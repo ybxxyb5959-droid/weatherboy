@@ -85,6 +85,43 @@ describe('kakao oauth (외부 호출 Mock 기반 내부 Flow 검증. 실제 Kaka
     expect((await b.get('/api/me')).body.id).toBe(me.body.id)
   })
 
+  it('이미 있던 카카오 계정으로 로그인하면 그 계정으로 들어가고, 게스트 데이터가 있었다면 표시한다 (합치지 않는다)', async () => {
+    const kakaoId = String(Date.now() + 7)
+    mockKakaoFetch(kakaoId)
+    // 1) 카카오 계정을 먼저 만들어 둔다 (옷 1벌)
+    const first = agent()
+    const s1 = stateOf((await first.get('/api/auth/kakao')).headers.location!)
+    await first.get(`/api/auth/kakao/callback?code=a&state=${s1}`)
+    const kakaoUser = (await first.get('/api/me')).body.id
+    await first.post('/api/clothes').send({ type: '코트', color: '검정' }).expect(201)
+
+    // 2) 다른 기기에서 게스트로 쓰며 직접 옷을 추가한 뒤, 같은 카카오 계정으로 로그인
+    const a = agent()
+    const guest = (await a.post('/api/auth/guest')).body
+    await a.post('/api/clothes').send({ type: '맨투맨', color: '회색' }).expect(201)
+    const s2 = stateOf((await a.get('/api/auth/kakao')).headers.location!)
+    const cb = await a.get(`/api/auth/kakao/callback?code=b&state=${s2}`)
+    expect(cb.headers.location).toContain('guestData=left')
+    const me = (await a.get('/api/me')).body
+    expect(me.id).toBe(kakaoUser)
+    expect(me.id).not.toBe(guest.id)
+    // 카카오 계정의 옷장에는 게스트 옷이 섞이지 않는다
+    expect(((await a.get('/api/clothes')).body as { type: string }[]).map((c) => c.type)).toEqual(['코트'])
+  })
+
+  it('게스트에 직접 만든 데이터가 없으면 안내 표시는 붙지 않는다', async () => {
+    const kakaoId = String(Date.now() + 8)
+    mockKakaoFetch(kakaoId)
+    const first = agent()
+    const s1 = stateOf((await first.get('/api/auth/kakao')).headers.location!)
+    await first.get(`/api/auth/kakao/callback?code=a&state=${s1}`)
+    const a = agent()
+    await a.post('/api/auth/guest')
+    const s2 = stateOf((await a.get('/api/auth/kakao')).headers.location!)
+    const cb = await a.get(`/api/auth/kakao/callback?code=b&state=${s2}`)
+    expect(cb.headers.location).not.toContain('guestData')
+  })
+
   it('Guest 로 쓰던 계정에 Kakao 를 연결하면 데이터가 유지된다', async () => {
     mockKakaoFetch(String(Date.now() + 1))
     const a = agent()

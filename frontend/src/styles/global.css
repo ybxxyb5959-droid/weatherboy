@@ -2354,3 +2354,15 @@ a.card {
   outline: 2px dashed var(--ink);
   outline-offset: 2px;
 }
+
+/* 카카오 로그인 후 안내 */
+.guest-notice {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  margin: 8px 12px;
+  background: var(--paper);
+}
+.guest-notice p {
+  margin: 0 0 8px;
+}

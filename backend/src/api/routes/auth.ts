@@ -89,8 +89,18 @@ authRouter.get(
       where: { provider_providerUserId: { provider: 'KAKAO', providerUserId: profile.id } },
     })
     let userId: string
+    // 이미 카카오로 쓰던 계정이 있으면 그 계정으로 들어간다. 지금 쓰던 게스트 데이터는 합치지 않는다(두 계정의 옷장·일정이 섞이는 걸 막기 위해).
+    // 게스트에 직접 만든 데이터가 있었다면 화면에서 알려주도록 표시한다.
+    let guestDataLeft = false
     if (identity) {
       userId = identity.userId
+      if (previousUserId && previousUserId !== identity.userId) {
+        const prev = await prisma.user.findFirst({ where: { id: previousUserId, identities: { every: { provider: 'GUEST' } } }, select: { id: true } })
+        if (prev) {
+          const [events, clothes] = await Promise.all([prisma.event.count({ where: { userId: prev.id } }), prisma.clothing.count({ where: { userId: prev.id, isSample: false, active: true } })])
+          guestDataLeft = events + clothes > 0
+        }
+      }
       await prisma.authIdentity.update({
         where: { id: identity.id },
         data: { nickname: profile.nickname, profileImageUrl: profile.profileImageUrl, email: profile.email },
@@ -113,7 +123,7 @@ authRouter.get(
     req.session.userId = userId
     await save(req)
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
-    res.redirect(`${env.FRONTEND_ORIGIN}${user.onboardingDone ? '/home' : '/setup'}`)
+    res.redirect(`${env.FRONTEND_ORIGIN}${user.onboardingDone ? '/home' : '/setup'}${guestDataLeft ? '?guestData=left' : ''}`)
   }),
 )
 

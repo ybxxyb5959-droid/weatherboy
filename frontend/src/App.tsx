@@ -14,6 +14,7 @@ import EventDetailPage from './pages/EventDetailPage'
 import WeatherPreviewPage from './pages/WeatherPreviewPage'
 import SetupPage from './pages/SetupPage'
 import SettingsPage from './pages/SettingsPage'
+import GuestDataNotice from './components/GuestDataNotice'
 import { useAuth } from './auth'
 
 // 세션(HttpOnly 쿠키)으로 로그인 여부를 판단한다. 첫 설정을 안 했으면 /setup 으로 보낸다.
@@ -48,6 +49,7 @@ export default function App() {
           <feDisplacementMap in="SourceGraphic" in2="t" scale="1.5" />
         </filter>
       </svg>
+      <GuestDataNotice />
       <Routes>
         <Route path="/" element={<Root />} />
         <Route path="/weather" element={<WeatherPreviewPage />} />

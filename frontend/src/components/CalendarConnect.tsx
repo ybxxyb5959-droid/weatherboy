@@ -92,6 +92,12 @@ export default function CalendarConnectDialog({ onClose, onConnected }: Props) {
                 <b>기간</b> 어제부터 90일 뒤까지
               </li>
               <li>
+                <b>자동 갱신</b> 30분마다 알아서 다시 읽어요. 앱을 열지 않아도 바뀐 일정이 반영돼요
+              </li>
+              <li>
+                <b>지원 범위</b> 반복 일정은 첫 일정 한 건만 가져와요(회차별 변경은 반영되지 않아요). 취소된 일정은 가져오지 않아요
+              </li>
+              <li>
                 <b>원본은 그대로</b> 여기서 바꿔도 내 캘린더는 바뀌지 않아요
               </li>
               <li>

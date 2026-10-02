@@ -2,6 +2,7 @@
 import cron from 'node-cron'
 import { prisma } from './db.js'
 import { airQualityCollectionJob, weatherCollectionJob } from './jobs/collectionJobs.js'
+import { calendarSyncJob } from './jobs/calendarSyncJob.js'
 import { eventForecastJob } from './jobs/eventForecastJob.js'
 import { logger } from './utils/logger.js'
 
@@ -28,11 +29,13 @@ function schedule(name: string, expr: string, fn: () => Promise<unknown>) {
 // KMA 단기예보는 02,05,08,11,14,17,20,23시 발표(+10분 이후 조회 가능)
 const weather = schedule('weatherCollectionJob', '15 2,5,8,11,14,17,20,23 * * *', () => weatherCollectionJob())
 const air = schedule('airQualityCollectionJob', '20,50 * * * *', () => airQualityCollectionJob())
+// 연동된 캘린더 자동 동기화(30분마다). 일정 점검(매시 25분) 전에 돌아서 바뀐 일정이 바로 반영된다.
+const calendars = schedule('calendarSyncJob', '5,35 * * * *', () => calendarSyncJob())
 // 예보 수집 직후 점검 + 매시간 안전망. Push(판단 변경)도 이 안에서 처리된다.
 const events = schedule('eventForecastJob', '25 * * * *', () => eventForecastJob())
 
 logger.info('worker started')
-void weather().then(() => air()).then(() => events())
+void weather().then(() => air()).then(() => calendars()).then(() => events())
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'worker shutting down')
