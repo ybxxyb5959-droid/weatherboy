@@ -32,6 +32,14 @@ const settingsSchema = z
     location: z.string().trim().min(1).max(100),
     notifyEvent: z.boolean(),
     notifyChange: z.boolean(),
+    notifyMorning: z.boolean(),
+    notifyRain: z.boolean(),
+    notifyColdReturn: z.boolean(),
+    notifyDust: z.boolean(),
+    notifyFeedback: z.boolean(),
+    notifyCloset: z.boolean(),
+    notifyNotice: z.boolean(),
+    morningLeadMin: z.number().int().refine((n) => [15, 30, 45, 60].includes(n), '15/30/45/60분 중에서 골라주세요'),
     place: placeHintSchema.optional(),
     routine: routineSchema,
   })
@@ -48,6 +56,14 @@ async function applySettings(userId: string, body: z.infer<typeof settingsSchema
   if (body.sensitivity) data.sensitivity = sensitivityMap.toDb(body.sensitivity)
   if (body.notifyEvent !== undefined) data.notifyEvent = body.notifyEvent
   if (body.notifyChange !== undefined) data.notifyChange = body.notifyChange
+  if (body.notifyMorning !== undefined) data.notifyMorning = body.notifyMorning
+  if (body.notifyRain !== undefined) data.notifyRain = body.notifyRain
+  if (body.notifyColdReturn !== undefined) data.notifyColdReturn = body.notifyColdReturn
+  if (body.notifyDust !== undefined) data.notifyDust = body.notifyDust
+  if (body.notifyFeedback !== undefined) data.notifyFeedback = body.notifyFeedback
+  if (body.notifyCloset !== undefined) data.notifyCloset = body.notifyCloset
+  if (body.notifyNotice !== undefined) data.notifyNotice = body.notifyNotice
+  if (body.morningLeadMin !== undefined) data.morningLeadMin = body.morningLeadMin
   if (body.routine) {
     const r = body.routine
     if (r.outAt !== undefined) data.routineOutAt = r.outAt

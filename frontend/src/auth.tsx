@@ -15,13 +15,22 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null)
 
+// 첫 설정 화면은 없다: 처음 들어오면 기본 설정 + 예시 옷장으로 바로 시작한다.
+// 위치/알림 허용은 홈 화면의 안내 카드와 설정 화면에서 나중에 할 수 있다.
+async function ensureOnboarded(m: Me): Promise<Me> {
+  if (m.onboardingDone) return m
+  await api('POST', '/api/onboarding/complete', { skip: true })
+  return api<Me>('GET', '/api/me')
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
-      const m = await api<Me>('GET', '/api/me')
+      let m = await api<Me>('GET', '/api/me')
+      m = await ensureOnboarded(m)
       setMe(m)
       return m
     } catch (e) {
@@ -39,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const startGuest = useCallback(async () => {
-    const m = await api<Me>('POST', '/api/auth/guest')
+    const m = await ensureOnboarded(await api<Me>('POST', '/api/auth/guest'))
     setMe(m)
     return m
   }, [])

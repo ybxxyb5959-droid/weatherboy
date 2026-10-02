@@ -51,7 +51,7 @@ export async function pushNotificationJob(
     return { decision, outcome: null }
   }
   const m = messageFor(decision, event.title)
-  const outcome = await sendToUser(user.id, event.id, { ...m, url: `/events/${event.id}` }, opts)
+  const outcome = await sendToUser(user.id, event.id, { ...m, url: `/events/${event.id}`, tag: `event-${event.id}` }, { ...opts, kind: decision === 'FIRST' ? 'EVENT_FIRST' : 'EVENT_CHANGE' })
   if (outcome === 'SENT') {
     await prisma.event.update({ where: { id: event.id }, data: { lastDecisionKey: currentKey, notificationCount: { increment: 1 } } })
   } else if (outcome === 'NO_SUBSCRIPTION' || outcome === 'NOT_CONFIGURED') {

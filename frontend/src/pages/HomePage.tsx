@@ -7,6 +7,7 @@ import CommuteLine from '../components/CommuteLine'
 import GearDoodles, { type GearKind } from '../components/GearDoodles'
 import FeedbackCard from '../components/FeedbackCard'
 import { feedbackDueAt, firstSeenToday, getFeedbackDone, setFeedbackDone } from '../lib/feedbackTiming'
+import FirstRunPrompt from '../components/FirstRunPrompt'
 import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
 import DailyForecast from '../components/DailyForecast'
@@ -128,6 +129,16 @@ export default function HomePage() {
       setNotice(errorMessage(e))
     }
   }
+
+  const firstRun = (
+    <FirstRunPrompt
+      onLocationSet={() => {
+        settings.reload()
+        weather.reload()
+        recommendation.reload()
+      }}
+    />
+  )
 
   const header = (
     <div className="page-head">
@@ -375,6 +386,7 @@ export default function HomePage() {
   return (
     <main className="home">
       {header}
+      {firstRun}
       {notice && <p role="alert">{notice}</p>}
 
       {layout.order.map((id, idx) => {

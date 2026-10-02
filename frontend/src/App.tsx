@@ -12,30 +12,28 @@ import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
 import EventDetailPage from './pages/EventDetailPage'
 import WeatherPreviewPage from './pages/WeatherPreviewPage'
-import SetupPage from './pages/SetupPage'
 import SettingsPage from './pages/SettingsPage'
 import GuestDataNotice from './components/GuestDataNotice'
 import { useAuth } from './auth'
 
-// 세션(HttpOnly 쿠키)으로 로그인 여부를 판단한다. 첫 설정을 안 했으면 /setup 으로 보낸다.
+// 세션(HttpOnly 쿠키)으로 로그인 여부를 판단한다. 첫 설정 화면은 없고 바로 홈으로 간다.
 function Root() {
   const { me, loading } = useAuth()
   if (loading) return null
   if (!me) return <IntroPage />
-  return <Navigate to={me.onboardingDone ? '/home' : '/setup'} replace />
+  return <Navigate to="/home" replace />
 }
 
-function Protected({ children, setup = false }: { children: ReactElement; setup?: boolean }) {
+function Protected({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
   if (loading) return null
   if (!me) return <Navigate to="/" replace />
-  if (!setup && !me.onboardingDone) return <Navigate to="/setup" replace />
   return children
 }
 
 export default function App() {
   const { pathname } = useLocation()
-  const showNav = pathname !== '/' && pathname !== '/setup'
+  const showNav = pathname !== '/'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}
@@ -53,7 +51,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Root />} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
-        <Route path="/setup" element={<Protected setup><SetupPage /></Protected>} />
         <Route path="/home" element={<Protected><HomePage /></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />
         <Route path="/wardrobe/scan" element={<Protected><ScanClosetPage /></Protected>} />

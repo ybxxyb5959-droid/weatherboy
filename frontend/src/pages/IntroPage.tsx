@@ -24,7 +24,7 @@ export default function IntroPage() {
     window.setTimeout(() => setBeeMood('idle'), next === 'angry' ? 1600 : 3300)
   }
 
-  // 카카오: 백엔드가 카카오 로그인 후 /setup 또는 /home 으로 돌려보낸다. 게스트: 서버에 임시 계정을 만든다.
+  // 카카오: 백엔드가 카카오 로그인 후 /home 으로 돌려보낸다. 게스트: 서버에 임시 계정을 만든다.
   const enter = async (provider: Provider) => {
     setError('')
     if (provider === 'kakao') {
@@ -32,8 +32,8 @@ export default function IntroPage() {
       return
     }
     try {
-      const m = await startGuest()
-      nav(m.onboardingDone ? '/home' : '/setup')
+      await startGuest()
+      nav('/home')
     } catch (e) {
       setError(errorMessage(e))
     }

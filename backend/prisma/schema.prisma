@@ -144,6 +144,15 @@ model User {
 
   notifyEvent  Boolean @default(true)
   notifyChange Boolean @default(true)
+  // 푸시 종류별 설정 (일정 알림 2종은 위의 notifyEvent / notifyChange)
+  notifyMorning    Boolean @default(true) // 아침 오늘의 옷차림
+  notifyRain       Boolean @default(true) // 우산 알림
+  notifyColdReturn Boolean @default(true) // 귀가 때 추워질 때
+  notifyDust       Boolean @default(false) // 미세먼지 나쁨
+  notifyFeedback   Boolean @default(true) // 귀가 후 후기 요청
+  notifyCloset     Boolean @default(false) // 옷장 리마인드(주 1회)
+  notifyNotice     Boolean @default(true) // 운영 공지
+  morningLeadMin   Int     @default(30) // 아침 알림: 외출 몇 분 전
   isAdmin      Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -381,10 +390,14 @@ model NotifyLog {
   eventId   String?      @db.Uuid
   status    NotifyStatus
   message   String?
+  // 알림 종류(EVENT_FIRST/EVENT_CHANGE/MORNING/RAIN/COLD_RETURN/DUST/FEEDBACK/CLOSET/NOTICE)와, 같은 알림의 중복 발송을 막는 키(예: MORNING:2026-10-05)
+  kind      String       @default("EVENT")
+  dedupeKey String?
   createdAt DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, dedupeKey])
   @@index([createdAt])
 }
 

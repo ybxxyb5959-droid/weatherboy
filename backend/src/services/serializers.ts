@@ -9,6 +9,14 @@ export function serializeSettings(u: User) {
     locationResolved: u.gridNx != null && u.gridNy != null,
     notifyEvent: u.notifyEvent,
     notifyChange: u.notifyChange,
+    notifyMorning: u.notifyMorning,
+    notifyRain: u.notifyRain,
+    notifyColdReturn: u.notifyColdReturn,
+    notifyDust: u.notifyDust,
+    notifyFeedback: u.notifyFeedback,
+    notifyCloset: u.notifyCloset,
+    notifyNotice: u.notifyNotice,
+    morningLeadMin: u.morningLeadMin,
     routine: { outAt: u.routineOutAt, homeAt: u.routineHomeAt, days: u.routineDays },
   }
 }
