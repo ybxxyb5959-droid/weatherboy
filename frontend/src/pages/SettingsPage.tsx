@@ -1,6 +1,7 @@
+import BackButton from '../components/BackButton'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import HandText from '../components/HandText'
 import LocationPicker from '../components/LocationPicker'
@@ -102,7 +103,9 @@ export default function SettingsPage() {
   const nav = useNavigate()
   const { me, logout, deleteAccount } = useAuth()
   const { data: s, error: loadError, loading, setData } = useAsync(() => api<ServerSettings>('GET', '/api/settings'))
-  const [message, setMessage] = useState('')
+  // 하위 화면에서 저장하고 돌아오면 설정 메인에 저장했다는 안내를 보여준다(화면이 새로 만들어져도 남도록 이동 정보로도 받는다)
+  const location = useLocation()
+  const [message, setMessage] = useState(() => (location.state as { saved?: string } | null)?.saved ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [routineDraft, setRoutineDraft] = useState<Routine | null>(null) // 하루 패턴 편집 중인 값 (저장 누를 때 반영)
@@ -159,9 +162,7 @@ export default function SettingsPage() {
     const back = (
       <div className="page-head">
         <div className="row">
-          <DoodleButton seed={1} className="small" aria-label="설정으로 돌아가기" onClick={() => nav('/settings')}>
-            ‹
-          </DoodleButton>
+          <BackButton to="/settings" label="설정으로 돌아가기" />
           <h1>{TITLES[section]}</h1>
         </div>
       </div>
@@ -179,7 +180,14 @@ export default function SettingsPage() {
             {!s.locationResolved && <p className="tiny">위치를 정확히 찾지 못했어요. 다른 이름으로 다시 입력해보세요.</p>}
             <div className="field">
               <div className="name">위치 바꾸기</div>
-              <LocationPicker onPick={(p) => void patch({ location: p.name, ...(p.place ? { place: p.place } : {}) } as Partial<Settings>, `내 위치를 "${p.name}"(으)로 바꿨어요.`)} />
+              <LocationPicker
+                onPick={(p) => {
+                  const done = `내 위치를 "${p.name}"(으)로 바꿨어요.`
+                  void patch({ location: p.name, ...(p.place ? { place: p.place } : {}) } as Partial<Settings>, done).then((ok) => {
+                    if (ok) nav('/settings', { state: { saved: done } }) // 위치를 바꾸면 설정 목록으로 돌아간다
+                  })
+                }}
+              />
             </div>
           </>
         )}
@@ -201,7 +209,12 @@ export default function SettingsPage() {
                 className="block"
                 onClick={() => {
                   if (!routineDraft) return
-                  void patch({ routine: routineDraft }, '하루 패턴을 저장했어요.').then((ok) => ok && setRoutineDraft(null))
+                  const done = '하루 패턴을 저장했어요.'
+                  void patch({ routine: routineDraft }, done).then((ok) => {
+                    if (!ok) return
+                    setRoutineDraft(null)
+                    nav('/settings', { state: { saved: done } }) // 저장하면 설정 목록으로 돌아간다
+                  })
                 }}
                 disabled={!routineDraft}
               >

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
@@ -91,7 +92,7 @@ export default function AddClothingPage() {
   return (
     <main>
       <div className="page-head">
-        <h1>옷 추가</h1>
+        <div className="row"><BackButton /><h1>옷 추가</h1></div>
       </div>
 
       <p className="add-lead">어떤 옷을 넣을까요?</p>

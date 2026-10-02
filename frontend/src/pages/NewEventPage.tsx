@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import DatePicker from '../components/DatePicker'
@@ -131,7 +132,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   return (
     <main>
       <div className="page-head">
-        <h1>{event ? '일정 수정' : '일정 등록'}</h1>
+        <div className="row"><BackButton /><h1>{event ? '일정 수정' : '일정 등록'}</h1></div>
       </div>
       {!event && (
       <SayBox

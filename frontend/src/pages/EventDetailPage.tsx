@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
@@ -67,6 +68,7 @@ function EventDetail({ id }: { id: string }) {
 
   return (
     <main>
+      <BackButton />
       <div className="page-head detail-head">
         <div>
           <h1>{e.title}</h1>

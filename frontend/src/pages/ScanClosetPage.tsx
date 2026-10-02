@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
@@ -78,7 +79,7 @@ export default function ScanClosetPage() {
   return (
     <main>
       <div className="page-head">
-        <h1>옷장 사진으로 등록</h1>
+        <div className="row"><BackButton /><h1>옷장 사진으로 등록</h1></div>
       </div>
 
       <div className="field ai-box" style={{ marginTop: 0 }}>

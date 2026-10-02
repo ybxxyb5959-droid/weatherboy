@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import BackButton from '../components/BackButton'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import { Clothespin } from '../components/Clothesline'
@@ -50,7 +51,7 @@ function Editor({ cloth }: { cloth: Clothing }) {
   return (
     <main>
       <div className="page-head">
-        <h1>옷 고치기</h1>
+        <div className="row"><BackButton /><h1>옷 고치기</h1></div>
         <div style={{ position: 'relative', width: 70, height: 70, marginTop: 10 }}>
           <Clothespin style={{ left: 14, top: -14 }} />
           <Clothespin style={{ left: 40, top: -14 }} />

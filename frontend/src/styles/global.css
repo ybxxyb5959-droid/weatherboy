@@ -2426,3 +2426,17 @@ a.card {
 .add-list h2 {
   margin: 4px 0 0;
 }
+
+/* ---------- 뒤로가기 (박스 없는 아이콘) ---------- */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  margin-left: -8px;
+  padding: 0 8px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
