@@ -89,7 +89,6 @@ export default function SetupPage() {
       </div>
 
       <div className="field">
-        <div className="name">나는…</div>
         <ChoiceRow options={sensOptions} value={sens} onChange={setSens} />
       </div>
 

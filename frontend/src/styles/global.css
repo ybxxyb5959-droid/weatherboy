@@ -2184,6 +2184,9 @@ a.card {
 .fb-instant .fb-btn {
   transition: none;
 }
+.fb-row {
+  position: relative;
+}
 .fb-thanks {
   margin-top: 8px;
   min-height: 1.4em;
@@ -2194,6 +2197,22 @@ a.card {
 .fb-thanks.show {
   opacity: 1;
   transform: none;
+}
+/* 고른 카드 오른쪽(사라진 두 카드 자리)에 글자를 놓는다. 카드는 한 줄을 3등분한 첫 칸에 있다 */
+.fb-thanks.fb-side {
+  position: absolute;
+  top: 50%;
+  left: calc((100% - 20px) / 3 + 10px + 14px);
+  right: 4px;
+  margin: 0;
+  min-height: 0;
+  font-size: 19px;
+  line-height: 1.35;
+  text-align: left;
+  transform: translateY(-50%) translateX(8px);
+}
+.fb-thanks.fb-side.show {
+  transform: translateY(-50%);
 }
 @media (prefers-reduced-motion: reduce) {
   .fb-btn,

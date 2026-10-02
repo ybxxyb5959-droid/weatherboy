@@ -59,7 +59,9 @@ export default function FeedbackCard({ selected, message, onPick }: Props) {
     setPhase('done')
   }
 
-  const showMessage = (phase === 'done' || phase === 'idle') && message
+  // 고맙다는 말은 고른 카드 옆(사라진 두 장 자리)에, 저장 실패 같은 안내는 카드 아래에 보여준다
+  const thanks = phase === 'done' && message ? message : ''
+  const notice = phase === 'idle' && message ? message : ''
   return (
     <section className="section feedback-card">
       <div className="box w1">
@@ -88,10 +90,15 @@ export default function FeedbackCard({ selected, message, onPick }: Props) {
               </button>
             )
           })}
+          <p className={`fb-thanks fb-side${thanks ? ' show' : ''}`} role="status" aria-live="polite">
+            {thanks}
+          </p>
         </div>
-        <p className={`tiny fb-thanks${showMessage ? ' show' : ''}`} role="status" aria-live="polite">
-          {showMessage ? message : ''}
-        </p>
+        {notice && (
+          <p className="tiny" role="status" style={{ marginTop: 8 }}>
+            {notice}
+          </p>
+        )}
       </div>
     </section>
   )

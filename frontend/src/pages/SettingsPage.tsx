@@ -188,11 +188,7 @@ export default function SettingsPage() {
           <>
             <div className="field">
               <div className="name">개인 체감</div>
-              <p>나는…</p>
               <ChoiceRow options={sensOptions} value={s.sensitivity} onChange={(v) => void patch({ sensitivity: v })} />
-              <p className="tiny" style={{ marginTop: 12 }}>
-                추위를 많이 타면 같은 날씨에도 한 겹 더 따뜻하게, 더위를 많이 타면 조금 가볍게 추천해요.
-              </p>
             </div>
 
             <hr className="scribble" />
