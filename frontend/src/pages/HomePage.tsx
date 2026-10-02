@@ -7,6 +7,7 @@ import CommuteLine from '../components/CommuteLine'
 import GearDoodles, { type GearKind } from '../components/GearDoodles'
 import FeedbackCard from '../components/FeedbackCard'
 import { feedbackDueAt, firstSeenToday, getFeedbackDone, setFeedbackDone } from '../lib/feedbackTiming'
+import { Link } from 'react-router-dom'
 import FirstRunPrompt from '../components/FirstRunPrompt'
 import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
@@ -50,6 +51,8 @@ export default function HomePage() {
   const settings = useAsync(() => api<{ location: string; routine?: Routine }>('GET', '/api/settings'))
   const favorites = useAsync(() => api<Favorite[]>('GET', '/api/favorites'))
   const favList = favorites.data ?? []
+  const clothes = useAsync(() => api<unknown[]>('GET', '/api/clothes'))
+  const closetEmpty = !clothes.loading && clothes.data != null && clothes.data.length === 0
 
   // AI 설명은 추천과 따로 만들어져서, 아직 없으면 잠시 뒤 조용히(화면을 비우지 않고) 다시 불러온다.
   const aiPending = !recommendation.loading && recommendation.data?.aiPending === true
@@ -348,8 +351,14 @@ export default function HomePage() {
         </div>
         {/* 외출·귀가 날씨: 졸라맨이 입은 옷 바로 아래. 외출 시간은 내 위치 기준이라 다른 지역을 구경 중일 땐 숨긴다 */}
         {target.kind === 'home' && <CommuteLine hourly={w.hourly ?? []} routine={routine} />}
-        {rec.insufficientWardrobe && <p className="tiny">옷장에 딱 맞는 옷이 부족해서 가장 가까운 조합이에요</p>}
-        {items.some((it) => !it.owned) && <p className="tiny">옷장에 없는 옷이 섞여 있어요 (일반 추천)</p>}
+        {closetEmpty ? (
+          <p className="tiny">
+            아직 옷장이 비어 있어서 일반 추천이에요.{' '}
+            <Link to="/wardrobe" className="guest-link">내 옷 등록하면 내 옷 기준으로 골라줘요 →</Link>
+          </p>
+        ) : null}
+        {rec.insufficientWardrobe && !closetEmpty &&<p className="tiny">옷장에 딱 맞는 옷이 부족해서 가장 가까운 조합이에요</p>}
+        {!closetEmpty && items.some((it) => !it.owned) &&<p className="tiny">옷장에 없는 옷이 섞여 있어요 (일반 추천)</p>}
         <div className="row stretch" style={{ marginTop: 14 }}>
           <DoodleButton seed={0} className="sketchy" selected={showWhy} onClick={() => setShowWhy((s) => !s)}>
             추천 이유

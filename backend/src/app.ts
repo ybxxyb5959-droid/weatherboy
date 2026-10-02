@@ -12,6 +12,7 @@ import { authRouter, meRouter } from './api/routes/auth.js'
 import { clothesRouter } from './api/routes/clothes.js'
 import { aiRouter } from './api/routes/ai.js'
 import { calendarRouter } from './api/routes/calendar.js'
+import { characterRouter } from './api/routes/character.js'
 import { eventsRouter } from './api/routes/events.js'
 import { placesRouter } from './api/routes/places.js'
 import { pushRouter } from './api/routes/push.js'
@@ -64,6 +65,7 @@ export function createApp() {
   app.use('/api/auth', authRouter)
   app.use('/api/me', meRouter)
   app.use('/api/clothes', clothesRouter)
+  app.use('/api/character', characterRouter)
   app.use('/api/events', eventsRouter)
   app.use('/api/calendar', calendarRouter)
   app.use('/api/ai', aiRouter)

@@ -15,7 +15,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null)
 
-// 첫 설정 화면은 없다: 처음 들어오면 기본 설정 + 예시 옷장으로 바로 시작한다.
+// 첫 설정 화면은 없다: 처음 들어오면 기본 설정 + 빈 옷장으로 바로 시작한다(옷장을 채우기 전엔 일반 추천).
 // 위치/알림 허용은 홈 화면의 안내 카드와 설정 화면에서 나중에 할 수 있다.
 async function ensureOnboarded(m: Me): Promise<Me> {
   if (m.onboardingDone) return m

@@ -47,7 +47,7 @@ const settingsSchema = z
 
 const onboardingSchema = settingsSchema.extend({
   closetMode: z.enum(['sample', 'empty']).optional(),
-  // "나중에 할게": 기본 설정 + 예시 옷장으로 완료 처리 (frontend 의 skip 동작과 동일)
+  // "나중에 할게": 기본 설정 + 빈 옷장으로 완료 처리 (옷은 나중에 등록하고, 그 전엔 일반 추천)
   skip: z.boolean().optional(),
 })
 
@@ -109,7 +109,7 @@ userRouter.post(
     const userId = (req as AuthedRequest).userId
     const body = parse(onboardingSchema, req.body ?? {})
     const skip = body.skip === true
-    const closetMode = skip ? 'sample' : (body.closetMode ?? 'sample')
+    const closetMode = skip ? 'empty' : (body.closetMode ?? 'sample')
     const settingsBody = skip ? { location: '서울 마포구' } : body
     // 이미 옷이 있는 사용자에게는 예시 옷을 중복 생성하지 않는다.
     const existing = await prisma.clothing.count({ where: { userId } })
