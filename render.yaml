@@ -10,7 +10,7 @@ services:
     dockerContext: ./backend
     healthCheckPath: /health
     # 시작 전에 DB 마이그레이션을 적용한다(Dockerfile 의 기본 명령 앞에 붙임)
-    dockerCommand: sh -c "npx prisma migrate deploy && node dist/server.js"
+    dockerCommand: sh ./docker-start.sh
     envVars:
       - key: NODE_ENV
         value: production

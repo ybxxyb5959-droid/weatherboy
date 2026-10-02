@@ -17,6 +17,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
+COPY docker-start.sh ./
 USER node
 EXPOSE 4000
 # API: node dist/server.js  /  Worker: node dist/worker.js (compose 에서 command 로 분리)
