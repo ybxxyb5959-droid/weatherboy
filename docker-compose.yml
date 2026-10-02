@@ -1,0 +1,69 @@
+# 개발/운영 공용 예제. 비밀값은 루트의 .env (Git 제외) 에서 읽는다. 예: backend/.env.example 참고
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-weather}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 를 .env 에 설정하세요}
+      POSTGRES_DB: ${POSTGRES_DB:-weather_boy}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 마이그레이션 1회 적용 (api/worker 보다 먼저)
+  migrate:
+    build: ./backend
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-weather_boy}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-weather_boy}
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-weather_boy}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # 선택: docker compose --profile monitoring up -d
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - kuma:/app/data
+
+volumes:
+  pgdata:
+  kuma:

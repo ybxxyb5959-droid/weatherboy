@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum AuthProvider {
+  KAKAO
+  GUEST
+}
+
+enum Sensitivity {
+  COLD
+  NORMAL
+  HOT
+}
+
+enum ClothingType {
+  SHORT_SLEEVE
+  LONG_SLEEVE
+  SWEATSHIRT
+  KNIT
+  HOODIE
+  PANTS
+  SHORTS
+  SKIRT
+  WINDBREAKER
+  JACKET
+  COAT
+  PADDING
+}
+
+enum Thickness {
+  THIN
+  NORMAL
+  THICK
+}
+
+enum ClothingColor {
+  BLACK
+  GRAY
+  WHITE
+  BEIGE
+  GREEN
+  BLUE
+  OTHER
+  NAVY
+  SKYBLUE
+  BROWN
+  KHAKI
+  RED
+  PINK
+  ORANGE
+  YELLOW
+  PURPLE
+}
+
+enum ClothingPattern {
+  SOLID
+  CHECK
+  STRIPE
+  DOT
+  PRINT
+}
+
+enum ClothingCategory {
+  TOP
+  BOTTOM
+  LIGHT_OUTER
+  HEAVY_OUTER
+}
+
+// COMMUTE/EXERCISE 는 예전 값(이제 일정이 아니라 하루 패턴으로 다룸). 기존 행은 OTHER 로 옮겼고 새로 쓰지 않는다.
+enum EventKind {
+  TRAVEL
+  CAMPING
+  COMMUTE
+  EXERCISE
+  OTHER
+  HIKING
+  OUTDOOR
+}
+
+enum ForecastStage {
+  WAITING
+  MIDTERM
+  SHORTTERM
+}
+
+enum FeedbackRating {
+  COLD
+  OK
+  HOT
+}
+
+enum FeedbackPeriod {
+  MORNING
+  DAY
+  EVENING
+}
+
+enum LogStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+enum NotifyStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model User {
+  id             String  @id @default(uuid()) @db.Uuid
+  plan           Plan    @default(FREE)
+  onboardingDone Boolean @default(false)
+
+  sensitivity    Sensitivity @default(NORMAL)
+  feedbackOffset Float       @default(0)
+
+  locationName   String  @default("서울 마포구")
+  regionSido     String?
+  regionDistrict String?
+  latitude       Float?
+  longitude      Float?
+  gridNx         Int?
+  gridNy         Int?
+
+  // 하루 패턴(출근/등교·퇴근/하교 시간, 요일, 운동·산책 시간). 모르면 null
+  routineOutAt  String? // 외출 시간 HH:mm
+  routineHomeAt String? // 들어오는 시간 HH:mm
+  routineDays   Int[]   @default([1, 2, 3, 4, 5]) // 0=일 ~ 6=토
+
+  notifyEvent  Boolean @default(true)
+  notifyChange Boolean @default(true)
+  isAdmin      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identities          AuthIdentity[]
+  clothes             Clothing[]
+  events              Event[]
+  calendarConnections CalendarConnection[]
+  recommendations     Recommendation[]
+  feedbacks           Feedback[]
+  pushSubscriptions   PushSubscription[]
+  notifyLogs          NotifyLog[]
+  favorites           FavoritePlace[]
+}
+
+// 사용자가 담아둔 지역(즐겨찾기). 좌표/격자를 미리 저장해서 누르면 바로 날씨를 볼 수 있다.
+model FavoritePlace {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  name           String
+  address        String
+  latitude       Float
+  longitude      Float
+  gridNx         Int
+  gridNy         Int
+  regionSido     String?
+  regionDistrict String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model AuthIdentity {
+  id              String       @id @default(uuid()) @db.Uuid
+  userId          String       @db.Uuid
+  provider        AuthProvider
+  providerUserId  String
+  email           String?
+  nickname        String?
+  profileImageUrl String?
+  createdAt       DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model Clothing {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  type       ClothingType
+  thickness  Thickness
+  color      ClothingColor
+  category   ClothingCategory
+  warmth     Float
+  windproof  Boolean          @default(false)
+  waterproof Boolean          @default(false)
+  pattern    ClothingPattern  @default(SOLID)
+  active     Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+}
+
+model Event {
+  id      String    @id @default(uuid()) @db.Uuid
+  userId  String    @db.Uuid
+  title   String
+  kind    EventKind
+  startAt DateTime
+  endAt   DateTime
+
+  placeName      String  @default("")
+  regionSido     String?
+  regionDistrict String?
+  latitude       Float?
+  longitude      Float?
+  gridNx         Int?
+  gridNy         Int?
+
+  forecastStage         ForecastStage @default(WAITING)
+  recommendationVersion Int           @default(0)
+  lastDecisionKey       String?
+  lastCheckedAt         DateTime?
+  notificationCount     Int           @default(0)
+
+  // 외부 캘린더(iCal)에서 가져온 일정이면 연결과 원본 UID 를 가진다. 직접 입력한 일정은 둘 다 null.
+  calendarConnectionId String? @db.Uuid
+  externalUid          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  calendar        CalendarConnection? @relation(fields: [calendarConnectionId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarConnectionId, externalUid])
+  @@index([userId, startAt])
+  @@index([forecastStage, startAt])
+}
+
+/// 사용자가 연동한 외부 캘린더(구글/애플/삼성 등의 iCal 구독 주소). 해제하면 가져온 일정도 함께 지워진다.
+model CalendarConnection {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  // GOOGLE | APPLE | SAMSUNG | OTHER
+  provider     String
+  icalUrl      String
+  lastSyncedAt DateTime?
+  lastError    String?
+  createdAt    DateTime  @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([userId, icalUrl])
+  @@index([userId])
+}
+
+model ForecastSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  gridNx    Int
+  gridNy    Int
+  // KMA_SHORT | KMA_MID
+  source    String
+  issuedAt  DateTime
+  fetchedAt DateTime @default(now())
+  targetAt  DateTime
+
+  temperature              Float
+  feelsLike                Float?
+  tempMin                  Float?
+  tempMax                  Float?
+  precipitationProbability Int?
+  precipitationType        String?
+  windSpeed                Float?
+  humidity                 Float?
+  sky                      String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([gridNx, gridNy, source, issuedAt, targetAt])
+  @@index([gridNx, gridNy, targetAt])
+}
+
+model AirQuality {
+  id          String   @id @default(uuid()) @db.Uuid
+  region      String
+  stationName String?
+  fetchedAt   DateTime @default(now())
+  pm10        Int?
+  pm25        Int?
+  pm10Grade   Int?
+  pm25Grade   Int?
+  createdAt   DateTime @default(now())
+
+  @@index([region, fetchedAt])
+}
+
+model Recommendation {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  eventId       String?  @db.Uuid
+  targetStartAt DateTime
+  targetEndAt   DateTime
+  resultJson    Json
+  reasonCodes   Json
+  decisionKey   String
+  version       Int      @default(1)
+  aiExplanation String?
+  createdAt     DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  feedbacks Feedback[]
+
+  @@index([userId, targetStartAt])
+  @@index([eventId])
+}
+
+model Feedback {
+  id                String          @id @default(uuid()) @db.Uuid
+  userId            String          @db.Uuid
+  recommendationId  String          @db.Uuid
+  rating            FeedbackRating
+  period            FeedbackPeriod?
+  actualTemperature Float?
+  createdAt         DateTime        @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recommendationId])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CollectLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  job        String
+  target     String?
+  status     LogStatus
+  message    String?
+  durationMs Int?
+  createdAt  DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+model NotifyLog {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  eventId   String?      @db.Uuid
+  status    NotifyStatus
+  message   String?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+model AiCallLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  model      String
+  status     LogStatus
+  fallback   Boolean   @default(false)
+  durationMs Int?
+  message    String?
+  createdAt  DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+// connect-pg-simple 세션 저장소 (테이블명 'session' 고정)
+model Session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}

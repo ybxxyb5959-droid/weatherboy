@@ -1,0 +1,81 @@
+import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import StickPerson from '../components/StickPerson'
+import { errorMessage } from '../api'
+import { useAuth } from '../auth'
+import HandText from '../components/HandText'
+import KakaoLoginButton from '../components/KakaoLoginButton'
+import { Bee, Cloud, Flower, Sun } from '../components/DoodleWeather'
+
+type Provider = 'kakao' | 'guest'
+
+export default function IntroPage() {
+  const nav = useNavigate()
+  const [beeMood, setBeeMood] = useState<'idle' | 'angry' | 'flee'>('idle')
+  const taps = useRef(0)
+  const { startGuest } = useAuth()
+  const [error, setError] = useState(() => (new URLSearchParams(window.location.search).get('login') === 'failed' ? '로그인에 실패했어요. 다시 시도해주세요.' : ''))
+
+  // 이스터에그: 벌을 누르면 화내거나 도망감
+  const poke = () => {
+    if (beeMood !== 'idle') return
+    const next = taps.current++ % 2 === 0 ? 'angry' : 'flee'
+    setBeeMood(next)
+    window.setTimeout(() => setBeeMood('idle'), next === 'angry' ? 1600 : 3300)
+  }
+
+  // 카카오: 백엔드가 카카오 로그인 후 /setup 또는 /home 으로 돌려보낸다. 게스트: 서버에 임시 계정을 만든다.
+  const enter = async (provider: Provider) => {
+    setError('')
+    if (provider === 'kakao') {
+      window.location.href = '/api/auth/kakao'
+      return
+    }
+    try {
+      const m = await startGuest()
+      nav(m.onboardingDone ? '/home' : '/setup')
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  return (
+    <main className="intro">
+      <span className="corner" style={{ top: 6, right: 4 }}>
+        <Sun />
+      </span>
+      <span className="corner" style={{ top: 60, left: 0 }}>
+        <Cloud />
+      </span>
+
+      <div style={{ marginTop: 40 }}>
+        <StickPerson mood="wave" size={200} />
+      </div>
+
+      <div className="login-list ready">
+        <KakaoLoginButton onClick={() => void enter('kakao')} />
+        <button type="button" className="guest-link" onClick={() => void enter('guest')}>
+          <HandText>로그인 없이 둘러보기</HandText>
+        </button>
+        {error && <p className="tiny" role="alert">{error}</p>}
+      </div>
+
+      <div className="bee-lane" aria-hidden="true">
+        <div className="bee-fly">
+          <div className="bee-flip">
+            <div className="bee-wob">
+              <button type="button" className="bee-hit" onClick={poke} aria-label="벌">
+                <span className={`bee-react ${beeMood}`}>
+                  <Bee size={34} />
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span className="corner" style={{ bottom: 6, right: 12 }}>
+        <Flower size={40} />
+      </span>
+    </main>
+  )
+}

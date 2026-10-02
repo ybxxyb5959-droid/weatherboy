@@ -1,0 +1,38 @@
+// 서비스워커: 웹푸시를 받아 알림으로 보여주고, 누르면 해당 화면으로 이동한다.
+// 서버가 보내는 payload: { title, body, url }
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
+
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : '' }
+  }
+  const title = data.title || '오늘 뭐 입지?'
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      data: { url: data.url || '/' },
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) {
+          if ('navigate' in c) c.navigate(url)
+          return c.focus()
+        }
+      }
+      return self.clients.openWindow(url)
+    }),
+  )
+})

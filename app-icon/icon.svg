@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <filter id="w" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="4" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" fill="#fcfcfa"/>
+  <g filter="url(#w)" fill="none" stroke="#222" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 해 -->
+    <path d="M25 14 C33 13 38 21 35 28 C31 36 19 36 14 28 C11 20 16 15 25 14Z" fill="#f2cf4a"/>
+    <path d="M21 23 l.1 0 M30 23 l.1 0" stroke-width="3.4"/>
+    <path d="M22 29 Q26 32 30 29" stroke-width="2"/>
+    <path d="M25 3 V7 M25 39 V43 M4 22 H8 M43 22 H47 M10 8 L13 11 M40 8 L37 11 M10 36 L13 33" stroke-width="2.6"/>
+    <!-- 다리 -->
+    <path d="M56 96 L49 122 M72 96 L81 122"/>
+    <!-- 팔 -->
+    <path d="M48 64 L29 88"/>
+    <path d="M29 88 l-6 3 M29 88 l-2 7 M29 88 l-8 -2" stroke-width="3"/>
+    <path d="M80 64 L101 42"/>
+    <path d="M101 42 l7 -4 M101 42 l2 -9 M101 42 l9 2" stroke-width="3"/>
+    <!-- 머리 -->
+    <path d="M64 21 C77 20 82 33 79 42 C75 53 53 53 48 42 C45 31 50 22 65 21 L70 23" fill="#fcfcfa" stroke-width="3.2"/>
+    <circle cx="57" cy="36" r="2.4" fill="#222" stroke="none"/>
+    <circle cx="71" cy="36" r="2.4" fill="#222" stroke="none"/>
+    <path d="M60.5 42.5 Q64 46 67.5 42.5" stroke-width="2.2"/>
+    <!-- 패딩 -->
+    <path d="M47 60 Q64 52 81 60 L88 98 Q64 106 40 98Z" fill="#e8a24a"/>
+    <path d="M43 76 Q64 83 85 76 M42 88 Q64 95 86 88" stroke-width="2.6"/>
+    <path d="M64 55 V102" stroke-width="2.6"/>
+  </g>
+</svg>
