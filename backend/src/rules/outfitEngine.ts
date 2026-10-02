@@ -3,7 +3,7 @@ import type { ClothingCategory, ClothingPattern, ClothingType, EventKind, Sensit
 import { clothingTypeMap, colorMap, patternMap } from '../config/mappings.js'
 import { ruleConfig } from '../config/ruleConfig.js'
 import { kstDate, toKstParts } from '../utils/time.js'
-import { deriveClothing } from './clothing.js'
+import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -36,6 +36,8 @@ export interface EngineInput {
   eventKind: EventKind | null
   clothes: WardrobeItem[]
   airGrade: number | null // AirKorea 1~4, 데이터 없으면 null
+  /** 있으면 알맞은 조합이 여럿일 때 이 값(예: 사용자+날짜)으로 하나를 골라 매일 조금씩 다르게 추천한다. 같은 값이면 항상 같은 결과. */
+  varietySeed?: string
   feelsMethod?: string // 체감온도 산출 방식(Reason Code용)
 }
 
@@ -79,7 +81,7 @@ export function genericWardrobe(): WardrobeItem[] {
       color: 'OTHER',
       category: d.category,
       warmth: d.warmth,
-      windproof: outer && type !== 'JACKET',
+      windproof: outer && !NOT_WINDPROOF_OUTER.has(type),
       waterproof: type === 'WINDBREAKER',
       owned: false,
     }
@@ -127,6 +129,13 @@ function buildCandidates(pool: WardrobeItem[]): Candidate[] {
       for (const outer of [null, ...outers])
         cands.push({ top, bottom, outer, total: top.warmth + bottom.warmth + (outer?.warmth ?? 0) })
   return cands
+}
+
+/** 문자열 -> 0 이상의 정수 (같은 문자열이면 항상 같은 값) */
+function hashOf(s: string): number {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0
+  return h
 }
 
 const keyOf = (c: Candidate) => `${c.top.id}|${c.bottom.id}|${c.outer?.id ?? ''}`
@@ -182,7 +191,14 @@ export function recommend(input: EngineInput): EngineResult {
     }
   }
   valid.sort(cmp)
-  const best = valid[0]!
+  let best = valid[0]!
+  if (input.varietySeed && !insufficient) {
+    // 가장 가벼운 알맞은 조합과 같은 종류의 대응(바람/비 감점 같음, 겉옷 유무 같음)이고 보온이 slack 이내인 조합들 중에서 고른다
+    const first = valid[0]!
+    const [wp, rp] = rank(first)
+    const group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && !!c.outer === !!first.outer && c.total <= first.total + ruleConfig.varietyWarmthSlack)
+    if (group.length > 1) best = group[hashOf(input.varietySeed) % group.length]!
+  }
   const toCombo = (c: Candidate): OutfitItem[] => [itemOf(c.top), itemOf(c.bottom), ...(c.outer ? [itemOf(c.outer)] : [])]
 
   // 대안: 최선과 다른 조합 (insufficient가 아니면 요구 보온을 만족하는 조합 중에서)

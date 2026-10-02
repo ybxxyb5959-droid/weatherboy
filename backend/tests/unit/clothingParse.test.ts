@@ -26,6 +26,18 @@ describe('옷 문장 해석', () => {
     expect(parseClothing('청바지').items[0]).toMatchObject({ color: '파랑', colorGuessed: false })
     expect(parseClothing('검정 청바지').items[0]!.color).toBe('검정')
   })
+  it('셔츠는 긴팔이 아니라 셔츠로, 티셔츠는 그대로 반팔로 읽는다', () => {
+    expect(labels('흰색 셔츠')).toEqual(['흰색 셔츠'])
+    expect(labels('남색 와이셔츠')).toEqual(['네이비 셔츠'])
+    expect(labels('체크셔츠')).toEqual(['체크 셔츠'])
+    expect(labels('흰 티셔츠')).toEqual(['흰색 반팔'])
+    expect(labels('회색 맨투맨이랑 셔츠')).toEqual(['회색 맨투맨', '셔츠'])
+  })
+  it('가디건은 니트가 아니라 가디건으로 읽는다', () => {
+    expect(labels('베이지 가디건')).toEqual(['베이지 가디건'])
+    expect(labels('카디건')).toEqual(['가디건'])
+    expect(labels('회색 니트랑 검정 가디건')).toEqual(['회색 니트', '검정 가디건'])
+  })
   it('색을 못 찾으면 기타로 두고 알려준다', () => {
     expect(parseClothing('패딩').items[0]).toMatchObject({ type: '패딩', color: '기타', colorGuessed: true })
   })

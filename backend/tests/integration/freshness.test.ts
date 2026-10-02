@@ -108,3 +108,14 @@ describe('추천 기준(basis)', () => {
     expect(['DEFAULT', 'NOW']).toContain(r.basis.source)
   })
 })
+
+describe('셔츠 옷 종류', () => {
+  const a = agent()
+  it('셔츠를 추가·조회·수정할 수 있다', async () => {
+    await a.post('/api/auth/guest').expect(201)
+    const c = (await a.post('/api/clothes').send({ type: '셔츠', color: '하늘색', pattern: '줄무늬' }).expect(201)).body
+    expect(c).toMatchObject({ type: '셔츠', color: '하늘색', pattern: '줄무늬' })
+    expect(((await a.get('/api/clothes')).body as { type: string }[]).map((x) => x.type)).toContain('셔츠')
+    expect((await a.patch('/api/clothes/' + c.id).send({ type: '긴팔' }).expect(200)).body.type).toBe('긴팔')
+  })
+})

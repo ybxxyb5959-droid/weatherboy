@@ -26,6 +26,7 @@ enum Sensitivity {
 enum ClothingType {
   SHORT_SLEEVE
   LONG_SLEEVE
+  SHIRT
   SWEATSHIRT
   KNIT
   HOODIE
@@ -34,6 +35,7 @@ enum ClothingType {
   SKIRT
   WINDBREAKER
   JACKET
+  CARDIGAN
   COAT
   PADDING
 }

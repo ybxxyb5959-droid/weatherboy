@@ -2,6 +2,9 @@ import type { ClothingCategory, ClothingType, Thickness } from '@prisma/client'
 import { categoryOfType } from '../config/mappings.js'
 import { ruleConfig } from '../config/ruleConfig.js'
 
+/** 겉옷이지만 기본으로 방풍으로 치지 않는 종류 */
+export const NOT_WINDPROOF_OUTER: ReadonlySet<ClothingType> = new Set<ClothingType>(['JACKET', 'CARDIGAN'])
+
 /** type/thickness 로부터 category, warmth 를 서버가 계산한다. */
 export function deriveClothing(type: ClothingType, thickness: Thickness): { category: ClothingCategory; warmth: number } {
   const warmth = Math.max(0.5, ruleConfig.baseWarmth[type] + ruleConfig.thicknessAdjust[thickness])
@@ -15,5 +18,5 @@ export function deriveClothing(type: ClothingType, thickness: Thickness): { cate
  */
 export function defaultsForType(type: ClothingType): { thickness: Thickness; windproof: boolean; waterproof: boolean } {
   const outer = categoryOfType[type] === 'LIGHT_OUTER' || categoryOfType[type] === 'HEAVY_OUTER'
-  return { thickness: 'NORMAL', windproof: outer && type !== 'JACKET', waterproof: type === 'WINDBREAKER' }
+  return { thickness: 'NORMAL', windproof: outer && !NOT_WINDPROOF_OUTER.has(type), waterproof: type === 'WINDBREAKER' }
 }

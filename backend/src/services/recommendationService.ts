@@ -144,6 +144,8 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     clothes: clothes.map(toWardrobe),
     airGrade: grade,
     feelsMethod: window.feelsMethod,
+    // 오늘 추천은 날짜마다, 일정 추천은 일정마다 같은 조합이 계속 나오지 않게 돌려 고른다(같은 날/일정 안에서는 고정)
+    varietySeed: `${user.id}:${event?.id ?? kstDate(start)}`,
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')
   return { result, window, region }

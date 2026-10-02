@@ -2235,13 +2235,9 @@ a.card {
   .mic-btn.listening { animation: none; }
 }
 
-/* 저장 버튼은 하단 메뉴 바로 위에 붙여서 항상 보이게 */
+/* 저장 버튼: 내용 바로 아래(하단 메뉴에는 가려지지 않게 페이지 아래 여백이 있다). 화면에 고정하면 짧은 페이지에서 위 내용을 덮는다 */
 .save-bar {
-  position: sticky;
-  bottom: 72px;
-  z-index: 5;
   padding: 8px 0 6px;
-  background: linear-gradient(to bottom, rgba(252, 252, 250, 0), var(--paper) 30%);
 }
 
 /* 말한 옷 목록 */

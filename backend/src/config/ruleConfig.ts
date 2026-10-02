@@ -13,11 +13,13 @@ export const ruleConfig = {
   baseWarmth: {
     SHORT_SLEEVE: 1,
     LONG_SLEEVE: 2,
+    SHIRT: 1.5, // 얇은 면 셔츠: 반팔(1)과 긴팔(2) 사이
     SWEATSHIRT: 2,
     HOODIE: 2,
     KNIT: 3,
     WINDBREAKER: 2,
     JACKET: 3,
+    CARDIGAN: 2, // 얇게 걸치는 겉옷
     COAT: 5,
     PADDING: 7,
     // 하의 (MVP Draft)
@@ -53,6 +55,8 @@ export const ruleConfig = {
   maskMinGrade: 3, // AirKorea 3=나쁨, 4=매우나쁨
   outerWarmthMin: 2, // 겉옷 필요 판단: 필요 보온 - (상의+하의) > 0
   alternativesCount: 3,
+  // 같은 날 비슷하게 알맞은 조합이 여러 개면, 가장 가벼운 조합보다 이만큼(보온 점수)까지는 후보로 보고 날짜마다 돌아가며 고른다
+  varietyWarmthSlack: 1,
 }
 
 export const dustGradeLabel: Record<number, string> = { 1: '좋음', 2: '보통', 3: '나쁨', 4: '매우나쁨' }
