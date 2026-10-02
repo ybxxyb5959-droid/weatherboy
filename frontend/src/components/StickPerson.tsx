@@ -1,4 +1,5 @@
 import { ClothingArt } from './ClothingDoodle'
+import { BackDecor, FrontDecor, type Accessories } from './CharacterDecor'
 
 export type Mood = 'wave' | 'cold' | 'rain' | 'trip' | 'empty' | 'wait' | 'stand' | 'travel' | 'camp' | 'hike' | 'outdoor'
 
@@ -15,11 +16,15 @@ interface Props {
   wear?: { top?: WornItem; bottom?: WornItem; outer?: WornItem }
   /** mood='stand' 일 때 우산을 들고 서 있기 */
   umbrella?: boolean
+  /** 내 캐릭터의 칭호(예: 'DARK_CHILD'). 칭호마다 상징 소품이 붙는다. mood='stand' 에서만 */
+  persona?: string | null
+  /** 내 캐릭터 꾸미기(모자·헤어핀·안경·목·기타). mood='stand' 에서만 */
+  accessories?: Accessories
 }
 
 const ink = '#222'
 
-export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false }: Props) {
+export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, persona = null, accessories = {} }: Props) {
   const showUmbrella = mood === 'rain' || (mood === 'stand' && umbrella)
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
   return (
@@ -62,6 +67,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         </g>
       )}
       <g transform={shift}>
+        {mood === 'stand' && <BackDecor persona={persona} acc={accessories} />}
         {/* 몸 */}
         <path d="M60 47 L61 100" />
         {mood === 'stand' ? (
@@ -183,6 +189,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                 <ClothingArt type={wear.outer.type} color={wear.outer.color} pattern={wear.outer.pattern} />
               </g>
             )}
+            {/* 칭호 소품과 꾸미기: 옷 위에 얹는다 */}
+            <FrontDecor persona={persona} acc={accessories} />
           </g>
         )}
 

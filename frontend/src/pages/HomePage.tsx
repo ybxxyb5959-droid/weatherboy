@@ -16,6 +16,7 @@ import { WeatherDoodle } from '../components/DoodleWeather'
 import { categories } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import { useAsync } from '../hooks'
+import { useCharacter } from '../lib/character'
 import type { Routine } from '../store'
 import type { ApiRecommendation, ApiWeather, Favorite, Target } from '../types'
 
@@ -51,6 +52,8 @@ export default function HomePage() {
   const settings = useAsync(() => api<{ location: string; routine?: Routine }>('GET', '/api/settings'))
   const favorites = useAsync(() => api<Favorite[]>('GET', '/api/favorites'))
   const favList = favorites.data ?? []
+  // 내 캐릭터(칭호 소품 + 꾸미기): 캐릭터 화면에서 꾸민 그대로 홈의 졸라맨에도 입힌다
+  const character = useCharacter().data
   const clothes = useAsync(() => api<unknown[]>('GET', '/api/clothes'))
   const closetEmpty = !clothes.loading && clothes.data != null && clothes.data.length === 0
 
@@ -339,7 +342,7 @@ export default function HomePage() {
         )}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
-          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} />
+          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={character?.analysis.title?.key ?? null} accessories={character?.config} />
           <ul className="look-items" aria-label="오늘 입을 옷">
             {items.map((it, i) => (
               <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>

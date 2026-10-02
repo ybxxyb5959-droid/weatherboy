@@ -13,6 +13,7 @@ import NewEventPage from './pages/NewEventPage'
 import EventDetailPage from './pages/EventDetailPage'
 import WeatherPreviewPage from './pages/WeatherPreviewPage'
 import SettingsPage from './pages/SettingsPage'
+import CharacterPage from './pages/CharacterPage'
 import GuestDataNotice from './components/GuestDataNotice'
 import { useAuth } from './auth'
 
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/wardrobe/scan" element={<Protected><ScanClosetPage /></Protected>} />
         <Route path="/wardrobe/:id/edit" element={<Protected><EditClothingPage /></Protected>} />
         <Route path="/wardrobe/add" element={<Protected><AddClothingPage /></Protected>} />
+        <Route path="/character" element={<Protected><CharacterPage /></Protected>} />
         <Route path="/events" element={<Protected><EventsPage /></Protected>} />
         <Route path="/events/new" element={<Protected><NewEventPage /></Protected>} />
         <Route path="/events/:id/edit" element={<Protected><EditEventPage /></Protected>} />
