@@ -63,6 +63,9 @@ export const ruleConfig = {
   newItemDays: 3,
   // 알맞은 조합이 전부 필요 보온보다 이 점수 넘게 두꺼운데, 이 점수 안으로 조금 모자란 조합이 있으면 두꺼운 것 대신 모자란 쪽을 고르고 '딱 맞는 옷이 부족'으로 알린다
   maxOvershoot: 4,
+  // 두꺼운 겉옷은 충분히 추울 때만 쓴다(필요 보온 기준: 6 = 판단 기온 17℃ 미만, 10 = 9℃ 미만). 그보다 따뜻한 날에는 옷장에 있어도 추천하지 않는다
+  coatMinRequired: 6,
+  paddingMinRequired: 10,
   maxShortfall: 4,
 }
 

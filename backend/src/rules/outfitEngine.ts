@@ -156,8 +156,10 @@ export function recommend(input: EngineInput): EngineResult {
   const temps = input.points.map((p) => p.temp)
   const diurnal = Math.max(...temps) - Math.min(...temps)
 
-  const own = input.clothes.filter((c) => c.owned)
-  const hasOwn = own.length > 0
+  // 두꺼운 겉옷(코트·패딩)은 그만큼 추운 날에만 쓴다: 21℃ 안팎에 반팔+반바지 위에 패딩을 얹는 추천을 막는다.
+  const usable = (c: WardrobeItem) => !(c.type === 'PADDING' && required < ruleConfig.paddingMinRequired) && !(c.type === 'COAT' && required < ruleConfig.coatMinRequired)
+  const own = input.clothes.filter((c) => c.owned && usable(c))
+  const hasOwn = input.clothes.some((c) => c.owned) // 두꺼운 겉옷만 걸러져 own 이 비어도 "옷이 없다"가 아니다
 
   const rank = (c: Candidate): (number | string)[] => {
     const o = c.outer
@@ -186,7 +188,7 @@ export function recommend(input: EngineInput): EngineResult {
       valid = cands.filter((c) => c.total === maxTotal)
     } else {
       // 상의/하의가 없는 옷장 -> 일반 타입 추천(owned=false)
-      cands = buildCandidates(genericWardrobe())
+      cands = buildCandidates(genericWardrobe().filter(usable))
       valid = cands.filter((c) => c.total >= required)
       if (valid.length === 0) {
         const maxTotal = Math.max(...cands.map((c) => c.total))

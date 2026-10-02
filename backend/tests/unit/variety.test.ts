@@ -209,3 +209,44 @@ describe('지나치게 두꺼운 조합은 권하지 않는다 (21℃에 패딩 
     }
   })
 })
+
+describe('두꺼운 겉옷(패딩·코트)은 충분히 추운 날에만 쓴다', () => {
+  const closet = () => [
+    cloth('SHORT_SLEEVE', 'WHITE'),
+    cloth('SHORTS', 'GRAY'),
+    cloth('PANTS', 'BLUE'),
+    cloth('SWEATSHIRT', 'GRAY'),
+    cloth('PADDING', 'BLACK', 'THICK', { windproof: true }),
+    cloth('COAT', 'BEIGE', 'THICK', { windproof: true }),
+  ]
+  const usedTypes = (temp: number, seed?: string) => run(closet(), temp, seed).items.map((i) => i.type)
+
+  it.each([25, 21, 18, 17, 15, 13, 11, 10])('%d℃: 패딩은 추천하지 않는다', (t) => {
+    for (const seed of [undefined, ...days.slice(0, 6)]) expect(usedTypes(t, seed)).not.toContain('패딩')
+  })
+
+  it.each([25, 21, 18])('%d℃: 코트도 추천하지 않는다', (t) => {
+    for (const seed of [undefined, ...days.slice(0, 6)]) expect(usedTypes(t, seed)).not.toContain('코트')
+  })
+
+  it('옷장에 패딩만 겉옷으로 있어도, 선선한(15℃) 날에는 패딩 대신 모자라도 가벼운 조합으로 알린다', () => {
+    const only = [cloth('SHORT_SLEEVE', 'WHITE'), cloth('SHORTS', 'GRAY'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
+    for (const seed of [undefined, ...days.slice(0, 4)]) {
+      const r = run(only, 15, seed)
+      expect(r.items.map((i) => i.type)).not.toContain('패딩')
+      expect(r.insufficientWardrobe).toBe(true)
+    }
+  })
+
+  it('정말 추운 날(5℃)에는 두꺼운 겉옷(패딩·코트)을 권한다', () => {
+    const t = usedTypes(5)
+    expect(t.includes('패딩') || t.includes('코트')).toBe(true)
+    const onlyPadding = [cloth('SWEATSHIRT', 'GRAY'), cloth('PANTS', 'BLUE'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
+    expect(run(onlyPadding, 5).items.map((i) => i.type)).toContain('패딩')
+  })
+
+  it('패딩만 있는 옷장도 "옷이 비었다"로 취급하지 않는다', () => {
+    const r = run([cloth('PADDING', 'BLACK', 'THICK')], 22)
+    expect(r.reasonCodes).not.toContain('EMPTY_WARDROBE_GENERIC')
+  })
+})
