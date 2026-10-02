@@ -17,8 +17,7 @@ export const clothingTypes = ['반팔', '긴팔', '맨투맨', '니트', '후드
 export const categories = [
   { name: '상의', types: ['반팔', '긴팔', '맨투맨', '니트', '후드티'] },
   { name: '하의', types: ['바지', '반바지', '치마'] },
-  { name: '가벼운 겉옷', types: ['바람막이', '자켓'] },
-  { name: '코트·패딩', types: ['코트', '패딩'] },
+  { name: '겉옷', types: ['바람막이', '자켓', '코트', '패딩'] },
 ]
 export const thicknesses = ['얇음', '보통', '두꺼움']
 export const colorNames = ['검정', '회색', '흰색', '베이지', '갈색', '카키', '초록', '네이비', '파랑', '하늘색', '빨강', '분홍', '주황', '노랑', '보라', '기타']

@@ -187,7 +187,7 @@ export default function HomePage() {
   const wear = {
     top: pick(categories[0]!.types),
     bottom: pick(categories[1]!.types),
-    outer: pick([...categories[2]!.types, ...categories[3]!.types]),
+    outer: pick(categories[2]!.types),
   }
 
   const recId = rec?.id ?? null

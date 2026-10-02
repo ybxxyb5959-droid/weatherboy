@@ -2271,3 +2271,44 @@ a.card {
   outline: 2px dashed var(--ink);
   outline-offset: 4px;
 }
+
+/* 새 옷이 빨랫줄에 걸린다: 지울 때 집게가 풀리고 떨어지는 모습의 반대 */
+.hung.arriving .hang svg[role='img'] {
+  animation: wb-hang-in 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) var(--arrive-delay, 0s) both;
+  transform-origin: 50% 0;
+}
+.hung.arriving .hang .pin:nth-child(1) {
+  animation: wb-pin-in-left 0.5s ease-out calc(var(--arrive-delay, 0s) + 0.45s) both;
+}
+.hung.arriving .hang .pin:nth-child(2) {
+  animation: wb-pin-in-right 0.5s ease-out calc(var(--arrive-delay, 0s) + 0.45s) both;
+}
+.hung.arriving .label {
+  animation: wb-label-in 0.4s ease calc(var(--arrive-delay, 0s) + 0.7s) both;
+}
+@keyframes wb-hang-in {
+  0% { transform: translateY(-150px) rotate(14deg); opacity: 0; }
+  40% { opacity: 1; }
+  60% { transform: translateY(6px) rotate(-5deg); }
+  80% { transform: translateY(-2px) rotate(2deg); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes wb-pin-in-left {
+  from { transform: translate(-30px, -34px) rotate(-75deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes wb-pin-in-right {
+  from { transform: translate(30px, -34px) rotate(75deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes wb-label-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hung.arriving .hang svg[role='img'],
+  .hung.arriving .hang .pin,
+  .hung.arriving .label {
+    animation: none;
+  }
+}

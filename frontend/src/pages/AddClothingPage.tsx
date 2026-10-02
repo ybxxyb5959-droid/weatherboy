@@ -73,9 +73,11 @@ export default function AddClothingPage() {
     setError('')
     setDone('')
     let saved = 0
+    const ids: string[] = []
     try {
       for (const d of queue) {
-        await api('POST', '/api/clothes', { type: d.type, color: d.color, pattern: d.pattern })
+        const row = await api<{ id: string }>('POST', '/api/clothes', { type: d.type, color: d.color, pattern: d.pattern })
+        ids.push(row.id)
         saved++
       }
     } catch (e) {
@@ -86,7 +88,7 @@ export default function AddClothingPage() {
       return
     }
     if (!another) {
-      nav('/wardrobe')
+      nav('/wardrobe', { state: { hung: ids } }) // 옷장에서 새 옷이 빨랫줄에 걸리는 모습을 보여준다
       return
     }
     setDrafts([])

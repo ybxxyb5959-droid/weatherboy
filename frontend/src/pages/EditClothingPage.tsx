@@ -40,7 +40,7 @@ function Editor({ cloth }: { cloth: Clothing }) {
     setErr('')
     try {
       await api('PATCH', `/api/clothes/${cloth.id}`, { type: v.type, color: v.color, pattern: v.pattern })
-      nav('/wardrobe')
+      nav('/wardrobe', { state: { hung: [cloth.id] } }) // 고친 옷을 다시 걸어준다
     } catch (e) {
       setErr(errorMessage(e))
       setSaving(false)

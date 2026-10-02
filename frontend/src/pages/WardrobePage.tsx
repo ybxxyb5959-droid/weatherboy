@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -18,6 +18,12 @@ const nameOf = (c: Clothing) => `${c.color}${c.pattern && c.pattern !== '무지'
 export default function WardrobePage() {
   const { data, error, loading, reload } = useAsync(() => api<Clothing[]>('GET', '/api/clothes'))
   const nav = useNavigate()
+  const location = useLocation()
+  // 방금 추가/수정한 옷: 빨랫줄에 새로 걸리는 모습을 보여준다. 새로고침 때 다시 재생되지 않게 기록은 바로 지운다.
+  const [arriving] = useState<string[]>(() => ((location.state as { hung?: string[] } | null)?.hung ?? []))
+  useEffect(() => {
+    if (arriving.length > 0) nav(location.pathname, { replace: true, state: null })
+  }, [arriving, nav, location.pathname])
   const [deleteMode, setDeleteMode] = useState(false)
   const [target, setTarget] = useState<Clothing | null>(null) // "삭제할게요" 확인 중인 옷
   const [leaving, setLeaving] = useState<string[]>([]) // 빨랫줄에서 떨어지는 중인 옷
@@ -27,6 +33,12 @@ export default function WardrobePage() {
   const clothes = (data ?? []).filter((c) => !gone.includes(c.id))
   const samples = clothes.filter((c) => c.isSample)
   const [confirming, setConfirming] = useState(false)
+  // 걸리는 옷이 줄 오른쪽 끝 화면 밖에 있으면 보이는 곳으로 스크롤한다
+  const hasData = data !== null
+  useEffect(() => {
+    if (!hasData || arriving.length === 0) return
+    document.querySelector(`[data-hung-id="${arriving[0]}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [hasData, arriving])
   const groups = categories
     .map((cat) => ({ name: cat.name, items: clothes.filter((c) => cat.types.includes(c.type)) }))
     .filter((g) => g.items.length > 0)
@@ -107,7 +119,7 @@ export default function WardrobePage() {
               <div className="cline-scroll" tabIndex={0} aria-label={`${g.name} 빨랫줄`}>
                 <div className={`cline-track l${gi % 3}`}>
                   {g.items.map((c, i) => (
-                    <div key={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}`}>
+                    <div key={c.id} data-hung-id={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}${arriving.includes(c.id) ? ' arriving' : ''}`} style={arriving.includes(c.id) ? ({ '--arrive-delay': `${arriving.indexOf(c.id) * 0.3}s` } as React.CSSProperties) : undefined}>
                       <div className="hang">
                         <Clothespin style={{ left: 20, top: -12 }} />
                         <Clothespin style={{ left: 50, top: -12 }} />
