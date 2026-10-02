@@ -157,24 +157,42 @@ export async function ensureMidTerm(region: Region, now = new Date()): Promise<D
 }
 
 // ───── 대기질 ─────
+const AIR_STALE_OK_MS = 3 * 3600_000 // 새로 못 받아오면 이 시간 안의 마지막 값은 그대로 보여준다
+const airInFlight = new Map<string, Promise<AirQualityReading | null>>()
+
+const toReading = (key: string, r: { stationName: string | null; pm10: number | null; pm25: number | null; pm10Grade: number | null; pm25Grade: number | null }): AirQualityReading => ({
+  region: key, stationName: r.stationName, pm10: r.pm10, pm25: r.pm25, pm10Grade: r.pm10Grade, pm25Grade: r.pm25Grade,
+})
+
+/**
+ * 시도+구 단위 캐시(30분). 같은 지역을 동시에 여러 곳(날씨 화면/추천/수집)에서 물어도 외부 호출은 한 번만 나간다.
+ * 측정소 이름이 구 이름과 달라도 캐시가 맞도록 캐시 키는 요청한 지역(시도|구)으로 정한다.
+ */
 export async function getAirQuality(region: Region, now = new Date()): Promise<AirQualityReading | null> {
   if (!region.sido) return null
-  const key = region.sido
-  const recent = await prisma.airQuality.findFirst({ where: { region: key, fetchedAt: { gt: new Date(now.getTime() - AIR_TTL_MS) } }, orderBy: { fetchedAt: 'desc' } })
-  if (recent && recent.stationName === (region.district ?? null)) {
-    return { region: key, stationName: recent.stationName, pm10: recent.pm10, pm25: recent.pm25, pm10Grade: recent.pm10Grade, pm25Grade: recent.pm25Grade }
-  }
+  const key = `${region.sido}|${region.district ?? ''}`
+  const fresh = await prisma.airQuality.findFirst({ where: { region: key, fetchedAt: { gt: new Date(now.getTime() - AIR_TTL_MS) } }, orderBy: { fetchedAt: 'desc' } })
+  if (fresh) return toReading(key, fresh)
   if (!providers.air.configured) return null
+  const pending = airInFlight.get(key)
+  if (pending) return pending
+  const p = fetchAir(region, key, now).finally(() => airInFlight.delete(key))
+  airInFlight.set(key, p)
+  return p
+}
+
+async function fetchAir(region: Region, key: string, now: Date): Promise<AirQualityReading | null> {
   const t0 = Date.now()
   try {
-    const r = await providers.air.fetch(region.sido, region.district)
+    const r = await providers.air.fetch(region.sido as string, region.district)
     await prisma.airQuality.create({ data: { region: key, stationName: r.stationName ?? region.district ?? null, pm10: r.pm10, pm25: r.pm25, pm10Grade: r.pm10Grade, pm25Grade: r.pm25Grade } })
     await logCollect('air', key, 'SUCCESS', null, t0)
-    return r
+    return { ...r, region: key }
   } catch (e) {
-    // AirKorea 실패가 날씨 전체 실패로 이어지지 않는다 (Partial Failure)
+    // AirKorea 실패가 날씨 전체 실패로 이어지지 않는다 (Partial Failure). 최근 값이 있으면 그걸 쓴다.
     await logCollect('air', key, 'PARTIAL', e instanceof Error ? e.message : String(e), t0)
-    return null
+    const last = await prisma.airQuality.findFirst({ where: { region: key, fetchedAt: { gt: new Date(now.getTime() - AIR_STALE_OK_MS) } }, orderBy: { fetchedAt: 'desc' } })
+    return last ? toReading(key, last) : null
   }
 }
 
@@ -187,6 +205,11 @@ export interface WindowForecast {
   tempMax: number | null
   stale: boolean
   usedMid: boolean
+  /** 단기예보 발표 시각(없으면 null) */
+  issuedAt: Date | null
+  /** 외출 구간 안에서 시간별 예보가 있는 시각 수 / 구간이 기대하는 시각 수 */
+  shortCount: number
+  expectedCount: number
 }
 
 export function toOutingPoint(h: HourlyForecast): { point: OutingPoint; method: string } {
@@ -202,7 +225,8 @@ export function toOutingPoint(h: HourlyForecast): { point: OutingPoint; method: 
 export async function forecastForWindow(region: Region, start: Date, end: Date, now = new Date()): Promise<WindowForecast> {
   let hourly: HourlyForecast[] = []
   let stale = false
-  const out: WindowForecast = { stage: 'WAITING', points: [], feelsMethod: 'FALLBACK_TEMP', tempMin: null, tempMax: null, stale: false, usedMid: false }
+  let issuedAt: Date | null = null
+  const out: WindowForecast = { stage: 'WAITING', points: [], feelsMethod: 'FALLBACK_TEMP', tempMin: null, tempMax: null, stale: false, usedMid: false, issuedAt: null, shortCount: 0, expectedCount: 0 }
   if (end.getTime() < now.getTime() - 3600_000) return out
 
   if (start.getTime() - now.getTime() < 4 * DAY) {
@@ -210,6 +234,7 @@ export async function forecastForWindow(region: Region, start: Date, end: Date, 
       const s = await ensureShortTerm(region.nx, region.ny, now)
       hourly = s.hourly
       stale = s.stale
+      issuedAt = s.issuedAt
     } catch (e) {
       if (!(e instanceof AppError)) throw e
       if (e.code === 'WEATHER_NOT_CONFIGURED') throw e
@@ -225,6 +250,10 @@ export async function forecastForWindow(region: Region, start: Date, end: Date, 
   }
   const shortDays = new Set(inWin.map((h) => kstDate(h.targetAt)))
   if (inWin.length > 0) out.stage = 'SHORTTERM'
+  out.issuedAt = issuedAt
+  out.shortCount = inWin.length
+  // 이미 지난 시간은 예보가 없어도 부족한 게 아니므로, 지금부터 끝까지만 센다
+  out.expectedCount = Math.max(1, Math.floor((end.getTime() - Math.max(start.getTime(), now.getTime() - 3600_000)) / 3600_000) + 1)
 
   // 단기예보가 덮지 못한 날짜 -> 중기예보
   const days: string[] = []

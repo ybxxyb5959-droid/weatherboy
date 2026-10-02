@@ -41,6 +41,25 @@ export default function HomePage() {
   const favorites = useAsync(() => api<Favorite[]>('GET', '/api/favorites'))
   const favList = favorites.data ?? []
 
+  // AI 설명은 추천과 따로 만들어져서, 아직 없으면 잠시 뒤 조용히(화면을 비우지 않고) 다시 불러온다.
+  const aiPending = !recommendation.loading && recommendation.data?.aiPending === true
+  const setRecData = recommendation.setData
+  useEffect(() => {
+    if (!aiPending) return
+    let tries = 0
+    const t = setInterval(() => {
+      tries++
+      api<ApiRecommendation>('GET', `/api/recommendations/today${qs}`)
+        .then((r) => {
+          setRecData(r)
+          if (!r.aiPending) clearInterval(t)
+        })
+        .catch(() => clearInterval(t))
+      if (tries >= 8) clearInterval(t)
+    }, 3000)
+    return () => clearInterval(t)
+  }, [aiPending, qs, setRecData])
+
   const [showWhy, setShowWhy] = useState(false)
   const [editing, setEditing] = useState(false)
   const layout = useHomeLayout()
@@ -118,9 +137,11 @@ export default function HomePage() {
   )
 
   const w = weather.data
-  const rec = recommendation.data
+  // 지역을 바꾸는 중에 이전 지역의 추천이 남아 보이지 않게, 불러오는 동안은 비운다
+  const rec = recommendation.loading ? null : recommendation.data
 
-  if (weather.loading || recommendation.loading) {
+  // 날씨만 있으면 날씨부터 보여준다. 추천이 늦거나 실패해도 날씨 화면은 막히지 않는다.
+  if (weather.loading) {
     return (
       <main className="home">
         {header}
@@ -130,14 +151,14 @@ export default function HomePage() {
     )
   }
 
-  if (!w || !rec) {
+  if (!w) {
     return (
       <main className="home">
         {header}
         {notice && <p role="alert">{notice}</p>}
         <div className="empty">
           <StickPerson mood="empty" size={140} />
-          <p role="alert">{weather.error ?? recommendation.error ?? '정보를 불러오지 못했어요.'}</p>
+          <p role="alert">{weather.error ?? '정보를 불러오지 못했어요.'}</p>
           <div className="row">
             <button
               type="button"
@@ -160,7 +181,7 @@ export default function HomePage() {
     )
   }
 
-  const items = altIdx < 0 ? rec.items : (rec.alternatives[altIdx] ?? rec.items)
+  const items = rec ? (altIdx < 0 ? rec.items : (rec.alternatives[altIdx] ?? rec.items)) : []
   // 지금 보여주는 조합(기본/대안)을 캐릭터가 그대로 입는다
   const pick = (types: string[]) => items.find((it) => types.includes(it.type))
   const wear = {
@@ -169,11 +190,11 @@ export default function HomePage() {
     outer: pick([...categories[2]!.types, ...categories[3]!.types]),
   }
 
-  const recId = rec.id
+  const recId = rec?.id ?? null
   // 준비물: 필요한 것만. 선크림은 해가 강한 날(맑음/폭염/자외선)에만.
   const gear: GearKind[] = []
-  if (rec.needUmbrella) gear.push('umbrella')
-  if (rec.needMask) gear.push('mask')
+  if (rec?.needUmbrella) gear.push('umbrella')
+  if (rec?.needMask) gear.push('mask')
   if (['clear', 'heat', 'uv'].includes(w.condition)) gear.push('sunscreen')
   // 저장되면(이미 저장돼 있어도) true. 실패하면 false 를 돌려줘 후기 카드가 원래대로 돌아가게 한다.
   const sendFeedback = async (f: '추웠어요' | '딱 좋아요' | '더웠어요'): Promise<boolean> => {
@@ -213,6 +234,18 @@ export default function HomePage() {
     if (routine.outAt) commuteMarks.push({ hour: Number(routine.outAt.split(':')[0]), label: '외출' })
     if (routine.homeAt) commuteMarks.push({ hour: Number(routine.homeAt.split(':')[0]), label: '귀가' })
   }
+
+  // 추천을 아직 못 받았을 때(계산 중이거나 실패) 추천 자리에 보여줄 안내
+  const recWaiting = recommendation.error ? (
+    <div className="empty">
+      <p role="alert">{recommendation.error}</p>
+      <button type="button" className="dbtn w1 small" onClick={recommendation.reload}>
+        추천 다시 불러오기
+      </button>
+    </div>
+  ) : (
+    <p className="tiny" role="status">옷차림을 고르는 중이에요…</p>
+  )
 
   const blocks: Record<BlockId, ReactNode> = {
     weather: (
@@ -273,7 +306,14 @@ export default function HomePage() {
 
       </>
     ),
-    character: (
+    character: !rec ? (
+      <section className="speech">
+        <StickPerson mood="stand" size={165} wear={wear} umbrella={false} />
+        <div className="say">
+          <HandText>{recommendation.error ? '추천을 못 불러왔어요' : '옷 고르는 중…'}</HandText>
+        </div>
+      </section>
+    ) : (
       <section className="speech">
         <StickPerson mood="stand" size={165} wear={wear} umbrella={rec.needUmbrella} />
         <div className="say">
@@ -286,11 +326,24 @@ export default function HomePage() {
     ),
     // 외출 시간은 내 위치 기준이라, 다른 지역을 구경 중일 땐 숨긴다
     commute: target.kind === 'home' ? <CommuteLine hourly={w.hourly ?? []} routine={routine} /> : null,
-    recommend: (
+    recommend: !rec ? (
+      <section className="section">
+        <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
+        <hr className="scribble under-title" />
+        {recWaiting}
+      </section>
+    ) : (
       <section className="section">
         <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
         <hr className="scribble under-title" />
         {rec.basis && <p className="tiny basis">{basisText(rec.basis)}</p>}
+        {rec.basis?.reliability.level === 'CAUTION' && (
+          <ul className="tiny caution" aria-label="예보 주의">
+            {rec.basis.reliability.notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        )}
         <div className="outfit">
           {items.map((it, i) => (
             <div key={`${it.type}-${it.clothingId ?? it.label}-${i}`} className="row">
@@ -318,7 +371,7 @@ export default function HomePage() {
               {rec.reasons.map((r) => (
                 <li key={r}>{r}</li>
               ))}
-              {rec.aiExplanation && <li>{rec.aiExplanation}</li>}
+              {rec.aiExplanation ? <li>{rec.aiExplanation}</li> : rec.aiPending ? <li className="tiny">AI 설명을 쓰는 중이에요…</li> : null}
             </ul>
           </div>
         )}

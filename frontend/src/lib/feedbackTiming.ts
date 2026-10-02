@@ -50,5 +50,10 @@ export function firstSeenToday(): number {
 }
 
 export const feedbackDoneKey = (recId: string) => `wb.feedbackDone.${recId}`
-export const getFeedbackDone = (recId: string) => read(feedbackDoneKey(recId))
-export const setFeedbackDone = (recId: string, rating: string) => write(feedbackDoneKey(recId), rating)
+const dayDoneKey = () => `wb.feedbackDay.${today()}`
+// 옷장이나 설정이 바뀌어 오늘 추천의 id 가 새로 만들어져도, 오늘 이미 후기를 남겼다면 다시 묻지 않는다.
+export const getFeedbackDone = (recId: string) => read(feedbackDoneKey(recId)) ?? read(dayDoneKey())
+export const setFeedbackDone = (recId: string, rating: string) => {
+  write(feedbackDoneKey(recId), rating)
+  write(dayDoneKey(), rating)
+}

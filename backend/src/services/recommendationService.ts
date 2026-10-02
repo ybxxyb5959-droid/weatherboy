@@ -3,7 +3,7 @@ import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
-import { explain } from './ai/explain.js'
+import { aiEnabled, explain } from './ai/explain.js'
 import { forecastForWindow, getAirQuality, type Region, type WindowForecast } from './weather/weatherService.js'
 
 export const TODAY_OUTING = { start: '07:00', end: '22:00' }
@@ -70,6 +70,8 @@ export interface RecommendationBasis {
   /** ROUTINE: 내 하루 패턴 / DEFAULT: 기본 07~22시 / NOW: 남은 시간이 짧아 지금부터 3시간 */
   source: WindowSource
   place: string | null
+  /** 예보를 얼마나 믿어도 되는지. 부족하거나 오래된 데이터가 있으면 notes 에 이유를 적는다 */
+  reliability: { level: 'OK' | 'CAUTION'; notes: string[] }
 }
 
 export interface RecommendationView {
@@ -86,6 +88,8 @@ export interface RecommendationView {
   alternatives: EngineResult['alternatives']
   insufficientWardrobe: boolean
   aiExplanation: string | null
+  /** AI 설명을 만드는 중이다. 잠시 뒤 다시 불러오면 들어 있다 */
+  aiPending: boolean
   forecastStage: string
   version: number
   /** 오늘 추천에서만 채운다(일정 추천은 일정 시간이 기준) */
@@ -111,6 +115,7 @@ export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: 
     alternatives: r.alternatives,
     insufficientWardrobe: r.insufficientWardrobe,
     aiExplanation: o.aiExplanation,
+    aiPending: o.id !== null && o.aiExplanation == null && aiEnabled(),
     forecastStage: o.stage ?? r.forecastStage ?? 'SHORTTERM',
     version: o.version,
   }
@@ -171,12 +176,38 @@ async function refreshIfSameOutfit(latest: Recommendation | null, result: Engine
   })
 }
 
-async function maybeExplain(result: EngineResult): Promise<string | null> {
-  try {
-    return await explain(result)
-  } catch {
-    return null
+const explaining = new Set<string>()
+
+/**
+ * AI 설명은 추천 응답을 기다리게 하지 않는다. 추천을 먼저 저장해 돌려주고, 설명은 뒤에서 만들어 같은 행에 채운다.
+ * 화면은 aiPending 이면 잠시 뒤 다시 불러온다. 실패해도 추천에는 영향이 없다.
+ */
+function explainInBackground(rec: Pick<Recommendation, 'id' | 'aiExplanation'>, result: EngineResult): void {
+  if (rec.aiExplanation != null || !aiEnabled() || explaining.has(rec.id)) return
+  explaining.add(rec.id)
+  void (async () => {
+    try {
+      const text = await explain(result)
+      if (text) await prisma.recommendation.update({ where: { id: rec.id }, data: { aiExplanation: text } })
+    } catch {
+      /* 설명 없이도 추천은 유효하다 */
+    } finally {
+      explaining.delete(rec.id)
+    }
+  })()
+}
+
+/** 예보의 신뢰도: 오래됐거나, 중기예보가 섞였거나, 외출 시간 일부의 예보가 없으면 이유를 알려준다. */
+export function reliabilityOf(w: WindowForecast, now: Date): RecommendationBasis['reliability'] {
+  const notes: string[] = []
+  if (w.stale) notes.push('기상청 응답이 늦어 저장해 둔 예보로 계산했어요')
+  if (w.issuedAt) {
+    const hours = Math.floor((now.getTime() - w.issuedAt.getTime()) / 3600_000)
+    if (hours >= 9) notes.push(`예보가 ${hours}시간 전에 발표된 거라 조금 오래됐어요`)
   }
+  if (w.usedMid) notes.push('일부 시간은 중기예보(하루 최저·최고 기온)로 계산해서 덜 정확해요')
+  else if (w.expectedCount > 0 && w.shortCount / w.expectedCount < 0.7) notes.push(`외출 시간 중 ${w.shortCount}/${w.expectedCount}시간 분량의 예보만 있어요`)
+  return { level: notes.length ? 'CAUTION' : 'OK', notes }
 }
 
 /** 오늘 추천: 같은 날 같은 옷 조합이면 같은 Recommendation(id)을 재사용해 피드백이 안정적으로 붙게 한다. 조합이 바뀌면 새 버전. */
@@ -186,14 +217,16 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
   if (!c) throw new AppError(502, 'WEATHER_UNAVAILABLE', '지금은 날씨 정보를 가져올 수 없어요.')
   // 다른 지역(즐겨찾기/검색)은 저장하지 않는다: 하루 1개 저장 추천은 내 기본 위치 기준이고, 피드백도 거기에만 붙는다.
   const placeOf = (r: Region) => [r.sido, r.district].filter(Boolean).join(' ') || null
-  const basis: RecommendationBasis = { startAt: start.toISOString(), endAt: end.toISOString(), source, place: regionOverride ? placeOf(regionOverride) : (user.locationName ?? placeOf(c.region)) }
+  const basis: RecommendationBasis = { startAt: start.toISOString(), endAt: end.toISOString(), source, place: regionOverride ? placeOf(regionOverride) : (user.locationName ?? placeOf(c.region)), reliability: reliabilityOf(c.window, now) }
   if (regionOverride) return { ...viewFromResult({ ...c.result, forecastStage: c.window.stage }, { id: null, aiExplanation: null, version: 0, stage: c.window.stage }), basis }
   const dayStart = kstStartOfDay(now)
   const latest = await prisma.recommendation.findFirst({ where: { userId: user.id, eventId: null, targetStartAt: dayStart }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
   const reused = await refreshIfSameOutfit(latest, c.result, stage)
-  if (reused) return { ...viewOf(reused, stage), basis }
-  const aiExplanation = await maybeExplain(c.result)
+  if (reused) {
+    explainInBackground(reused, c.result)
+    return { ...viewOf(reused, stage), basis }
+  }
   const rec = await prisma.recommendation.create({
     data: {
       userId: user.id,
@@ -203,9 +236,9 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
       reasonCodes: c.result.reasonCodes,
       decisionKey: c.result.decisionKey,
       version: (latest?.version ?? 0) + 1,
-      aiExplanation,
     },
   })
+  explainInBackground(rec, c.result)
   return { ...viewOf(rec, stage), basis }
 }
 
@@ -229,10 +262,10 @@ export async function saveEventRecommendation(event: Event, c: Computed): Promis
         reasonCodes: c.result.reasonCodes,
         decisionKey: c.result.decisionKey,
         version: (latest?.version ?? 0) + 1,
-        aiExplanation: await maybeExplain(c.result),
       },
     })
   }
+  explainInBackground(saved!, c.result)
   await prisma.event.update({ where: { id: event.id }, data: { forecastStage: stage, recommendationVersion: saved!.version, lastCheckedAt: new Date() } })
   return saved!
 }

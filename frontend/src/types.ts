@@ -66,9 +66,11 @@ export interface ApiRecommendation {
   alternatives: ApiOutfitItem[][]
   insufficientWardrobe: boolean
   aiExplanation: string | null
+  /** AI 설명을 만드는 중: 잠시 뒤 다시 불러오면 들어 있다 */
+  aiPending?: boolean
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'
   /** 오늘 추천이 계산된 기준 시간/지역 */
-  basis?: { startAt: string; endAt: string; source: 'ROUTINE' | 'DEFAULT' | 'NOW'; place: string | null }
+  basis?: { startAt: string; endAt: string; source: 'ROUTINE' | 'DEFAULT' | 'NOW'; place: string | null; reliability: { level: 'OK' | 'CAUTION'; notes: string[] } }
 }
 
 export interface EventOutfit {
