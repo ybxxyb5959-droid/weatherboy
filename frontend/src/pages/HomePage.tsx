@@ -313,7 +313,6 @@ export default function HomePage() {
         </div>
       )}
 
-      <hr className="scribble" />
 
       </>
     ),
@@ -335,8 +334,6 @@ export default function HomePage() {
             ))}
           </ul>
         )}
-        {/* 외출·귀가 날씨: 제목과 졸라맨 사이. 외출 시간은 내 위치 기준이라 다른 지역을 구경 중일 땐 숨긴다 */}
-        {target.kind === 'home' && <CommuteLine hourly={w.hourly ?? []} routine={routine} />}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
           <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} />
@@ -349,6 +346,8 @@ export default function HomePage() {
             ))}
           </ul>
         </div>
+        {/* 외출·귀가 날씨: 졸라맨이 입은 옷 바로 아래. 외출 시간은 내 위치 기준이라 다른 지역을 구경 중일 땐 숨긴다 */}
+        {target.kind === 'home' && <CommuteLine hourly={w.hourly ?? []} routine={routine} />}
         {rec.insufficientWardrobe && <p className="tiny">옷장에 딱 맞는 옷이 부족해서 가장 가까운 조합이에요</p>}
         {items.some((it) => !it.owned) && <p className="tiny">옷장에 없는 옷이 섞여 있어요 (일반 추천)</p>}
         <div className="row stretch" style={{ marginTop: 14 }}>

@@ -78,15 +78,17 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <path d="M61 100 L44 136 M61 100 L80 133" />
         )}
         {/* 머리 */}
-        <path d="M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15" />
+        <path d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
         {mood === 'stand' ? (
-          // 오늘 추천: 후기 카드의 '딱 좋아요' 얼굴과 같다 (동그란 눈 + 활짝 웃는 입)
+          // 오늘 추천: 동글동글하고 귀엽게 (작은 점 눈 + 작은 미소 + 볼터치)
           <g>
             <g stroke="none">
-              <circle cx="53" cy="27.7" r="2.6" fill={ink} />
-              <circle cx="67" cy="27.7" r="2.6" fill={ink} />
+              <circle cx="53" cy="30" r="2.3" fill={ink} />
+              <circle cx="67" cy="30" r="2.3" fill={ink} />
+              <circle cx="48.5" cy="36" r="3.2" fill="#f4b9b2" opacity="0.85" />
+              <circle cx="71.5" cy="36" r="3.2" fill="#f4b9b2" opacity="0.85" />
             </g>
-            <path d="M49.6 35.5 Q60 47.2 70.4 35.5 Z" fill="#fcfcfa" strokeWidth="1.8" />
+            <path d="M56 36.5 Q60 40.5 64 36.5" strokeWidth="2" />
           </g>
         ) : (
           <>
