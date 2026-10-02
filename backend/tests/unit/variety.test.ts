@@ -39,7 +39,6 @@ describe('추천 다양성: 알맞은 조합이 여럿이면 날짜마다 돌아
       const r = run(wardrobe, 20, d)
       expect(r.insufficientWardrobe).toBe(false)
       expect(r.requiredWarmth).toBe(base.requiredWarmth)
-      expect(r.needOuter).toBe(base.needOuter) // 겉옷 필요 여부는 날씨가 정한다
     }
   })
 
@@ -77,5 +76,109 @@ describe('새 옷을 담으면 추천에 반영된다', () => {
     const c = cloth('CARDIGAN')
     expect(c.category).toBe('LIGHT_OUTER')
     expect(c.windproof).toBe(false)
+  })
+})
+
+describe('신고된 상황: 새로 담은 옷이 오늘 추천에 안 나오거나 늘 같은 옷만 나온다', () => {
+  const NOW = new Date('2026-10-05T03:00:00Z')
+  const old = new Date('2026-09-01T00:00:00Z')
+  const recent = new Date('2026-10-04T03:00:00Z') // 하루 전에 담음
+  // 12℃(필요 보온 6): 겉옷 없이 채우는 상의는 두꺼운 니트 하나뿐이다
+  const baseCloset = () => [
+    cloth('KNIT', 'GRAY', 'THICK', { createdAt: old }), // 보온 4+1=5
+    cloth('LONG_SLEEVE', 'BEIGE', 'NORMAL', { createdAt: old }),
+    cloth('SWEATSHIRT', 'GRAY', 'NORMAL', { createdAt: old }),
+    cloth('PANTS', 'BLUE', 'NORMAL', { createdAt: old }),
+    cloth('PANTS', 'BLACK', 'NORMAL', { createdAt: old }),
+    cloth('WINDBREAKER', 'GREEN', 'NORMAL', { createdAt: old }),
+    cloth('PADDING', 'BLACK', 'THICK', { createdAt: old }),
+  ]
+  const runAt = (clothes: WardrobeItem[], temp: number, seed: string) =>
+    recommend({ points: pts(temp), sensitivity: 'NORMAL', feedbackOffset: 0, eventKind: null, clothes, airGrade: 2, varietySeed: seed, now: NOW } as EngineInput)
+
+  it('최근에 담은 가디건은 선선한 날 바로 추천에 들어간다', () => {
+    const closet = baseCloset()
+    const cardigan = cloth('CARDIGAN', 'NAVY', 'NORMAL', { createdAt: recent })
+    closet.push(cardigan)
+    for (const d of days) {
+      const r = runAt(closet, 12, d)
+      expect(r.insufficientWardrobe).toBe(false)
+      expect(r.items.map((i) => i.clothingId)).toContain(cardigan.id)
+    }
+  })
+
+  it('최근에 담은 상의도 후보로 쓰인다', () => {
+    const closet = baseCloset()
+    const hoodie = cloth('HOODIE', 'BLACK', 'THICK', { createdAt: recent })
+    closet.push(hoodie)
+    for (const d of days) expect(runAt(closet, 12, d).items.map((i) => i.clothingId)).toContain(hoodie.id)
+  })
+
+  it('새 옷이 없어도 같은 조건에서 여러 가지 조합이 돌아가며 나온다 (한 가지로 굳지 않는다)', () => {
+    const closet = baseCloset()
+    const combos = new Set(days.map((d) => ids(runAt(closet, 12, d))))
+    expect(combos.size).toBeGreaterThanOrEqual(3)
+    const tops = new Set(days.map((d) => runAt(closet, 12, d).items[0]!.type))
+    expect(tops.size).toBeGreaterThanOrEqual(2) // 바지만 바뀌는 게 아니라 상의도 바뀐다
+  })
+
+  it('더운 날에는 최근에 담은 가디건이 있어도 걸치지 않는다', () => {
+    const closet = baseCloset()
+    closet.push(cloth('SHORT_SLEEVE', 'WHITE', 'THIN', { createdAt: old }), cloth('SHORTS', 'BLACK', 'THIN', { createdAt: old }), cloth('CARDIGAN', 'NAVY', 'NORMAL', { createdAt: recent }))
+    for (const d of days) expect(runAt(closet, 28, d).needOuter).toBe(false)
+  })
+
+  it('같은 날에는 몇 번을 물어도 같은 조합이다', () => {
+    const closet = baseCloset()
+    closet.push(cloth('CARDIGAN', 'NAVY', 'NORMAL', { createdAt: recent }))
+    const a = ids(runAt(closet, 12, 'u1:2026-10-05'))
+    for (let i = 0; i < 5; i++) expect(ids(runAt(closet, 12, 'u1:2026-10-05'))).toBe(a)
+  })
+})
+
+describe('"다른 조합 보기": 서로 다른 옷이 나온다', () => {
+  const NOW = new Date('2026-10-05T03:00:00Z')
+  const old = new Date('2026-09-01T00:00:00Z')
+  const recent = new Date('2026-10-04T03:00:00Z')
+  const closet = (extra: WardrobeItem[] = []) => [
+    cloth('KNIT', 'GRAY', 'THICK', { createdAt: old }),
+    cloth('HOODIE', 'BLACK', 'NORMAL', { createdAt: old }),
+    cloth('SWEATSHIRT', 'GRAY', 'NORMAL', { createdAt: old }),
+    cloth('LONG_SLEEVE', 'BEIGE', 'NORMAL', { createdAt: old }),
+    cloth('PANTS', 'BLUE', 'NORMAL', { createdAt: old }),
+    cloth('PANTS', 'BLUE', 'NORMAL', { createdAt: old }), // 겉보기에 똑같은 바지
+    cloth('PANTS', 'BLACK', 'NORMAL', { createdAt: old }),
+    cloth('WINDBREAKER', 'GREEN', 'NORMAL', { createdAt: old }),
+    cloth('CARDIGAN', 'BEIGE', 'NORMAL', { createdAt: old }),
+    ...extra,
+  ]
+  const runAt = (clothes: WardrobeItem[], seed: string) =>
+    recommend({ points: pts(12), sensitivity: 'NORMAL', feedbackOffset: 0, eventKind: null, clothes, airGrade: 2, varietySeed: seed, now: NOW } as EngineInput)
+  const label = (items: { label: string }[]) => items.map((i) => i.label).join(' + ')
+
+  it('메인과 대안이 모두 다른 조합이고, 같은 이름의 조합은 반복되지 않는다', () => {
+    for (const d of days) {
+      const r = runAt(closet(), d)
+      const all = [label(r.items), ...r.alternatives.map(label)]
+      expect(new Set(all).size).toBe(all.length)
+    }
+  })
+
+  it('대안에는 메인과 다른 상의가 들어 있다 (바지만 바꾼 변형으로 채우지 않는다)', () => {
+    for (const d of days) {
+      const r = runAt(closet(), d)
+      const tops = new Set([r.items[0]!.type, ...r.alternatives.map((a) => a[0]!.type)])
+      expect(tops.size).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('최근에 담은 옷은 메인이 아니어도 대안에서 볼 수 있다', () => {
+    const fresh = cloth('SHIRT', 'WHITE', 'NORMAL', { createdAt: recent })
+    const upper = cloth('SWEATSHIRT', 'NAVY', 'THICK', { createdAt: recent })
+    for (const d of days) {
+      const r = runAt(closet([fresh, upper]), d)
+      const used = new Set([...r.items, ...r.alternatives.flat()].map((i) => i.clothingId))
+      expect(used.has(upper.id)).toBe(true)
+    }
   })
 })

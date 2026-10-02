@@ -27,6 +27,8 @@ export interface WardrobeItem {
   windproof: boolean
   waterproof: boolean
   owned: boolean
+  /** 옷장에 담은 시각 (최근에 담은 옷을 우선 추천하는 데 쓴다) */
+  createdAt?: Date
 }
 
 export interface EngineInput {
@@ -38,6 +40,8 @@ export interface EngineInput {
   airGrade: number | null // AirKorea 1~4, 데이터 없으면 null
   /** 있으면 알맞은 조합이 여럿일 때 이 값(예: 사용자+날짜)으로 하나를 골라 매일 조금씩 다르게 추천한다. 같은 값이면 항상 같은 결과. */
   varietySeed?: string
+  /** 기준 시각 (최근에 담은 옷 판단용, 기본은 지금) */
+  now?: Date
   feelsMethod?: string // 체감온도 산출 방식(Reason Code용)
 }
 
@@ -192,12 +196,19 @@ export function recommend(input: EngineInput): EngineResult {
   }
   valid.sort(cmp)
   let best = valid[0]!
+  const newSince = (input.now ?? new Date()).getTime() - ruleConfig.newItemDays * 86400_000
+  const isNew = (i: WardrobeItem | null) => !!i?.createdAt && i.createdAt.getTime() >= newSince
   if (input.varietySeed && !insufficient) {
-    // 가장 가벼운 알맞은 조합과 같은 종류의 대응(바람/비 감점 같음, 겉옷 유무 같음)이고 보온이 slack 이내인 조합들 중에서 고른다
+    // 가장 가벼운 알맞은 조합과 바람/비 대응이 같고 보온이 slack 이내인 조합들 중에서 고른다.
+    // 선선한 날(필요 보온이 충분히 큰 날)에는 겉옷을 걸친 조합도 후보다: 겉옷 없이 채우는 상의가 하나뿐이어도 다른 옷이 나올 수 있게.
     const first = valid[0]!
     const [wp, rp] = rank(first)
-    const group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && !!c.outer === !!first.outer && c.total <= first.total + ruleConfig.varietyWarmthSlack)
-    if (group.length > 1) best = group[hashOf(input.varietySeed) % group.length]!
+    const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
+    let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
+    // 최근에 담은 옷이 든 조합이 있으면 그 안에서 고른다
+    const fresh = group.filter((c) => isNew(c.top) || isNew(c.bottom) || isNew(c.outer))
+    if (fresh.length > 0) group = fresh
+    if (group.length > 0) best = group[hashOf(input.varietySeed) % group.length]!
   }
   const toCombo = (c: Candidate): OutfitItem[] => [itemOf(c.top), itemOf(c.bottom), ...(c.outer ? [itemOf(c.outer)] : [])]
 
@@ -205,12 +216,40 @@ export function recommend(input: EngineInput): EngineResult {
   const altSource = (insufficient ? valid : cands.filter((c) => c.total >= required)).slice().sort(cmp)
   const alternatives: OutfitItem[][] = []
   const seen = new Set<string>([keyOf(best)])
-  for (const c of altSource) {
-    const k = keyOf(c)
-    if (seen.has(k)) continue
-    seen.add(k)
-    alternatives.push(toCombo(c))
-    if (alternatives.length >= ruleConfig.alternativesCount) break
+  if (!input.varietySeed) {
+    for (const c of altSource) {
+      const k = keyOf(c)
+      if (seen.has(k)) continue
+      seen.add(k)
+      alternatives.push(toCombo(c))
+      if (alternatives.length >= ruleConfig.alternativesCount) break
+    }
+  } else {
+    // 서로 다른 옷이 들어가도록 고른다: 이미 보여준 옷(상의>하의>겉옷 순으로 비중)과 겹치지 않을수록, 최근에 담은 옷일수록 먼저.
+    // 같은 이름("니트 + 파랑 바지")으로 보이는 조합은 한 번만 보여준다. 점수가 같으면 가벼운 조합이 먼저(위에서 정렬한 순서).
+    const labelKey = (c: Candidate) => toCombo(c).map((i) => i.label).join('|')
+    const shown = new Set<string>([labelKey(best)])
+    const used = new Set<string>([best.top.id, best.bottom.id, ...(best.outer ? [best.outer.id] : [])])
+    while (alternatives.length < ruleConfig.alternativesCount) {
+      let pick: Candidate | null = null
+      let pickScore = -1
+      for (const c of altSource) {
+        if (seen.has(keyOf(c)) || shown.has(labelKey(c))) continue
+        const score =
+          (used.has(c.top.id) ? 0 : 4) + (used.has(c.bottom.id) ? 0 : 2) + (c.outer && !used.has(c.outer.id) ? 2 : 0) + (isNew(c.top) || isNew(c.bottom) || isNew(c.outer) ? 1 : 0)
+        if (score > pickScore) {
+          pickScore = score
+          pick = c
+        }
+      }
+      if (!pick) break
+      seen.add(keyOf(pick))
+      shown.add(labelKey(pick))
+      used.add(pick.top.id)
+      used.add(pick.bottom.id)
+      if (pick.outer) used.add(pick.outer.id)
+      alternatives.push(toCombo(pick))
+    }
   }
 
   const items = toCombo(best)

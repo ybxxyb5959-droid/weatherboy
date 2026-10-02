@@ -15,7 +15,7 @@ export function regionOf(u: Pick<User, 'gridNx' | 'gridNy' | 'regionSido' | 'reg
 }
 
 export const toWardrobe = (c: Clothing): WardrobeItem => ({
-  id: c.id, type: c.type, thickness: c.thickness, color: c.color, pattern: c.pattern, category: c.category, warmth: c.warmth, windproof: c.windproof, waterproof: c.waterproof, owned: !c.isSample, // 확인 전 예시 옷은 '내 옷'으로 추천하지 않는다 (일반 추천)
+  id: c.id, type: c.type, thickness: c.thickness, color: c.color, pattern: c.pattern, category: c.category, warmth: c.warmth, windproof: c.windproof, waterproof: c.waterproof, createdAt: c.createdAt, owned: !c.isSample, // 확인 전 예시 옷은 '내 옷'으로 추천하지 않는다 (일반 추천)
 })
 
 export type WindowSource = 'ROUTINE' | 'DEFAULT' | 'NOW'
@@ -145,6 +145,7 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     airGrade: grade,
     feelsMethod: window.feelsMethod,
     // 오늘 추천은 날짜마다, 일정 추천은 일정마다 같은 조합이 계속 나오지 않게 돌려 고른다(같은 날/일정 안에서는 고정)
+    now,
     varietySeed: `${user.id}:${event?.id ?? kstDate(start)}`,
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')

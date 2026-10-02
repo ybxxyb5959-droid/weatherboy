@@ -57,7 +57,7 @@ export default function CommuteLine({ hourly, routine }: { hourly: ApiHourly[]; 
   if (!routine || (!routine.outAt && !routine.homeAt)) {
     return (
       <p className="commute hint">
-        <Link to="/settings/routine">
+        <Link to="/settings/personal">
           <HandText>외출·귀가 시간을 정하면 그 시간 날씨를 알려드려요 ›</HandText>
         </Link>
       </p>

@@ -56,7 +56,11 @@ export const ruleConfig = {
   outerWarmthMin: 2, // 겉옷 필요 판단: 필요 보온 - (상의+하의) > 0
   alternativesCount: 3,
   // 같은 날 비슷하게 알맞은 조합이 여러 개면, 가장 가벼운 조합보다 이만큼(보온 점수)까지는 후보로 보고 날짜마다 돌아가며 고른다
-  varietyWarmthSlack: 1,
+  varietyWarmthSlack: 2,
+  // 겉옷을 걸친 조합도 후보에 넣는 최소 필요 보온(선선한 날부터). 더운 날에 가디건을 걸치는 일이 없게 한다
+  varietyOuterMinRequired: 4,
+  // 이 기간(일) 안에 추가한 옷이 들어간 조합을 우선한다(새로 담은 옷이 바로 추천에 보이게)
+  newItemDays: 3,
 }
 
 export const dustGradeLabel: Record<number, string> = { 1: '좋음', 2: '보통', 3: '나쁨', 4: '매우나쁨' }

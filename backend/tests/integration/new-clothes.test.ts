@@ -9,6 +9,7 @@ beforeAll(async () => {
 })
 afterAll(async () => {
   vi.restoreAllMocks()
+  await prisma.forecastSnapshot.deleteMany({}) // 19℃ 예보를 캐시에 남기면 다음 테스트 파일(12℃ 기대)이 그걸 읽는다
   await prisma.$disconnect()
   await pool.end()
 })

@@ -88,8 +88,7 @@ function Legal({ sections }: { sections: LegalSection[] }) {
 
 const TITLES: Record<string, string> = {
   location: '내 위치 설정',
-  routine: '하루 패턴',
-  sensitivity: '개인 체감',
+  personal: '개인맞춤 설정',
   notify: '알림 설정',
   account: '계정',
   faq: '자주 묻는 질문',
@@ -185,8 +184,20 @@ export default function SettingsPage() {
           </>
         )}
 
-        {section === 'routine' && (
+        {section === 'personal' && (
           <>
+            <div className="field">
+              <div className="name">개인 체감</div>
+              <p>나는…</p>
+              <ChoiceRow options={sensOptions} value={s.sensitivity} onChange={(v) => void patch({ sensitivity: v })} />
+              <p className="tiny" style={{ marginTop: 12 }}>
+                추위를 많이 타면 같은 날씨에도 한 겹 더 따뜻하게, 더위를 많이 타면 조금 가볍게 추천해요.
+              </p>
+            </div>
+
+            <hr className="scribble" />
+
+            <div className="name">하루 패턴</div>
             <RoutineEditor value={routineDraft ?? s.routine ?? defaultRoutine} onChange={setRoutineDraft} />
             <div className="field">
               <DoodleButton
@@ -201,16 +212,6 @@ export default function SettingsPage() {
                 저장
               </DoodleButton>
             </div>
-          </>
-        )}
-
-        {section === 'sensitivity' && (
-          <>
-            <p>나는…</p>
-            <ChoiceRow options={sensOptions} value={s.sensitivity} onChange={(v) => void patch({ sensitivity: v })} />
-            <p className="tiny" style={{ marginTop: 12 }}>
-              추위를 많이 타면 같은 날씨에도 한 겹 더 따뜻하게, 더위를 많이 타면 조금 가볍게 추천해요.
-            </p>
           </>
         )}
 
@@ -326,8 +327,7 @@ export default function SettingsPage() {
 
       <Group seed={1}>
         <Row label="내 위치 설정" value={s.location} onClick={go('location')} />
-        <Row label="하루 패턴" value={routineLabel(s.routine)} onClick={go('routine')} />
-        <Row label="개인 체감" value={s.sensitivity} onClick={go('sensitivity')} />
+        <Row label="개인맞춤 설정" value={`${s.sensitivity} · ${routineLabel(s.routine)}`} onClick={go('personal')} />
         <Row label="알림 설정" value={notifyLabel} onClick={go('notify')} />
       </Group>
 
