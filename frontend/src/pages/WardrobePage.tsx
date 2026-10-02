@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -17,6 +17,7 @@ const nameOf = (c: Clothing) => `${c.color}${c.pattern && c.pattern !== '무지'
 
 export default function WardrobePage() {
   const { data, error, loading, reload } = useAsync(() => api<Clothing[]>('GET', '/api/clothes'))
+  const nav = useNavigate()
   const [deleteMode, setDeleteMode] = useState(false)
   const [target, setTarget] = useState<Clothing | null>(null) // "삭제할게요" 확인 중인 옷
   const [leaving, setLeaving] = useState<string[]>([]) // 빨랫줄에서 떨어지는 중인 옷
@@ -110,7 +111,13 @@ export default function WardrobePage() {
                       <div className="hang">
                         <Clothespin style={{ left: 20, top: -12 }} />
                         <Clothespin style={{ left: 50, top: -12 }} />
-                        <ClothingDoodle type={c.type} color={c.color} pattern={c.pattern} size={86} />
+                        {deleteMode ? (
+                          <ClothingDoodle type={c.type} color={c.color} pattern={c.pattern} size={86} />
+                        ) : (
+                          <button type="button" className="cloth-edit" aria-label={`${nameOf(c)} 고치기`} onClick={() => nav(`/wardrobe/${c.id}/edit`)}>
+                            <ClothingDoodle type={c.type} color={c.color} pattern={c.pattern} size={86} />
+                          </button>
+                        )}
                         {deleteMode && !leaving.includes(c.id) && (
                           <button type="button" className="del-badge" aria-label={`${nameOf(c)} 삭제`} onClick={() => setTarget(c)}>
                             ⛔

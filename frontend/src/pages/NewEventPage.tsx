@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import DatePicker from '../components/DatePicker'
 import TimePicker from '../components/TimePicker'
+import SayBox from '../components/SayBox'
 import { eventKinds } from '../mocks/events'
 import type { EventKind, PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
@@ -60,13 +61,14 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const span = multi && date && endDate ? dayNumber(endDate) - dayNumber(date) : null
 
   // 한 문장을 일정 칸으로 바꿔서 채운다. 제안일 뿐이라 사용자가 확인하고 저장한다.
-  const fillFromText = async () => {
-    if (thinking || say.trim().length < 2) return
+  const fillFromText = async (spoken?: string) => {
+    const text = (spoken ?? say).trim()
+    if (thinking || text.length < 2) return
     setThinking(true)
     setError('')
     setAiNote('')
     try {
-      const s = await api<EventSuggestion>('POST', '/api/ai/parse-event', { text: say.trim() })
+      const s = await api<EventSuggestion>('POST', '/api/ai/parse-event', { text })
       const k = (eventKinds as string[]).includes(s.kind) ? (s.kind as EventKind) : '기타'
       setKind(k)
       setTitle(s.title)
@@ -132,25 +134,18 @@ export function EventForm({ event }: { event?: PlanEvent }) {
         <h1>{event ? '일정 수정' : '일정 등록'}</h1>
       </div>
       {!event && (
-      <div className="field ai-box" style={{ marginTop: 0 }}>
-        <label className="name" htmlFor="say">✨ 말로 적기</label>
-        <div className="row">
-          <input
-            id="say"
-            type="text"
-            value={say}
-            maxLength={200}
-            placeholder="예: 다음주 금요일부터 2박 3일 제주 여행"
-            onChange={(e) => setSay(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void fillFromText()}
-          />
-          <DoodleButton seed={2} className="small" onClick={() => void fillFromText()} disabled={thinking || say.trim().length < 2}>
-            {thinking ? '읽는 중…' : '채워줘'}
-          </DoodleButton>
-        </div>
-        {aiNote && <p className="tiny ai-note">{aiNote}</p>}
-      </div>
-
+      <SayBox
+        id="say"
+        label="말로 적기"
+        placeholder="예: 다음주 금요일부터 2박 3일 제주 여행"
+        value={say}
+        onChange={setSay}
+        onSubmit={(t) => void fillFromText(t)}
+        busy={thinking}
+        busyLabel="읽는 중…"
+        submitLabel="채워줘"
+        note={aiNote}
+      />
       )}
       <div className="field" style={event ? { marginTop: 0 } : undefined}>
         <div className="name">일정 유형</div>

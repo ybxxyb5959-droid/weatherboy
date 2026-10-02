@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
 import EditEventPage from './pages/EditEventPage'
 import ScanClosetPage from './pages/ScanClosetPage'
+import EditClothingPage from './pages/EditClothingPage'
 import AddClothingPage from './pages/AddClothingPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/home" element={<Protected><HomePage /></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />
         <Route path="/wardrobe/scan" element={<Protected><ScanClosetPage /></Protected>} />
+        <Route path="/wardrobe/:id/edit" element={<Protected><EditClothingPage /></Protected>} />
         <Route path="/wardrobe/add" element={<Protected><AddClothingPage /></Protected>} />
         <Route path="/events" element={<Protected><EventsPage /></Protected>} />
         <Route path="/events/new" element={<Protected><NewEventPage /></Protected>} />
