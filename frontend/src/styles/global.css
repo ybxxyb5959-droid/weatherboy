@@ -2533,3 +2533,9 @@ a.card {
     overflow: visible;
   }
 }
+
+/* 일정 탭: 목록 제목(보고 있는 달) */
+.month-title {
+  margin: 2px 0 8px;
+  font-size: 22px;
+}

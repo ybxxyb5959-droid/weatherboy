@@ -4,7 +4,7 @@ import HandText from '../components/HandText'
 import CalendarConnectDialog, { ConnectionRow, type CalendarConn } from '../components/CalendarConnect'
 import { eventMood, isSceneMood } from '../lib/eventMood'
 import EventMenu from '../components/EventMenu'
-import MonthCalendar from '../components/MonthCalendar'
+import MonthCalendar, { type MonthView } from '../components/MonthCalendar'
 import StickPerson from '../components/StickPerson'
 import { formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
@@ -14,6 +14,18 @@ import { useAsync } from '../hooks'
 export default function EventsPage() {
   const { data, error, loading, reload } = useAsync(() => api<PlanEvent[]>('GET', '/api/events'))
   const events = data ?? []
+  // 보고 있는 달: 처음엔 오늘이 속한 달. 달력을 넘기면 그 달의 일정이 위쪽 목록에 뜬다.
+  const [view, setView] = useState<MonthView>(() => {
+    const t = new Date()
+    return { y: t.getFullYear(), m: t.getMonth() }
+  })
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  const monthStart = `${view.y}-${p2(view.m + 1)}-01`
+  const monthEnd = `${view.y}-${p2(view.m + 1)}-${p2(new Date(view.y, view.m + 1, 0).getDate())}`
+  // 그 달에 걸쳐 있는 일정(며칠짜리가 달을 넘어가도 양쪽 달에 보인다), 빠른 날짜순
+  const monthEvents = events
+    .filter((e) => e.startDate <= monthEnd && (e.endDate && e.endDate >= e.startDate ? e.endDate : e.startDate) >= monthStart)
+    .sort((a, b) => (a.startDate + a.startTime).localeCompare(b.startDate + b.startTime))
   const conns = useAsync(() => api<CalendarConn[]>('GET', '/api/calendar'))
   const [connecting, setConnecting] = useState(false)
   const [notice, setNotice] = useState('')
@@ -73,14 +85,20 @@ export default function EventsPage() {
           </button>
         </div>
       )}
-      {!loading && !error && events.length === 0 && (
+      {!loading && !error && (
+        <h2 className="month-title">
+          {view.y !== new Date().getFullYear() ? `${view.y}년 ` : ''}
+          {view.m + 1}월 일정
+        </h2>
+      )}
+      {!loading && !error && monthEvents.length === 0 && (
         <div className="empty">
           <StickPerson mood="empty" size={140} />
-          <p>아직 일정이 없어요</p>
+          <p>{events.length === 0 ? '아직 일정이 없어요' : `${view.m + 1}월에는 일정이 없어요`}</p>
         </div>
       )}
       <div className="col">
-        {events.map((e, i) => (
+        {monthEvents.map((e, i) => (
           <div key={e.id} className="card-wrap">
           <Link to={`/events/${e.id}`} className={`box card w${i % 4}`}>
               <div className="row between">
@@ -98,7 +116,7 @@ export default function EventsPage() {
       </div>
       </div>
 
-      {!loading && !error && <MonthCalendar events={events} />}
+      {!loading && !error && <MonthCalendar events={events} view={view} onViewChange={setView} />}
       {connecting && (
         <CalendarConnectDialog
           onClose={() => setConnecting(false)}
