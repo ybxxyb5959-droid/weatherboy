@@ -114,6 +114,7 @@ export default function SettingsPage() {
     setMessage(errorMessage(e))
   }
   const [routineDraft, setRoutineDraft] = useState<Routine | null>(null) // 하루 패턴 편집 중인 값 (저장 누를 때 반영)
+  const [sensDraft, setSensDraft] = useState<Sensitivity | null>(null) // 개인 체감도 같은 화면에서 고르고 저장 때 한 번에 반영한다
 
   const patch = async (p: Partial<Settings>, okMessage = '') => {
     setMessage('')
@@ -155,6 +156,7 @@ export default function SettingsPage() {
   if (loading) return <main><p>불러오는 중…</p></main>
   if (!s || !me) return <main><p role="alert">{loadError ?? '설정을 불러오지 못했어요.'}</p></main>
 
+  const changed = (sensDraft !== null && sensDraft !== s.sensitivity) || routineDraft !== null
   const isGuest = me.provider !== 'KAKAO'
   const customerNo = me.id.slice(0, 8).toUpperCase()
   const providerLabel = isGuest ? '아직 회원이 아니에요' : `카카오 · ${me.nickname ?? ''}`
@@ -204,7 +206,7 @@ export default function SettingsPage() {
           <>
             <div className="field">
               <div className="name">개인 체감</div>
-              <ChoiceRow options={sensOptions} value={s.sensitivity} onChange={(v) => void patch({ sensitivity: v })} />
+              <ChoiceRow options={sensOptions} value={sensDraft ?? s.sensitivity} onChange={setSensDraft} />
             </div>
 
             <hr className="scribble" />
@@ -216,15 +218,16 @@ export default function SettingsPage() {
                 seed={1}
                 className="block"
                 onClick={() => {
-                  if (!routineDraft) return
-                  const done = '하루 패턴을 저장했어요.'
-                  void patch({ routine: routineDraft }, done).then((ok) => {
+                  if (!changed) return
+                  const done = '개인맞춤 설정을 저장했어요.'
+                  void patch({ ...(sensDraft ? { sensitivity: sensDraft } : {}), ...(routineDraft ? { routine: routineDraft } : {}) }, done).then((ok) => {
                     if (!ok) return
+                    setSensDraft(null)
                     setRoutineDraft(null)
                     nav('/settings', { state: { saved: done } }) // 저장하면 설정 목록으로 돌아간다
                   })
                 }}
-                disabled={!routineDraft}
+                disabled={!changed}
               >
                 저장
               </DoodleButton>
