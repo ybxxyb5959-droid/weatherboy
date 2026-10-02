@@ -48,6 +48,7 @@ function wobblyHand(deg: number, len: number, bend: number): string {
 
 const HOUR_MARKS = Array.from({ length: 12 }, (_, i) => i + 1)
 const STEP_MIN = 10 // 분은 10분 단위
+const MINUTE_CHIPS = [0, 10, 20, 30, 40, 50]
 // 숫자 사이사이의 눈금: 10분 단위 위치(60도마다)를 점으로 표시한다. 숫자 자리와 겹치지 않게 숫자(5분 단위)는 그대로 둔다.
 const MIN_DOTS = Array.from({ length: 6 }, (_, i) => i * 60)
 const HOUR_HAND = 46 // 짧은 바늘(시)
@@ -95,6 +96,7 @@ export default function TimePicker({ value, onChange, label }: { value: string; 
   }
 
   const down = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType !== 'mouse') return // 터치는 손가락이 바늘을 가리고 어느 바늘인지 헷갈리기 쉬워서, 숫자 누르기 + 분 칩으로 맞춘다
     const p = locate(e.clientX, e.clientY)
     if (!p || p.dist < 10) return // 가운데 점은 무시
     dragging.current = p.dist < SPLIT ? 'hour' : 'min'
@@ -170,13 +172,30 @@ export default function TimePicker({ value, onChange, label }: { value: string; 
             {HOUR_MARKS.map((n) => {
               const p = polar(n * 30, 86)
               return (
-                <text key={n} x={p.x} y={p.y} className="tp-num" textAnchor="middle" dominantBaseline="central" aria-hidden="true">
-                  {n}
-                </text>
+                <g
+                  key={n}
+                  className="tp-hour"
+                  onPointerDown={(e) => {
+                    e.stopPropagation() // 시계 위 끌기(마우스)와 겹치지 않게
+                    setHour(n % 12)
+                  }}
+                >
+                  <circle cx={p.x} cy={p.y} r="19" className="tp-hit" />
+                  <text x={p.x} y={p.y} className="tp-num" textAnchor="middle" dominantBaseline="central" aria-hidden="true">
+                    {n}
+                  </text>
+                </g>
               )
             })}
           </svg>
-          <p className="tiny tp-hint">끌거나 눌러서 조절해요</p>
+          <div className="tp-mins" role="group" aria-label={`${label} 분`}>
+            {MINUTE_CHIPS.map((m) => (
+              <button key={m} type="button" className={`tp-min${minute === m ? ' on' : ''}`} aria-label={`${m}분`} aria-pressed={minute === m} onClick={() => setMinute(m)}>
+                {p2(m)}
+              </button>
+            ))}
+          </div>
+          <p className="tiny tp-hint">시계의 숫자를 눌러 시를, 아래 숫자로 분을 골라요</p>
           <button type="button" className="dbtn w1 small tp-done" onClick={() => setOpen(false)}>
             확인
           </button>
