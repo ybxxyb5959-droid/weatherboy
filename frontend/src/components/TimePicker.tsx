@@ -176,7 +176,7 @@ export default function TimePicker({ value, onChange, label }: { value: string; 
               )
             })}
           </svg>
-          <p className="tiny tp-hint">안쪽 짧은 바늘은 시, 바깥쪽 긴 바늘은 분이에요. 눌러도 끌어도 돼요 (분은 10분 단위)</p>
+          <p className="tiny tp-hint">끌거나 눌러서 조절해요</p>
           <button type="button" className="dbtn w1 small tp-done" onClick={() => setOpen(false)}>
             확인
           </button>
