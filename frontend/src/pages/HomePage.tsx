@@ -17,16 +17,6 @@ import { useAsync } from '../hooks'
 import type { Routine } from '../store'
 import type { ApiRecommendation, ApiWeather, Favorite, Target } from '../types'
 
-const kstHm = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
-const kstDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date(iso))
-
-/** 추천이 어떤 시간·지역 기준인지 한 줄로 */
-function basisText(b: NonNullable<ApiRecommendation['basis']>) {
-  const range = `${kstHm(b.startAt)}~${kstDay(b.endAt) !== kstDay(b.startAt) ? '다음 날 ' : ''}${kstHm(b.endAt)}`
-  const what = b.source === 'ROUTINE' ? `내 하루 패턴 ${range} 외출 기준` : b.source === 'NOW' ? `지금부터 ${range} 기준` : `기본 외출 시간 ${range} 기준 (설정에서 바꿀 수 있어요)`
-  return b.place ? `${b.place} · ${what}` : what
-}
-
 function dustGrade(v: number, [good, normal, bad]: [number, number, number]) {
   return v <= good ? '좋음' : v <= normal ? '보통' : v <= bad ? '나쁨' : '매우 나쁨'
 }
@@ -326,7 +316,6 @@ export default function HomePage() {
       <section className="section">
         <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
         <hr className="scribble under-title" />
-        {rec.basis && <p className="tiny basis">{basisText(rec.basis)}</p>}
         {rec.basis?.reliability.level === 'CAUTION' && (
           <ul className="tiny caution" aria-label="예보 주의">
             {rec.basis.reliability.notes.map((n) => (

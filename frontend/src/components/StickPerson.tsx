@@ -80,15 +80,18 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         {/* 머리 */}
         <path d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
         {mood === 'stand' ? (
-          // 오늘 추천: 동글동글하고 귀엽게 (작은 점 눈 + 작은 미소 + 볼터치)
+          // 오늘 추천: 작은 점 눈 + 작게 벌린 :D 입 (혀가 살짝 보이게)
           <g>
             <g stroke="none">
-              <circle cx="53" cy="30" r="2.3" fill={ink} />
-              <circle cx="67" cy="30" r="2.3" fill={ink} />
-              <circle cx="48.5" cy="36" r="3.2" fill="#f4b9b2" opacity="0.85" />
-              <circle cx="71.5" cy="36" r="3.2" fill="#f4b9b2" opacity="0.85" />
+              <circle cx="53.5" cy="30" r="1.9" fill={ink} />
+              <circle cx="66.5" cy="29.5" r="1.9" fill={ink} />
             </g>
-            <path d="M56 36.5 Q60 40.5 64 36.5" strokeWidth="2" />
+            <clipPath id="wb-grin">
+              <path d="M56 35.5 H64 Q64 41.5 60 41.5 Q56 41.5 56 35.5Z" />
+            </clipPath>
+            <path d="M56 35.5 H64 Q64 41.5 60 41.5 Q56 41.5 56 35.5Z" fill={ink} stroke="none" />
+            <ellipse cx="60" cy="41.2" rx="2.6" ry="1.9" fill="#f08a8a" stroke="none" clipPath="url(#wb-grin)" />
+            <path d="M56 35.5 H64 Q64 41.5 60 41.5 Q56 41.5 56 35.5Z" strokeWidth="1.8" />
           </g>
         ) : (
           <>
