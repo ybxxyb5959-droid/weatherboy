@@ -28,6 +28,26 @@ function basisText(b: NonNullable<ApiRecommendation['basis']>) {
   return b.place ? `${b.place} · ${what}` : what
 }
 
+function dustGrade(v: number, [good, normal, bad]: [number, number, number]) {
+  return v <= good ? '좋음' : v <= normal ? '보통' : v <= bad ? '나쁨' : '매우 나쁨'
+}
+
+/** 값이 어느 정도인지 보여주는 가로 게이지 (회색 바탕 + 검정 채움) */
+function Gauge({ label, ratio, text }: { label: string; ratio: number | null; text: string }) {
+  const pct = ratio == null ? 0 : Math.round(Math.min(1, Math.max(0, ratio)) * 100)
+  return (
+    <div className="gauge">
+      <div className="gauge-head">
+        <span className="gauge-label">{label}</span>
+        <span className="gauge-text">{text}</span>
+      </div>
+      <div className="gauge-track" role="img" aria-label={`${label} ${text}`}>
+        <div className="gauge-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const [target, setTarget] = useState<Target>({ kind: 'home' })
   const [notice, setNotice] = useState('')
@@ -275,30 +295,22 @@ export default function HomePage() {
       </div>
       {showDetail && (
         <div className="box w3 detail">
-          <dl>
-            <dt>바람</dt>
-            <dd>{w.wind.speed} m/s ({w.wind.label})</dd>
-            <dt>미세먼지</dt>
-            <dd>
-              {w.dust
-                ? `PM10 ${w.dust.pm10 ?? '-'} ㎍/㎥ · PM2.5 ${w.dust.pm25 ?? '-'} ㎍/㎥ (${w.dust.grade ?? '정보 없음'})`
-                : '정보 없음'}
-            </dd>
-            <dt>오늘 기온</dt>
-            <dd>{w.tempMin != null && w.tempMax != null ? `최저 ${w.tempMin}° / 최고 ${w.tempMax}°` : '정보 없음'}</dd>
-            <dt>체감온도</dt>
-            <dd>
-              {w.feels}°C{w.feels < w.temp ? ' (바람·습도 때문에 더 쌀쌀해요)' : w.feels > w.temp ? ' (습해서 더 덥게 느껴져요)' : ''}
-            </dd>
-            <dt>비 올 확률</dt>
-            <dd>{w.rainChance}%</dd>
-            {w.humidity != null && (
-              <>
-                <dt>습도</dt>
-                <dd>{w.humidity}%</dd>
-              </>
-            )}
-          </dl>
+          <div className="gauges">
+            <Gauge label="바람" ratio={w.wind.speed / 14} text={`${w.wind.speed} m/s · ${w.wind.label}`} />
+            <Gauge
+              label="미세먼지"
+              ratio={w.dust?.pm10 != null ? w.dust.pm10 / 150 : null}
+              text={w.dust?.pm10 != null ? `${w.dust.pm10} ㎍/㎥ · ${dustGrade(w.dust.pm10, [30, 80, 150])}` : '정보 없음'}
+            />
+            <Gauge
+              label="초미세먼지"
+              ratio={w.dust?.pm25 != null ? w.dust.pm25 / 75 : null}
+              text={w.dust?.pm25 != null ? `${w.dust.pm25} ㎍/㎥ · ${dustGrade(w.dust.pm25, [15, 35, 75])}` : '정보 없음'}
+            />
+            <Gauge label="체감온도" ratio={(w.feels + 15) / 50} text={`${w.feels}°C`} />
+            <Gauge label="비 올 확률" ratio={w.rainChance / 100} text={`${w.rainChance}%`} />
+            {w.humidity != null && <Gauge label="습도" ratio={w.humidity / 100} text={`${w.humidity}%`} />}
+          </div>
         </div>
       )}
 

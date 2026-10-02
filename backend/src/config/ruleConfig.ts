@@ -61,6 +61,9 @@ export const ruleConfig = {
   varietyOuterMinRequired: 4,
   // 이 기간(일) 안에 추가한 옷이 들어간 조합을 우선한다(새로 담은 옷이 바로 추천에 보이게)
   newItemDays: 3,
+  // 알맞은 조합이 전부 필요 보온보다 이 점수 넘게 두꺼운데, 이 점수 안으로 조금 모자란 조합이 있으면 두꺼운 것 대신 모자란 쪽을 고르고 '딱 맞는 옷이 부족'으로 알린다
+  maxOvershoot: 4,
+  maxShortfall: 4,
 }
 
 export const dustGradeLabel: Record<number, string> = { 1: '좋음', 2: '보통', 3: '나쁨', 4: '매우나쁨' }

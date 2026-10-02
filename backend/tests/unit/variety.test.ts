@@ -182,3 +182,30 @@ describe('"다른 조합 보기": 서로 다른 옷이 나온다', () => {
     }
   })
 })
+
+describe('지나치게 두꺼운 조합은 권하지 않는다 (21℃에 패딩 추천 방지)', () => {
+  // 옷장이 작다: 반팔, 반바지, 그리고 겉옷은 패딩 하나뿐
+  const small = () => [cloth('SHORT_SLEEVE', 'WHITE', 'NORMAL'), cloth('SHORTS', 'BLACK', 'NORMAL'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
+  const types = (r: ReturnType<typeof run>) => r.items.map((i) => i.type)
+
+  it.each([21, 18])('%d℃: 반팔+반바지에 패딩을 얹지 않고, 옷이 부족하다고 알린다', (t) => {
+    for (const seed of [undefined, ...days.slice(0, 4)]) {
+      const r = run(small(), t, seed)
+      expect(types(r)).not.toContain('패딩')
+      expect(r.insufficientWardrobe).toBe(true)
+    }
+  })
+
+  it('정말 추운 날(5℃)에는 패딩을 권한다', () => {
+    for (const seed of [undefined, ...days.slice(0, 4)]) expect(types(run(small(), 5, seed))).toContain('패딩')
+  })
+
+  it('알맞은 가벼운 겉옷이 있으면 그걸 쓴다 (패딩이 아니라)', () => {
+    const c = [...small(), cloth('PANTS', 'BLUE'), cloth('JACKET', 'BLUE', 'NORMAL')]
+    for (const seed of [undefined, ...days.slice(0, 4)]) {
+      const r = run(c, 15, seed)
+      expect(types(r)).not.toContain('패딩')
+      expect(r.insufficientWardrobe).toBe(false)
+    }
+  })
+})

@@ -194,6 +194,16 @@ export function recommend(input: EngineInput): EngineResult {
       }
     }
   }
+  // 알맞은 조합이 전부 지나치게 두껍다(예: 겉옷이 패딩 하나뿐이라 반팔+반바지에 패딩을 얹는 조합뿐)면,
+  // 조금 모자라더라도 덜 두꺼운 쪽이 낫다. 두꺼운 조합을 억지로 권하지 않고 '딱 맞는 옷이 부족'으로 알린다.
+  if (!insufficient && valid.length > 0 && valid.every((c) => c.total - required > ruleConfig.maxOvershoot)) {
+    const below = cands.filter((c) => c.total < required && required - c.total <= ruleConfig.maxShortfall)
+    if (below.length > 0) {
+      insufficient = true
+      const maxBelow = Math.max(...below.map((c) => c.total))
+      valid = below.filter((c) => c.total === maxBelow)
+    }
+  }
   valid.sort(cmp)
   let best = valid[0]!
   const newSince = (input.now ?? new Date()).getTime() - ruleConfig.newItemDays * 86400_000

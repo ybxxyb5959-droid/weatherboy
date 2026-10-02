@@ -1245,6 +1245,31 @@ a.card {
 .detail dd {
   margin: 0;
 }
+.gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gauge-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.gauge-label {
+  font-weight: 700;
+}
+.gauge-track {
+  height: 10px;
+  border-radius: 6px;
+  background: #d6d6d6;
+  overflow: hidden;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: #111;
+}
 
 /* ---------- 준비물 낙서 ---------- */
 .gear {

@@ -150,9 +150,15 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
               </g>
             )}
             {wear?.top && (
-              <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4">
-                <ClothingArt type={wear.top.type} color={wear.top.color} pattern={wear.top.pattern} />
-              </g>
+              <>
+                {/* 겉옷을 입으면 상의는 몸통만 보이게 한다: 반팔 소매가 겉옷 소매 밖으로 삐져나와 겹쳐 보이지 않도록 */}
+                <clipPath id="wb-top-torso">
+                  <rect x="29" y="0" width="42" height="100" />
+                </clipPath>
+                <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={wear?.outer ? 'url(#wb-top-torso)' : undefined}>
+                  <ClothingArt type={wear.top.type} color={wear.top.color} pattern={wear.top.pattern} />
+                </g>
+              </>
             )}
             {wear?.outer && (
               <g transform="translate(24 41) scale(0.72)" strokeWidth="3.2">
