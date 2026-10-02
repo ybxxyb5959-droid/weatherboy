@@ -1700,25 +1700,74 @@ a.card {
   gap: 8px;
   background: var(--paper);
 }
-.tp-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+.tp-readout {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
-.tp-cell {
+.tp-part {
   font-family: var(--font);
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
-  min-height: 38px;
   color: var(--ink);
   background: none;
   border: 2px solid transparent;
   border-radius: 40% 55% 45% 60% / 55% 40% 60% 45%;
+  padding: 0 14px;
+  min-height: 40px;
   cursor: pointer;
 }
-.tp-cell.on {
+.tp-part.on {
   background: var(--pick);
   border-color: var(--ink);
+}
+/* 낙서 시계 */
+.tp-clock {
+  width: min(100%, 280px);
+  align-self: center;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+}
+.tp-face {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+.tp-face2 {
+  fill: none;
+  stroke-width: 1.4;
+  opacity: 0.55;
+}
+.tp-blob {
+  fill: var(--pick);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.tp-hand {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+.tp-dot {
+  fill: var(--ink);
+}
+.tp-num {
+  font-family: var(--font);
+  font-size: 21px;
+  font-weight: 700;
+  fill: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+.tp-num:focus-visible {
+  text-decoration: underline;
+}
+.tp-hint {
+  text-align: center;
+  margin: 0;
 }
 .tp-done {
   align-self: flex-end;
@@ -2101,3 +2150,40 @@ a.card {
 .sample-note .tiny { flex: 1 1 220px; margin: 0; }
 .sample-tag { opacity: 0.6; font-size: 0.85em; }
 .basis { margin: 4px 0 8px; opacity: 0.75; }
+
+/* 후기 카드: 고르면 나머지 두 장이 사라지고, 고른 카드가 첫 칸으로 옮겨간 뒤 감사 문구 */
+.fb-btn {
+  transition: opacity 320ms ease, transform 320ms ease;
+}
+.fb-btn.fb-gone {
+  opacity: 0;
+  transform: scale(0.82);
+  pointer-events: none;
+}
+.fb-moving .fb-btn.fb-mine {
+  transition: transform 460ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+.fb-done .fb-btn.fb-mine {
+  transition: none;
+}
+.fb-instant .fb-btn {
+  transition: none;
+}
+.fb-thanks {
+  margin-top: 8px;
+  min-height: 1.4em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+.fb-thanks.show {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb-btn,
+  .fb-moving .fb-btn.fb-mine,
+  .fb-thanks {
+    transition: none;
+  }
+}

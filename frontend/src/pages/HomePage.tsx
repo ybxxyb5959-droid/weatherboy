@@ -175,22 +175,25 @@ export default function HomePage() {
   if (rec.needUmbrella) gear.push('umbrella')
   if (rec.needMask) gear.push('mask')
   if (['clear', 'heat', 'uv'].includes(w.condition)) gear.push('sunscreen')
-  const sendFeedback = async (f: '추웠어요' | '딱 좋아요' | '더웠어요') => {
-    if (!recId) return
+  // 저장되면(이미 저장돼 있어도) true. 실패하면 false 를 돌려줘 후기 카드가 원래대로 돌아가게 한다.
+  const sendFeedback = async (f: '추웠어요' | '딱 좋아요' | '더웠어요'): Promise<boolean> => {
+    if (!recId) return false
     setFeedbackMsg('')
     try {
       await api('POST', `/api/recommendations/${recId}/feedback`, { rating: f })
       setFeedback(f)
       setFeedbackDone(recId, f)
-      setFeedbackMsg('알려줘서 고마워요. 다음엔 더 잘 고를게요.')
+      setFeedbackMsg('알려줘서 고마워요 :D. 다음엔 더 잘 고를게요.')
+      return true
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setFeedback(f)
         setFeedbackDone(recId, f)
         setFeedbackMsg('오늘 추천은 이미 알려줬어요. 고마워요!')
-      } else {
-        setFeedbackMsg(errorMessage(e))
+        return true
       }
+      setFeedbackMsg(errorMessage(e))
+      return false
     }
   }
 
@@ -198,7 +201,7 @@ export default function HomePage() {
   const feedbackCard = (
     <>
       {recId && (feedback || now >= feedbackDueAt(firstSeen, settings.data?.routine)) && (!getFeedbackDone(recId) || feedback) && (
-        <FeedbackCard selected={feedback} message={feedbackMsg} onPick={(f) => void sendFeedback(f)} />
+        <FeedbackCard selected={feedback} message={feedbackMsg} onPick={sendFeedback} />
       )}
     </>
   )
