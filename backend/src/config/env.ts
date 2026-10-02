@@ -23,6 +23,10 @@ const schema = z.object({
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default(''),
   LOG_LEVEL: z.string().default('info'),
+  // 설정하면 이 폴더(예: ../frontend/dist)의 화면 파일을 서버가 직접 내준다. Nginx 없이 한 곳에서 화면+API 를 서비스할 때(개인/베타 배포용).
+  SERVE_FRONTEND_DIR: z.string().default(''),
+  // true 면 알림/수집 예약 작업(worker)을 이 서버 프로세스 안에서 같이 돌린다. 서버를 한 개만 둘 수 있는 무료 호스팅용. 별도 worker 가 있으면 켜지 말 것(알림이 두 번 갈 수 있다).
+  RUN_JOBS_IN_API: bool,
 })
 
 export const env = schema.parse(process.env)

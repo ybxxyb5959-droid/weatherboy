@@ -1,0 +1,5 @@
+# DOMAIN 은 .env 에서 읽는다(예: 13-125-0-1.sslip.io). Caddy 가 https 인증서를 자동으로 받아 갱신한다.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy api:4000
+}

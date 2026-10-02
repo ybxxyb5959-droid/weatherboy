@@ -1,0 +1,50 @@
+# Render 배포 설정(서버만). 화면은 Vercel 에 올리고, /api 요청을 이 서버로 넘긴다(frontend/vercel.json).
+# 비밀값(sync: false)은 Render 화면에서 직접 입력한다. 이 파일에 값을 적지 말 것.
+services:
+  - type: web
+    name: weather-boy-api
+    runtime: docker
+    plan: free
+    region: singapore # 한국과 가장 가까운 Render 지역
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    # 시작 전에 DB 마이그레이션을 적용한다(Dockerfile 의 기본 명령 앞에 붙임)
+    dockerCommand: sh -c "npx prisma migrate deploy && node dist/server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: TZ
+        value: Asia/Seoul
+      - key: DATABASE_URL # Neon 의 '직접 연결(Direct)' 주소
+        sync: false
+      - key: SESSION_SECRET # 긴 임의 문자열(예: openssl rand -hex 32)
+        sync: false
+      - key: FRONTEND_ORIGIN # Vercel 주소. 예: https://내앱.vercel.app
+        sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false
+      - key: KAKAO_CLIENT_SECRET
+        sync: false
+      - key: KAKAO_REDIRECT_URI # Vercel 주소 기준: https://내앱.vercel.app/api/auth/kakao/callback
+        sync: false
+      - key: KMA_SERVICE_KEY
+        sync: false
+      - key: AIRKOREA_SERVICE_KEY
+        sync: false
+      - key: RUN_JOBS_IN_API # 알림 작업을 이 서버 안에서 같이 돌린다(무료 플랜은 서버가 1개뿐)
+        value: "true"
+      - key: VAPID_PUBLIC_KEY # 알림용 키(npx web-push generate-vapid-keys 로 생성)
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT # mailto:내이메일@example.com
+        sync: false
+      - key: AI_ENABLED
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false

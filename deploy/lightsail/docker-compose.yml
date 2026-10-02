@@ -1,0 +1,74 @@
+# Lightsail 한 대(메모리 1GB)에 전체 앱: DB + 서버(+알림 작업) + https(Caddy).
+# 사용: deploy/lightsail 에서 .env 를 채운 뒤  docker compose up -d --build
+name: weather-boy
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: weather
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 를 .env 에 설정하세요}
+      POSTGRES_DB: weather_boy
+      TZ: UTC
+    # 1GB 서버용으로 메모리를 작게(작은 앱이라 충분)
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=30", "-c", "work_mem=4MB", "-c", "maintenance_work_mem=32MB", "-c", "effective_cache_size=256MB"]
+    mem_limit: 320m
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./restore:/restore:ro # 개발 DB 덤프를 넣어 두는 곳(처음 한 번 복원할 때만 사용)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weather -d weather_boy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.app
+    image: weather-boy-app
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://weather:${POSTGRES_PASSWORD}@postgres:5432/weather_boy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: weather-boy-app
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://weather:${POSTGRES_PASSWORD}@postgres:5432/weather_boy
+      FRONTEND_ORIGIN: https://${DOMAIN}
+      KAKAO_REDIRECT_URI: https://${DOMAIN}/api/auth/kakao/callback
+      RUN_JOBS_IN_API: "true" # 알림/날씨 수집 작업을 같은 프로세스에서(프로세스를 하나만 둬서 메모리 절약)
+      NODE_OPTIONS: --max-old-space-size=256
+    mem_limit: 420m
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN 을 .env 에 설정하세요}
+    ports:
+      - "80:80"
+      - "443:443"
+    mem_limit: 80m
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

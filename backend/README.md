@@ -1,4 +1,4 @@
-# 오늘 뭐 입지? — Backend
+# 뭐입을옷? — Backend
 
 Node.js · Express 5 · TypeScript · PostgreSQL(Prisma) · 세션 인증(Kakao / Guest) · 기상청·에어코리아 · 결정론적 옷차림 Rule Engine · Worker(node-cron) · Web Push
 

@@ -10,13 +10,12 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : '' }
   }
-  const title = data.title || '오늘 뭐 입지?'
+  const title = data.title || '뭐입을옷?'
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',
       data: { url: data.url || '/' },
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      icon: '/icon-192.png',
     }),
   )
 })
