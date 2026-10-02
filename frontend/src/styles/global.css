@@ -2483,3 +2483,35 @@ a.card {
   border: 0;
   cursor: pointer;
 }
+
+/* 오늘 추천: 졸라맨 옆에 입을 옷 조합 */
+.look {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.look > svg {
+  flex: none;
+}
+.look-items {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.look-items li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.look-items li > svg {
+  flex: none;
+}

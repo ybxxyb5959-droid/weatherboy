@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import HandText from '../components/HandText'
 import StickPerson from '../components/StickPerson'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
@@ -318,24 +317,6 @@ export default function HomePage() {
 
       </>
     ),
-    character: !rec ? (
-      <section className="speech">
-        <StickPerson mood="stand" size={165} wear={wear} umbrella={false} />
-        <div className="say">
-          <HandText>{recommendation.error ? '추천을 못 불러왔어요' : '옷 고르는 중…'}</HandText>
-        </div>
-      </section>
-    ) : (
-      <section className="speech">
-        <StickPerson mood="stand" size={165} wear={wear} umbrella={rec.needUmbrella} />
-        <div className="say">
-          <HandText>{rec.headline}</HandText>
-          <br />
-          <HandText>{rec.sub}</HandText>
-        </div>
-      </section>
-
-    ),
     // 외출 시간은 내 위치 기준이라, 다른 지역을 구경 중일 땐 숨긴다
     commute: target.kind === 'home' ? <CommuteLine hourly={w.hourly ?? []} routine={routine} /> : null,
     recommend: !rec ? (
@@ -356,16 +337,17 @@ export default function HomePage() {
             ))}
           </ul>
         )}
-        <div className="outfit">
-          {items.map((it, i) => (
-            <div key={`${it.type}-${it.clothingId ?? it.label}-${i}`} className="row">
-              {i > 0 && <span className="plus">+</span>}
-              <div className="piece">
-                <ClothingDoodle type={it.type} color={it.color} pattern={it.pattern} size={100} />
-                <div>{it.label}</div>
-              </div>
-            </div>
-          ))}
+        {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
+        <div className="look">
+          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} />
+          <ul className="look-items" aria-label="오늘 입을 옷">
+            {items.map((it, i) => (
+              <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>
+                <ClothingDoodle type={it.type} color={it.color} pattern={it.pattern} size={58} />
+                <span>{it.label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
         {rec.insufficientWardrobe && <p className="tiny">옷장에 딱 맞는 옷이 부족해서 가장 가까운 조합이에요</p>}
         {items.some((it) => !it.owned) && <p className="tiny">옷장에 없는 옷이 섞여 있어요 (일반 추천)</p>}
@@ -380,6 +362,9 @@ export default function HomePage() {
         {showWhy && (
           <div className="box w2 why">
             <ul>
+              <li>
+                <b>{rec.headline}</b> {rec.sub}
+              </li>
               {rec.reasons.map((r) => (
                 <li key={r}>{r}</li>
               ))}
