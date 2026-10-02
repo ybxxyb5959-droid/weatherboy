@@ -2624,3 +2624,107 @@ a.card {
   border: 0;
   cursor: pointer;
 }
+
+/* ---------- 내 캐릭터: 꾸미기 (그림으로 고르기) + 공유 ---------- */
+.share-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.share-btn:disabled {
+  opacity: 0.4;
+}
+.char-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.char-head h2 {
+  margin: 0;
+}
+.char-head .save-state {
+  flex: 1;
+  min-height: 1.2em;
+}
+.text-btn {
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed var(--ink);
+  padding: 0 2px;
+  cursor: pointer;
+}
+.char-slots {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin: 10px 0 8px;
+  border-bottom: 2px solid rgba(34, 34, 34, 0.35);
+}
+.char-tab {
+  position: relative;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(34, 34, 34, 0.55);
+  background: none;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  padding: 6px 0 5px;
+  cursor: pointer;
+}
+.char-tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.char-tab i {
+  position: absolute;
+  top: 6px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4aa6a0;
+}
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+.item-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px dashed rgba(34, 34, 34, 0.4);
+  border-radius: 12px 16px 11px 15px / 15px 11px 16px 12px;
+  cursor: pointer;
+}
+.item-tile svg {
+  width: 100%;
+  max-width: 62px;
+  height: 52px;
+}
+.item-tile span {
+  font-size: 13px;
+  line-height: 1.1;
+  text-align: center;
+}
+.item-tile.on {
+  border: 2.4px solid var(--ink);
+  background: var(--pick);
+}

@@ -32,6 +32,13 @@ export const PERSONA_WEAR: Record<string, Wear> = {
   HOODIE_ADDICT: { top: { type: '후드티', color: '초록' }, bottom: { type: '바지', color: '파랑' } },
   WARM_BEAR: { top: { type: '니트', color: '갈색' }, bottom: { type: '바지', color: '베이지' } },
   TEE_ONLY: { top: { type: '반팔', color: '주황' }, bottom: { type: '반바지', color: '파랑' } },
+  OUTER_FAN: { top: { type: '맨투맨', color: '회색' }, bottom: { type: '바지', color: '검정' }, outer: { type: '자켓', color: '카키' } },
+  SHIRT_GENTLE: { top: { type: '셔츠', color: '하늘색' }, bottom: { type: '바지', color: '네이비' } },
+  SKIRT_LOVER: { top: { type: '긴팔', color: '하늘색' }, bottom: { type: '치마', color: '분홍' } },
+  EARTH_TONE: { top: { type: '니트', color: '베이지' }, bottom: { type: '바지', color: '갈색' } },
+  BLUE_SEA: { top: { type: '맨투맨', color: '파랑' }, bottom: { type: '바지', color: '네이비' } },
+  VITAMIN: { top: { type: '반팔', color: '노랑' }, bottom: { type: '반바지', color: '주황' } },
+  RAINBOW: { top: { type: '후드티', color: '빨강' }, bottom: { type: '바지', color: '파랑' } },
   BALANCED: { top: { type: '맨투맨', color: '회색' }, bottom: { type: '바지', color: '파랑' } },
 }
 export const BASIC_WEAR: Wear = { top: { type: '반팔', color: '흰색' }, bottom: { type: '바지', color: '파랑' } }
@@ -66,7 +73,7 @@ export function useCharacter() {
   /** 꾸미기 저장. 성공하면 모든 화면의 캐릭터가 같이 바뀐다. */
   const saveConfig = useCallback(async (config: Accessories) => {
     const body: Record<string, string | null> = {}
-    for (const k of ['hat', 'hairpin', 'glasses', 'neck', 'extra'] as const) body[k] = config[k] ?? null
+    for (const k of ['hat', 'hairpin', 'glasses', 'neck', 'face', 'extra'] as const) body[k] = config[k] ?? null
     publish(await api<CharacterData>('PUT', '/api/character', { config: body }))
   }, [])
 

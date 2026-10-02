@@ -1,14 +1,23 @@
-import { useState } from 'react'
-import DoodleButton from '../components/DoodleButton'
+import { useEffect, useRef, useState } from 'react'
 import StickPerson from '../components/StickPerson'
-import type { Accessories } from '../components/CharacterDecor'
+import { ItemThumb, type Accessories, type Slot } from '../components/CharacterDecor'
 import { colorHex } from '../mocks/clothes'
 import { BASIC_WEAR, PERSONA_WEAR, useCharacter, type Share } from '../lib/character'
+import { buildCharacterCard, shareImage } from '../lib/shareCard'
+import { useAuth } from '../auth'
 import { errorMessage } from '../api'
 
-type Slot = keyof Accessories
-
 const pct = (s: number) => `${Math.round(s * 100)}%`
+const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
+
+/** 공유 아이콘 (상자에서 위로 나가는 화살표) */
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 28 28" width="26" height="26" fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 18 V4 M9 9 L14 4 L19 9 M6 13 V23 H22 V13" />
+    </svg>
+  )
+}
 
 /** 비중 막대. 색 비중은 그 옷 색으로 칠한다. */
 function Bars({ title, rows, colored = false, max = 5 }: { title: string; rows: Share[]; colored?: boolean; max?: number }) {
@@ -31,12 +40,17 @@ function Bars({ title, rows, colored = false, max = 5 }: { title: string; rows: 
 
 export default function CharacterPage() {
   const { data, error, saveConfig } = useCharacter()
-  const [draft, setDraft] = useState<Accessories | null>(null) // 꾸미는 중인 값 (저장 누르면 반영)
+  const { me } = useAuth()
+  const [local, setLocal] = useState<Accessories | null>(null) // 고르는 즉시 보이는 값 (서버에는 잠깐 뒤 자동 저장)
   const [slot, setSlot] = useState<Slot>('hat')
   const [preview, setPreview] = useState<string | null>(null) // 칭호 도감에서 눌러 본 다른 칭호의 모습 (내 칭호는 그대로)
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState('')
-  const [fail, setFail] = useState('')
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [note, setNote] = useState('')
+  const [sharing, setSharing] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const latest = useRef<Accessories | null>(null)
+
+  useEffect(() => () => clearTimeout(timer.current), [])
 
   if (!data) {
     return (
@@ -51,31 +65,59 @@ export default function CharacterPage() {
 
   const a = data.analysis
   const title = a.title
-  const config = draft ?? data.config
+  const config = local ?? data.config
   const shown = preview ? (data.titles.find((t) => t.key === preview) ?? title) : title
   const wear = (shown && PERSONA_WEAR[shown.key]) || BASIC_WEAR
-  const changed = draft !== null && JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(data.config))
   const current = data.catalog.find((c) => c.slot === slot)!
+  const equippedCount = Object.values(config).filter(Boolean).length
 
-  const pick = (id: string | null) => {
-    setMsg('')
-    const next = { ...config }
-    if (id === null) delete next[slot]
-    else next[slot] = id
-    setDraft(next)
+  // 고르면 바로 보이고, 0.5초 뒤에 저장한다 (빠르게 여러 개 골라도 한 번만 저장)
+  const change = (next: Accessories) => {
+    setLocal(next)
+    latest.current = next
+    setState('saving')
+    clearTimeout(timer.current)
+    timer.current = setTimeout(async () => {
+      try {
+        await saveConfig(next)
+        if (latest.current && sameConfig(latest.current, next)) setLocal(null)
+        setState('saved')
+      } catch (e) {
+        setState('error')
+        setNote(errorMessage(e))
+      }
+    }, 500)
   }
-  const save = async () => {
-    if (!changed || saving) return
-    setSaving(true)
-    setFail('')
+  const pick = (id: string) => {
+    const next = { ...config }
+    if (next[slot] === id) delete next[slot] // 입고 있는 걸 다시 누르면 벗는다
+    else next[slot] = id
+    change(next)
+  }
+
+  const share = async () => {
+    if (sharing) return
+    setSharing(true)
+    setNote('')
     try {
-      await saveConfig(config)
-      setDraft(null)
-      setMsg('캐릭터를 저장했어요. 홈의 캐릭터도 똑같이 꾸며졌어요.')
+      const card = await buildCharacterCard({
+        title: shown?.name ?? '내 캐릭터',
+        tagline: shown?.tagline ?? '옷장을 채우면 칭호를 드려요',
+        persona: shown?.key ?? null,
+        wear,
+        accessories: config,
+        colors: a.colors,
+        count: a.count,
+        code: (me?.id ?? '').slice(0, 8).toUpperCase(),
+        origin: window.location.origin,
+      })
+      const text = `내 옷장 칭호는 "${shown?.name ?? '???'}"! 너는 어떤 칭호야? ${window.location.origin}`
+      const r = await shareImage(card, text)
+      if (r === 'downloaded') setNote('이미지로 저장했어요. 카카오톡에서 사진으로 보내 보세요.')
     } catch (e) {
-      setFail(errorMessage(e))
+      setNote(errorMessage(e))
     } finally {
-      setSaving(false)
+      setSharing(false)
     }
   }
 
@@ -83,6 +125,9 @@ export default function CharacterPage() {
     <main className="character">
       <div className="page-head">
         <h1>내 캐릭터</h1>
+        <button type="button" className="share-btn" onClick={() => void share()} disabled={sharing} aria-label="공유하기">
+          <ShareIcon />
+        </button>
       </div>
 
       <section className="char-hero">
@@ -109,36 +154,45 @@ export default function CharacterPage() {
         )}
       </section>
 
-      {msg && <p role="status" className="set-msg set-saved">✓ {msg}</p>}
-      {fail && <p role="alert">{fail}</p>}
+      {note && (
+        <p role="status" className="set-msg set-saved">
+          {note}
+        </p>
+      )}
 
       <hr className="scribble" />
 
       <section>
-        <h2>꾸미기</h2>
-        <div className="char-slots" role="tablist" aria-label="꾸미기 칸">
+        <div className="char-head">
+          <h2>꾸미기</h2>
+          <span className="tiny save-state" role="status">
+            {state === 'saving' ? '저장 중…' : state === 'saved' ? '저장됨 ✓' : state === 'error' ? '저장 실패' : ''}
+          </span>
+          {equippedCount > 0 && (
+            <button type="button" className="text-btn" onClick={() => change({})}>
+              모두 벗기
+            </button>
+          )}
+        </div>
+
+        <div className="char-slots" role="tablist" aria-label="꾸미기 종류">
           {data.catalog.map((c) => (
-            <button key={c.slot} type="button" role="tab" aria-selected={slot === c.slot} className={`dbtn small${slot === c.slot ? ' on' : ''}`} onClick={() => setSlot(c.slot)}>
+            <button key={c.slot} type="button" role="tab" aria-selected={slot === c.slot} className={`char-tab${slot === c.slot ? ' on' : ''}`} onClick={() => setSlot(c.slot)}>
               {c.label}
-              {config[c.slot] ? ' ✓' : ''}
+              {config[c.slot] && <i aria-label="착용 중" />}
             </button>
           ))}
         </div>
-        <div className="char-items" role="group" aria-label={`${current.label} 고르기`}>
-          <button type="button" className={`dbtn small${config[slot] ? '' : ' on'}`} aria-pressed={!config[slot]} onClick={() => pick(null)}>
-            벗기
-          </button>
+
+        <div className="char-grid" role="group" aria-label={`${current.label} 고르기`}>
           {current.items.map((it) => (
-            <button key={it.id} type="button" className={`dbtn small${config[slot] === it.id ? ' on' : ''}`} aria-pressed={config[slot] === it.id} onClick={() => pick(it.id)}>
-              {it.label}
+            <button key={it.id} type="button" className={`item-tile${config[slot] === it.id ? ' on' : ''}`} aria-pressed={config[slot] === it.id} aria-label={it.label} onClick={() => pick(it.id)}>
+              <ItemThumb slot={slot} id={it.id} />
+              <span>{it.label}</span>
             </button>
           ))}
         </div>
-        <div className="field">
-          <DoodleButton seed={1} className="block" onClick={() => void save()} disabled={!changed || saving}>
-            {saving ? '저장 중…' : '저장'}
-          </DoodleButton>
-        </div>
+        <p className="tiny">누르면 바로 입혀지고 자동으로 저장돼요. 다시 누르면 벗어요.</p>
       </section>
 
       <hr className="scribble" />
@@ -160,12 +214,20 @@ export default function CharacterPage() {
       <hr className="scribble" />
 
       <section>
-        <h2>칭호 도감</h2>
+        <h2>칭호 도감 ({data.titles.length})</h2>
         <p className="tiny">눌러 보면 그 칭호의 캐릭터를 미리 볼 수 있어요.</p>
         <ul className="char-dex">
           {data.titles.map((t) => (
             <li key={t.key} className={title?.key === t.key ? 'mine' : undefined}>
-              <button type="button" className="dex-btn" aria-label={`${t.name} 모습 미리보기`} onClick={() => { setPreview(t.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+              <button
+                type="button"
+                className="dex-btn"
+                aria-label={`${t.name} 모습 미리보기`}
+                onClick={() => {
+                  setPreview(t.key)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              >
                 <b>{t.name}</b>
                 {title?.key === t.key && <span className="tiny"> · 내 칭호</span>}
                 <div className="tiny">{t.rule}</div>
@@ -177,5 +239,3 @@ export default function CharacterPage() {
     </main>
   )
 }
-
-const normalize = (c: Accessories) => Object.fromEntries(Object.entries(c).filter(([, v]) => v).sort())
