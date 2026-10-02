@@ -7,6 +7,8 @@ export interface Clothing {
   pattern?: string
   windproof: boolean
   waterproof: boolean
+  /** 온보딩 예시 옷: '내 옷이에요'로 확인하기 전에는 추천에 쓰이지 않는다 */
+  isSample?: boolean
 }
 
 export const clothingTypes = ['반팔', '긴팔', '맨투맨', '니트', '후드티', '바지', '반바지', '치마', '바람막이', '자켓', '코트', '패딩']

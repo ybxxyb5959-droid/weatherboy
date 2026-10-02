@@ -35,6 +35,7 @@ export function serializeClothing(c: Clothing) {
     pattern: patternMap.toUi(c.pattern),
     windproof: c.windproof,
     waterproof: c.waterproof,
+    isSample: c.isSample,
   }
 }
 

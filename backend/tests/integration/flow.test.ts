@@ -42,7 +42,7 @@ describe('Guest 전체 흐름', () => {
   it('Clothes: 11벌 + 추가/수정/삭제(soft)', async () => {
     const list = (await a.get('/api/clothes')).body
     expect(list).toHaveLength(11)
-    expect(list[0]).toEqual({ id: expect.any(String), type: '반팔', thickness: '얇음', color: '흰색', pattern: '무지', windproof: false, waterproof: false })
+    expect(list[0]).toEqual({ id: expect.any(String), type: '반팔', thickness: '얇음', color: '흰색', pattern: '무지', windproof: false, waterproof: false, isSample: true })
     const added = await a.post('/api/clothes').send({ type: '코트', thickness: '두꺼움', color: '검정', windproof: true })
     expect(added.status).toBe(201)
     expect(added.body.type).toBe('코트')
@@ -83,7 +83,9 @@ describe('Guest 전체 흐름', () => {
     expect(r.body.dust).toMatchObject({ pm10: 35, pm25: 18, grade: '보통' })
   })
 
-  it('Recommendation today: 보유 옷에서 선택, 미세먼지 보통이면 마스크 false', async () => {
+  it('Recommendation today: 예시 옷은 확인하기 전이라 일반 추천, 미세먼지 보통이면 마스크 false', async () => {
+    // 예시 옷을 '내 옷이에요'로 확인하면 보유 옷에서 고른다
+    for (const c of (await a.get('/api/clothes')).body as { id: string }[]) await a.patch(`/api/clothes/${c.id}`).send({ confirmed: true }).expect(200)
     const r = await a.get('/api/recommendations/today')
     expect(r.status).toBe(200)
     recId = r.body.id

@@ -15,20 +15,61 @@ export function regionOf(u: Pick<User, 'gridNx' | 'gridNy' | 'regionSido' | 'reg
 }
 
 export const toWardrobe = (c: Clothing): WardrobeItem => ({
-  id: c.id, type: c.type, thickness: c.thickness, color: c.color, pattern: c.pattern, category: c.category, warmth: c.warmth, windproof: c.windproof, waterproof: c.waterproof, owned: true,
+  id: c.id, type: c.type, thickness: c.thickness, color: c.color, pattern: c.pattern, category: c.category, warmth: c.warmth, windproof: c.windproof, waterproof: c.waterproof, owned: !c.isSample, // 확인 전 예시 옷은 '내 옷'으로 추천하지 않는다 (일반 추천)
 })
 
-/** 오늘의 외출 구간: 07:00~22:00(KST) 중 현재 이후. 이미 늦었다면 지금부터 3시간. */
-export function todayWindow(now: Date): { start: Date; end: Date } {
-  const day = kstDate(now)
-  const end = fromKst(day, TODAY_OUTING.end)
-  const startNominal = fromKst(day, TODAY_OUTING.start)
-  let start = new Date(Math.max(startNominal.getTime(), now.getTime() - 3600_000))
-  if (end.getTime() - start.getTime() < 3 * 3600_000) {
-    start = new Date(now.getTime() - 3600_000)
-    return { start, end: new Date(now.getTime() + 3 * 3600_000) }
-  }
+export type WindowSource = 'ROUTINE' | 'DEFAULT' | 'NOW'
+export interface Routine { outAt: string | null; homeAt: string | null; days: number[] }
+
+const DAY_MS = 24 * 3600_000
+const weekdayOf = (kstYmd: string) => new Date(`${kstYmd}T00:00:00Z`).getUTCDay() // 0=일 ~ 6=토
+
+/** 하루 패턴(외출/귀가/요일)으로 그 날의 외출 구간을 만든다. 패턴이 없거나 그 요일이 아니면 null. 귀가가 외출보다 이르거나 같으면 다음 날 귀가(야간)로 본다. */
+function routineSpan(day: string, r: Routine | null): { start: Date; end: Date } | null {
+  if (!r?.outAt || !r.homeAt || !r.days.includes(weekdayOf(day))) return null
+  const start = fromKst(day, r.outAt)
+  let end = fromKst(day, r.homeAt)
+  if (end.getTime() <= start.getTime()) end = new Date(end.getTime() + DAY_MS)
   return { start, end }
+}
+
+/**
+ * 오늘의 외출 구간. 하루 패턴이 있으면 그 시간, 없으면 07:00~22:00(KST). 이미 지난 시간은 빼고(1시간 전부터),
+ * 남은 구간이 3시간보다 짧으면 지금부터 3시간으로 본다. 어젯밤 외출이 새벽까지 이어지는 경우도 처리한다.
+ */
+export function todayWindow(now: Date, routine: Routine | null = null): { start: Date; end: Date; source: WindowSource } {
+  const day = kstDate(now)
+  const yesterday = kstDate(new Date(now.getTime() - DAY_MS))
+  const prev = routineSpan(yesterday, routine)
+  const today = routineSpan(day, routine)
+  let nominal: { start: Date; end: Date }
+  let source: WindowSource
+  if (prev && prev.end.getTime() > now.getTime() && prev.start.getTime() < now.getTime()) {
+    nominal = prev
+    source = 'ROUTINE'
+  } else if (today) {
+    nominal = today
+    source = 'ROUTINE'
+  } else {
+    nominal = { start: fromKst(day, TODAY_OUTING.start), end: fromKst(day, TODAY_OUTING.end) }
+    source = 'DEFAULT'
+  }
+  const start = new Date(Math.max(nominal.start.getTime(), now.getTime() - 3600_000))
+  if (nominal.end.getTime() - start.getTime() < 3 * 3600_000) {
+    return { start: new Date(now.getTime() - 3600_000), end: new Date(now.getTime() + 3 * 3600_000), source: 'NOW' }
+  }
+  return { start, end: nominal.end, source }
+}
+
+export const routineOf = (u: Pick<User, 'routineOutAt' | 'routineHomeAt' | 'routineDays'>): Routine => ({ outAt: u.routineOutAt, homeAt: u.routineHomeAt, days: u.routineDays })
+
+/** 추천이 어떤 시간·지역을 기준으로 계산됐는지. 화면에 그대로 보여준다. */
+export interface RecommendationBasis {
+  startAt: string
+  endAt: string
+  /** ROUTINE: 내 하루 패턴 / DEFAULT: 기본 07~22시 / NOW: 남은 시간이 짧아 지금부터 3시간 */
+  source: WindowSource
+  place: string | null
 }
 
 export interface RecommendationView {
@@ -47,6 +88,8 @@ export interface RecommendationView {
   aiExplanation: string | null
   forecastStage: string
   version: number
+  /** 오늘 추천에서만 채운다(일정 추천은 일정 시간이 기준) */
+  basis?: RecommendationBasis
 }
 
 export function viewOf(rec: Recommendation, stage?: string): RecommendationView {
@@ -76,6 +119,7 @@ export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: 
 export interface Computed {
   result: EngineResult
   window: WindowForecast
+  region: Region
 }
 
 /** 순수 계산: 예보 + 옷장 -> 엔진 결과 (저장하지 않음) */
@@ -97,7 +141,7 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     feelsMethod: window.feelsMethod,
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')
-  return { result, window }
+  return { result, window, region }
 }
 
 /**
@@ -137,16 +181,18 @@ async function maybeExplain(result: EngineResult): Promise<string | null> {
 
 /** 오늘 추천: 같은 날 같은 옷 조합이면 같은 Recommendation(id)을 재사용해 피드백이 안정적으로 붙게 한다. 조합이 바뀌면 새 버전. */
 export async function todayRecommendation(user: User, now = new Date(), regionOverride?: Region): Promise<RecommendationView> {
-  const { start, end } = todayWindow(now)
+  const { start, end, source } = todayWindow(now, routineOf(user))
   const c = await compute(user, null, start, end, now, regionOverride)
   if (!c) throw new AppError(502, 'WEATHER_UNAVAILABLE', '지금은 날씨 정보를 가져올 수 없어요.')
   // 다른 지역(즐겨찾기/검색)은 저장하지 않는다: 하루 1개 저장 추천은 내 기본 위치 기준이고, 피드백도 거기에만 붙는다.
-  if (regionOverride) return viewFromResult({ ...c.result, forecastStage: c.window.stage }, { id: null, aiExplanation: null, version: 0, stage: c.window.stage })
+  const placeOf = (r: Region) => [r.sido, r.district].filter(Boolean).join(' ') || null
+  const basis: RecommendationBasis = { startAt: start.toISOString(), endAt: end.toISOString(), source, place: regionOverride ? placeOf(regionOverride) : (user.locationName ?? placeOf(c.region)) }
+  if (regionOverride) return { ...viewFromResult({ ...c.result, forecastStage: c.window.stage }, { id: null, aiExplanation: null, version: 0, stage: c.window.stage }), basis }
   const dayStart = kstStartOfDay(now)
   const latest = await prisma.recommendation.findFirst({ where: { userId: user.id, eventId: null, targetStartAt: dayStart }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
   const reused = await refreshIfSameOutfit(latest, c.result, stage)
-  if (reused) return viewOf(reused, stage)
+  if (reused) return { ...viewOf(reused, stage), basis }
   const aiExplanation = await maybeExplain(c.result)
   const rec = await prisma.recommendation.create({
     data: {
@@ -160,7 +206,7 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
       aiExplanation,
     },
   })
-  return viewOf(rec, stage)
+  return { ...viewOf(rec, stage), basis }
 }
 
 export function eventWindow(e: Pick<Event, 'startAt' | 'endAt'>) {

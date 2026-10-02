@@ -24,6 +24,8 @@ export default function WardrobePage() {
   const [notice, setNotice] = useState('')
 
   const clothes = (data ?? []).filter((c) => !gone.includes(c.id))
+  const samples = clothes.filter((c) => c.isSample)
+  const [confirming, setConfirming] = useState(false)
   const groups = categories
     .map((cat) => ({ name: cat.name, items: clothes.filter((c) => cat.types.includes(c.type)) }))
     .filter((g) => g.items.length > 0)
@@ -40,6 +42,20 @@ export default function WardrobePage() {
       setNotice(errorMessage(e))
     } finally {
       setLeaving((l) => l.filter((x) => x !== c.id))
+    }
+  }
+
+  // 예시 옷을 한 번에 '내 옷'으로 확인한다. 실패하면 목록을 다시 불러와 실제 상태를 보여준다.
+  const confirmSamples = async () => {
+    setConfirming(true)
+    setNotice('')
+    try {
+      await Promise.all(samples.map((c) => api('PATCH', `/api/clothes/${c.id}`, { confirmed: true })))
+    } catch (e) {
+      setNotice(errorMessage(e))
+    } finally {
+      setConfirming(false)
+      reload()
     }
   }
 
@@ -60,6 +76,14 @@ export default function WardrobePage() {
       {groups.length > 0 && <ClosetScene />}
       {deleteMode && groups.length > 0 && <p className="tiny">지울 옷의 ⛔를 눌러주세요.</p>}
       {notice && <p role="alert">{notice}</p>}
+      {samples.length > 0 && (
+        <div className="sample-note">
+          <p className="tiny">예시 옷 {samples.length}벌이 있어요. 확인하기 전까지는 추천에서 내 옷으로 쓰지 않아요. 지울 옷은 지우고, 내 옷이 맞으면 확인해 주세요.</p>
+          <button type="button" className="dbtn w2 small" onClick={() => void confirmSamples()} disabled={confirming}>
+            <HandText>{confirming ? '확인 중…' : '남은 옷 전부 내 옷이에요'}</HandText>
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <p>불러오는 중…</p>
@@ -93,7 +117,7 @@ export default function WardrobePage() {
                           </button>
                         )}
                       </div>
-                      <div className="label">{nameOf(c)}</div>
+                      <div className="label">{nameOf(c)}{c.isSample && <span className="sample-tag"> · 예시</span>}</div>
                     </div>
                   ))}
                 </div>

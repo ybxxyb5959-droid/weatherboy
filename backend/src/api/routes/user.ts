@@ -103,7 +103,7 @@ userRouter.post(
         data: sampleClothes.map((c) => {
           const type = clothingTypeMap.toDb(c.type)
           const thickness = thicknessMap.toDb(c.thickness)
-          return { userId, type, thickness, color: colorMap.toDb(c.color), windproof: c.windproof, waterproof: c.waterproof, ...deriveClothing(type, thickness) }
+          return { userId, isSample: true, type, thickness, color: colorMap.toDb(c.color), windproof: c.windproof, waterproof: c.waterproof, ...deriveClothing(type, thickness) }
         }),
       })
     }

@@ -67,6 +67,8 @@ export interface ApiRecommendation {
   insufficientWardrobe: boolean
   aiExplanation: string | null
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'
+  /** 오늘 추천이 계산된 기준 시간/지역 */
+  basis?: { startAt: string; endAt: string; source: 'ROUTINE' | 'DEFAULT' | 'NOW'; place: string | null }
 }
 
 export interface EventOutfit {

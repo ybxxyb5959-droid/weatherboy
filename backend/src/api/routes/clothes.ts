@@ -47,7 +47,7 @@ clothesRouter.patch(
   '/:id',
   wrap(async (req, res) => {
     const { id } = parse(idParam, req.params)
-    const b = parse(base.partial(), req.body)
+    const b = parse(base.partial().extend({ confirmed: z.boolean().optional() }), req.body)
     const userId = (req as AuthedRequest).userId
     const cur = await prisma.clothing.findFirst({ where: { id, userId, active: true } })
     if (!cur) throw notFound('옷을 찾을 수 없어요.')
@@ -65,6 +65,7 @@ clothesRouter.patch(
         pattern: b.pattern ? patternMap.toDb(b.pattern) : cur.pattern,
         windproof: b.windproof ?? (retyped ? d.windproof : cur.windproof),
         waterproof: b.waterproof ?? (retyped ? d.waterproof : cur.waterproof),
+        isSample: false, // 수정하거나 '내 옷이에요'로 확인하면 예시가 아니라 내 옷이 된다
         ...deriveClothing(type, thickness),
       },
     })

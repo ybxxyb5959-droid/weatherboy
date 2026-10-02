@@ -2095,3 +2095,9 @@ a.card {
 
 
 
+
+/* 예시 옷 안내 / 추천 기준 */
+.sample-note { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.sample-note .tiny { flex: 1 1 220px; margin: 0; }
+.sample-tag { opacity: 0.6; font-size: 0.85em; }
+.basis { margin: 4px 0 8px; opacity: 0.75; }
