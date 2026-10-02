@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ArrowButton from './ArrowButton'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 const p2 = (n: number) => String(n).padStart(2, '0')
@@ -48,15 +49,11 @@ export default function DatePicker({ value, onChange, label, min, id }: Props) {
       {open && (
         <div className="dp-panel box w3" role="group" aria-label={label}>
           <div className="cal-head">
-            <button type="button" className="mini" onClick={() => go(-1)} aria-label="이전 달">
-              ◀
-            </button>
+            <ArrowButton dir="prev" onClick={() => go(-1)} label="이전 달" />
             <strong>
               {view.y}년 {view.m + 1}월
             </strong>
-            <button type="button" className="mini" onClick={() => go(1)} aria-label="다음 달">
-              ▶
-            </button>
+            <ArrowButton dir="next" onClick={() => go(1)} label="다음 달" />
           </div>
           <div className="cal-grid dp-grid">
             {WEEKDAY.map((w, i) => (

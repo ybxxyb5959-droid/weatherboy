@@ -46,18 +46,22 @@ function wobblyHand(deg: number, len: number, bend: number): string {
   return `M ${C} ${C} Q ${(mid.x + nx * bend).toFixed(1)} ${(mid.y + ny * bend).toFixed(1)} ${tip.x.toFixed(1)} ${tip.y.toFixed(1)}`
 }
 
-type Step = 'hour' | 'min'
 const HOUR_MARKS = Array.from({ length: 12 }, (_, i) => i + 1)
-const MIN_MARKS = Array.from({ length: 12 }, (_, i) => i * 5)
+const STEP_MIN = 10 // 분은 10분 단위
+// 숫자 사이사이의 눈금: 10분 단위 위치(60도마다)를 점으로 표시한다. 숫자 자리와 겹치지 않게 숫자(5분 단위)는 그대로 둔다.
+const MIN_DOTS = Array.from({ length: 6 }, (_, i) => i * 60)
+const HOUR_HAND = 46 // 짧은 바늘(시)
+const MIN_HAND = 80 // 긴 바늘(분)
+const SPLIT = 63 // 이 거리보다 안쪽을 누르면 시침, 바깥쪽이면 분침
 
 /**
- * 낙서 스타일 원형 시계로 시간을 고른다. 누르면(또는 바늘을 끌면) 시를 고르고, 이어서 분을 고른다.
- * 분은 5분 단위. 숫자는 키보드(Tab/Enter)로도 고를 수 있다.
+ * 낙서 스타일 원형 시계. 진짜 시계처럼 짧은 바늘은 시, 긴 바늘은 분이고 한 화면에서 둘 다 맞춘다.
+ * 안쪽을 누르거나 끌면 시침이, 바깥쪽을 누르거나 끌면 분침이 움직인다(분은 10분 단위). 시계에 적힌 숫자는 1~12 그대로다.
+ * 키보드는 ←/→ 로 10분, ↑/↓ 로 1시간씩 움직인다.
  */
 export default function TimePicker({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<Step>('hour')
-  const dragging = useRef(false)
+  const dragging = useRef<'hour' | 'min' | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const { pm, hour12, minute } = split(value)
 
@@ -65,58 +69,59 @@ export default function TimePicker({ value, onChange, label }: { value: string; 
   const face2 = useMemo(() => wobblyCircle(105, 4, 2.8), []) // 한 번 더 덧그린 선
   const blob = useMemo(() => wobblyCircle(17, 7, 1.2), [])
 
-  const isHour = step === 'hour'
-  const handDeg = isHour ? (hour12 % 12) * 30 : minute * 6
-  const hand = useMemo(() => wobblyHand(handDeg, 62, isHour ? 3 : -3), [handDeg, isHour])
-  const tip = polar(handDeg, 86)
+  const hourDeg = (hour12 % 12) * 30
+  const minDeg = minute * 6
+  const hourHand = useMemo(() => wobblyHand(hourDeg, HOUR_HAND, 3), [hourDeg])
+  const minHand = useMemo(() => wobblyHand(minDeg, MIN_HAND, -3), [minDeg])
+  const hourTip = polar(hourDeg, 86) // 시에 해당하는 숫자 위치(강조)
+  const minTip = polar(minDeg, MIN_HAND)
 
-  const pickAt = (clientX: number, clientY: number, final: boolean) => {
+  const setHour = (h: number) => onChange(join(pm, h === 0 ? 12 : h, minute))
+  const setMinute = (m: number) => onChange(join(pm, hour12, ((m % 60) + 60) % 60))
+
+  // 누른 점이 중심에서 얼마나 떨어졌는지(viewBox 단위)와 시계 위 각도
+  const locate = (clientX: number, clientY: number) => {
     const box = svgRef.current?.getBoundingClientRect()
-    if (!box) return
+    if (!box) return null
     const dx = clientX - (box.left + box.width / 2)
     const dy = clientY - (box.top + box.height / 2)
-    if (Math.hypot(dx, dy) < box.width * 0.08) return // 가운데 점은 무시
+    const dist = (Math.hypot(dx, dy) * 240) / box.width
     const deg = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360
-    if (isHour) {
-      onChange(join(pm, Math.round(deg / 30) % 12 || 12, minute))
-      if (final) setStep('min') // 손을 떼면 분으로 넘어간다
-    } else {
-      onChange(join(pm, hour12, (Math.round(deg / 30) * 5) % 60))
-    }
+    return { dist, deg }
+  }
+  const apply = (hand: 'hour' | 'min', deg: number) => {
+    if (hand === 'hour') setHour(Math.round(deg / 30) % 12)
+    else setMinute(Math.round(deg / (STEP_MIN * 6)) * STEP_MIN)
   }
 
   const down = (e: PointerEvent<SVGSVGElement>) => {
-    dragging.current = true
+    const p = locate(e.clientX, e.clientY)
+    if (!p || p.dist < 10) return // 가운데 점은 무시
+    dragging.current = p.dist < SPLIT ? 'hour' : 'min'
     e.currentTarget.setPointerCapture(e.pointerId)
-    pickAt(e.clientX, e.clientY, false)
+    apply(dragging.current, p.deg)
   }
   const move = (e: PointerEvent<SVGSVGElement>) => {
-    if (dragging.current) pickAt(e.clientX, e.clientY, false)
-  }
-  const up = (e: PointerEvent<SVGSVGElement>) => {
     if (!dragging.current) return
-    dragging.current = false
-    pickAt(e.clientX, e.clientY, true)
+    const p = locate(e.clientX, e.clientY)
+    if (p) apply(dragging.current, p.deg)
   }
-  const keyPick = (e: KeyboardEvent, apply: () => void) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      apply()
-    }
+  const up = () => {
+    dragging.current = null
+  }
+  const total = (hour12 % 12) * 60 + minute
+  const keyPick = (e: KeyboardEvent) => {
+    const delta = e.key === 'ArrowRight' ? STEP_MIN : e.key === 'ArrowLeft' ? -STEP_MIN : e.key === 'ArrowUp' ? 60 : e.key === 'ArrowDown' ? -60 : 0
+    if (!delta) return
+    e.preventDefault()
+    const t = (((total + delta) % 720) + 720) % 720
+    const h = Math.floor(t / 60)
+    onChange(join(pm, h === 0 ? 12 : h, t % 60))
   }
 
   return (
     <>
-      <button
-        type="button"
-        className="dbtn w2 tp-show"
-        aria-expanded={open}
-        aria-label={`${label} 시간 선택`}
-        onClick={() => {
-          setOpen((o) => !o)
-          setStep('hour')
-        }}
-      >
+      <button type="button" className="dbtn w2 tp-show" aria-expanded={open} aria-label={`${label} 시간 선택`} onClick={() => setOpen((o) => !o)}>
         <span className="tp-ampm">{pm ? '오후' : '오전'}</span> {hour12}:{p2(minute)}
       </button>
       {open && (
@@ -130,61 +135,48 @@ export default function TimePicker({ value, onChange, label }: { value: string; 
             </DoodleButton>
           </div>
           <div className="tp-readout" aria-live="polite">
-            <button type="button" className={`tp-part${isHour ? ' on' : ''}`} aria-pressed={isHour} onClick={() => setStep('hour')}>
-              {hour12}시
-            </button>
-            <button type="button" className={`tp-part${!isHour ? ' on' : ''}`} aria-pressed={!isHour} onClick={() => setStep('min')}>
-              {p2(minute)}분
-            </button>
+            <span className="tp-part on">
+              {hour12}시 {p2(minute)}분
+            </span>
           </div>
           <svg
             ref={svgRef}
             className="tp-clock"
             viewBox="0 0 240 240"
-            role="group"
-            aria-label={isHour ? '시계에서 시를 골라요' : '시계에서 분을 골라요'}
+            role="slider"
+            tabIndex={0}
+            aria-label={`${label} 시각`}
+            aria-valuemin={0}
+            aria-valuemax={719}
+            aria-valuenow={total}
+            aria-valuetext={`${pm ? '오후' : '오전'} ${hour12}시 ${minute}분`}
             onPointerDown={down}
             onPointerMove={move}
             onPointerUp={up}
-            onPointerCancel={() => {
-              dragging.current = false
-            }}
+            onPointerCancel={up}
+            onKeyDown={keyPick}
           >
             <path d={face} className="tp-face" />
             <path d={face2} className="tp-face tp-face2" />
-            <path d={blob} className="tp-blob" transform={`translate(${tip.x - C} ${tip.y - C})`} />
-            <path d={hand} className="tp-hand" />
+            {MIN_DOTS.map((deg) => {
+              const p = polar(deg, 99)
+              return <circle key={deg} cx={p.x} cy={p.y} r="1.3" className="tp-tick" />
+            })}
+            <path d={blob} className="tp-blob" transform={`translate(${hourTip.x - C} ${hourTip.y - C})`} />
+            <path d={minHand} className="tp-hand tp-hand-min" />
+            <path d={hourHand} className="tp-hand tp-hand-hour" />
+            <circle cx={minTip.x} cy={minTip.y} r="4" className="tp-mintip" />
             <circle cx={C} cy={C} r="4.5" className="tp-dot" />
-            {(isHour ? HOUR_MARKS : MIN_MARKS).map((n) => {
-              const p = polar(isHour ? n * 30 : n * 6, 86)
-              const on = isHour ? n === hour12 : n === minute
+            {HOUR_MARKS.map((n) => {
+              const p = polar(n * 30, 86)
               return (
-                <text
-                  key={n}
-                  x={p.x}
-                  y={p.y}
-                  className={`tp-num${on ? ' on' : ''}`}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  tabIndex={0}
-                  role="button"
-                  aria-pressed={on}
-                  aria-label={isHour ? `${n}시` : `${p2(n)}분`}
-                  onKeyDown={(e) =>
-                    keyPick(e, () => {
-                      if (isHour) {
-                        onChange(join(pm, n, minute))
-                        setStep('min')
-                      } else onChange(join(pm, hour12, n))
-                    })
-                  }
-                >
-                  {isHour ? n : p2(n)}
+                <text key={n} x={p.x} y={p.y} className="tp-num" textAnchor="middle" dominantBaseline="central" aria-hidden="true">
+                  {n}
                 </text>
               )
             })}
           </svg>
-          <p className="tiny tp-hint">{isHour ? '시계를 눌러 시를 골라요 (끌어도 돼요)' : '이제 분을 골라요 (5분 단위)'}</p>
+          <p className="tiny tp-hint">안쪽 짧은 바늘은 시, 바깥쪽 긴 바늘은 분이에요. 눌러도 끌어도 돼요 (분은 10분 단위)</p>
           <button type="button" className="dbtn w1 small tp-done" onClick={() => setOpen(false)}>
             확인
           </button>

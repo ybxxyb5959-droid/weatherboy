@@ -1754,6 +1754,21 @@ a.card {
 .tp-dot {
   fill: var(--ink);
 }
+.tp-hand-hour {
+  stroke-width: 5;
+}
+.tp-hand-min {
+  stroke-width: 2.8;
+}
+.tp-mintip {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.tp-tick {
+  fill: var(--ink);
+  opacity: 0.5;
+}
 .tp-num {
   font-family: var(--font);
   font-size: 21px;
@@ -2311,4 +2326,31 @@ a.card {
   .hung.arriving .label {
     animation: none;
   }
+}
+
+/* 달력 이전/다음 화살표: 상자 없이 낙서 화살표만 */
+.cal-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.cal-arrow svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cal-arrow:active svg {
+  transform: scale(0.88);
+}
+.cal-arrow:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
 }

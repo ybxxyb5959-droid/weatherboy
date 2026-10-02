@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import HandText from './HandText'
+import ArrowButton from './ArrowButton'
 import type { PlanEvent } from '../mocks/events'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
@@ -50,11 +51,11 @@ export default function MonthCalendar({ events }: { events: PlanEvent[] }) {
   return (
     <section className="section cal">
       <div className="cal-head">
-        <button type="button" className="mini" onClick={() => go(-1)} aria-label="이전 달">◀</button>
+        <ArrowButton dir="prev" onClick={() => go(-1)} label="이전 달" />
         <h2>
           {view.y}년 {view.m + 1}월
         </h2>
-        <button type="button" className="mini" onClick={() => go(1)} aria-label="다음 달">▶</button>
+        <ArrowButton dir="next" onClick={() => go(1)} label="다음 달" />
       </div>
       <hr className="scribble under-title" />
       <div className="cal-grid" role="grid">
