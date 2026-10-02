@@ -1107,6 +1107,14 @@ a.card {
 .set-msg {
   margin: 0 0 10px;
 }
+/* 저장했다는 안내: 눈에 띄게 낙서 상자로 */
+.set-saved {
+  padding: 8px 12px;
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  border-radius: 10px 15px 9px 13px / 13px 9px 15px 10px;
+  background: var(--pick);
+}
 .set-danger {
   display: block;
   margin: 18px auto 4px;

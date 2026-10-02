@@ -108,16 +108,24 @@ export default function SettingsPage() {
   const [message, setMessage] = useState(() => (location.state as { saved?: string } | null)?.saved ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false) // message 가 저장 성공 안내인지 오류인지
+  const showError = (e: unknown) => {
+    setFailed(true)
+    setMessage(errorMessage(e))
+  }
   const [routineDraft, setRoutineDraft] = useState<Routine | null>(null) // 하루 패턴 편집 중인 값 (저장 누를 때 반영)
 
   const patch = async (p: Partial<Settings>, okMessage = '') => {
     setMessage('')
     try {
       setData(await api<ServerSettings>('PUT', '/api/settings', p))
-      if (okMessage) setMessage(okMessage)
+      if (okMessage) {
+        setFailed(false)
+        setMessage(okMessage)
+      }
       return true
     } catch (e) {
-      setMessage(errorMessage(e))
+      showError(e)
       return false
     }
   }
@@ -128,7 +136,7 @@ export default function SettingsPage() {
       await logout()
       nav('/', { replace: true })
     } catch (e) {
-      setMessage(errorMessage(e))
+      showError(e)
       setBusy(false)
     }
   }
@@ -139,7 +147,7 @@ export default function SettingsPage() {
       await deleteAccount()
       nav('/', { replace: true })
     } catch (e) {
-      setMessage(errorMessage(e))
+      showError(e)
       setBusy(false)
     }
   }
@@ -333,6 +341,12 @@ export default function SettingsPage() {
       <div className="page-head">
         <h1>설정</h1>
       </div>
+      {message && (
+        <p role={failed ? 'alert' : 'status'} className={failed ? 'set-msg' : 'set-msg set-saved'}>
+          {failed ? '' : '✓ '}
+          {message}
+        </p>
+      )}
 
       <Group seed={1}>
         <Row label="내 위치 설정" value={s.location} onClick={go('location')} />
@@ -358,7 +372,6 @@ export default function SettingsPage() {
       <Group seed={1}>
         <Row label={busy ? '잠시만요…' : '로그아웃'} onClick={() => void doLogout()} />
       </Group>
-      {message && <p role="alert">{message}</p>}
     </main>
   )
 }
