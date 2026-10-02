@@ -2366,3 +2366,23 @@ a.card {
 .guest-notice p {
   margin: 0 0 8px;
 }
+
+/* 옷 추가: 말로 적기가 주인공, 사진/직접 고르기는 그 아래 같은 크기 두 칸 */
+.add-lead {
+  margin: 4px 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.add-or {
+  margin: 4px 0 8px;
+  text-align: center;
+}
+.add-alt {
+  margin-bottom: 4px;
+}
+.add-manual {
+  margin-top: 6px;
+}
+.add-list h2 {
+  margin: 4px 0 0;
+}
