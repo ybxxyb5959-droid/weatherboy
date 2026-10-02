@@ -1,16 +1,15 @@
 import { useCallback, useState } from 'react'
 
-export type BlockId = 'weather' | 'commute' | 'recommend' | 'hourly' | 'daily'
+export type BlockId = 'weather' | 'recommend' | 'hourly' | 'daily'
 
 export const blockLabels: Record<BlockId, string> = {
   weather: '현재 날씨',
-  commute: '외출 날씨',
   recommend: '오늘 추천',
   hourly: '시간대별 날씨',
   daily: '앞으로의 날씨',
 }
 
-const DEFAULT_ORDER: BlockId[] = ['weather', 'commute', 'recommend', 'hourly', 'daily']
+const DEFAULT_ORDER: BlockId[] = ['weather', 'recommend', 'hourly', 'daily']
 const KEY = 'wb.homeLayout'
 
 interface Layout {

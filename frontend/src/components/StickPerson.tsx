@@ -79,12 +79,25 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         )}
         {/* 머리 */}
         <path d="M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15" />
-        {/* 얼굴: 작고 동그란 점 눈 + 작은 미소(양 끝에 보조개 점) */}
-        <g stroke="none">
-          <circle cx="53.5" cy="30" r="1.9" fill={ink} />
-          <circle cx="66.5" cy="29.5" r="1.9" fill={ink} />
-        </g>
-        {mood !== 'empty' && <path d="M56.5 36.5 Q60.5 40 64.5 36" strokeWidth="2" />}
+        {mood === 'stand' ? (
+          // 오늘 추천: 후기 카드의 '딱 좋아요' 얼굴과 같다 (동그란 눈 + 활짝 웃는 입)
+          <g>
+            <g stroke="none">
+              <circle cx="53" cy="27.7" r="2.6" fill={ink} />
+              <circle cx="67" cy="27.7" r="2.6" fill={ink} />
+            </g>
+            <path d="M49.6 35.5 Q60 47.2 70.4 35.5 Z" fill="#fcfcfa" strokeWidth="1.8" />
+          </g>
+        ) : (
+          <>
+            {/* 얼굴: 작고 동그란 점 눈 + 작은 미소(양 끝에 보조개 점) */}
+            <g stroke="none">
+              <circle cx="53.5" cy="30" r="1.9" fill={ink} />
+              <circle cx="66.5" cy="29.5" r="1.9" fill={ink} />
+            </g>
+            {mood !== 'empty' && <path d="M56.5 36.5 Q60.5 40 64.5 36" strokeWidth="2" />}
+          </>
+        )}
 
         {mood === 'hike' && (
           <g>

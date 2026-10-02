@@ -317,8 +317,6 @@ export default function HomePage() {
 
       </>
     ),
-    // 외출 시간은 내 위치 기준이라, 다른 지역을 구경 중일 땐 숨긴다
-    commute: target.kind === 'home' ? <CommuteLine hourly={w.hourly ?? []} routine={routine} /> : null,
     recommend: !rec ? (
       <section className="section">
         <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
@@ -337,6 +335,8 @@ export default function HomePage() {
             ))}
           </ul>
         )}
+        {/* 외출·귀가 날씨: 제목과 졸라맨 사이. 외출 시간은 내 위치 기준이라 다른 지역을 구경 중일 땐 숨긴다 */}
+        {target.kind === 'home' && <CommuteLine hourly={w.hourly ?? []} routine={routine} />}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
           <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} />
