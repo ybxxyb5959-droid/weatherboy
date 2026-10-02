@@ -111,6 +111,10 @@ export default function WardrobePage() {
         <div className="empty">
           <StickPerson mood="empty" size={150} />
           <p>옷장이 텅 비어있어</p>
+          <p className="tiny">말로 적거나 사진으로 한 번에 넣을 수 있어요.</p>
+          <Link to="/wardrobe/add" className="dbtn w1">
+            <HandText>+ 첫 옷 추가하기</HandText>
+          </Link>
         </div>
       ) : (
         <div className="lines">

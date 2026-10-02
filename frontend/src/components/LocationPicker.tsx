@@ -29,7 +29,7 @@ export default function LocationPicker({ onPick }: { onPick: (p: PickedPlace) =>
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const useCurrent = async () => {
+  const findCurrent = async () => {
     if (busy) return
     setBusy(true)
     setError('')
@@ -46,7 +46,7 @@ export default function LocationPicker({ onPick }: { onPick: (p: PickedPlace) =>
 
   return (
     <div className="picker">
-      <DoodleButton seed={1} className="block picker-gps" disabled={busy} onClick={() => void useCurrent()}>
+      <DoodleButton seed={1} className="block picker-gps" disabled={busy} onClick={() => void findCurrent()}>
         <Pin />
         <HandText>{busy ? '위치 찾는 중…' : '현재 위치로 찾기'}</HandText>
       </DoodleButton>
