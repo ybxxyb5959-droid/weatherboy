@@ -29,10 +29,20 @@ describe('내 캐릭터 API', () => {
     expect(r.catalog.map((s: { slot: string }) => s.slot)).toEqual(['hat', 'hairpin', 'glasses', 'neck', 'face', 'extra'])
   })
 
+  it('옷장을 채우기 전에는 캐릭터가 잠겨 있다: 꾸미기 저장은 409', async () => {
+    const r = (await a.get('/api/character').expect(200)).body
+    expect(r).toMatchObject({ unlocked: false, minClothes: 5 })
+    const put = await a.put('/api/character').send({ config: { hat: 'beanie' } })
+    expect(put.status).toBe(409)
+    expect(put.body.code).toBe('CHARACTER_LOCKED')
+    expect((await a.get('/api/character')).body.config).toEqual({}) // 저장되지 않았다
+  })
+
   it('검정 옷을 5벌 담으면 "어둠의 아이"가 되고 색 비중이 나온다', async () => {
     for (const t of ['후드티', '바지', '반팔', '긴팔', '맨투맨']) await a.post('/api/clothes').send({ type: t, color: '검정' }).expect(201)
     const r = (await a.get('/api/character').expect(200)).body
     expect(r.analysis.ready).toBe(true)
+    expect(r.unlocked).toBe(true) // 옷장을 채우면 캐릭터가 열린다
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 5, share: 1 })
     expect(r.titles).toHaveLength(15)

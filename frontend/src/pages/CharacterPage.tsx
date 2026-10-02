@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import StickPerson from '../components/StickPerson'
 import { ItemThumb, type Accessories, type Slot } from '../components/CharacterDecor'
 import { colorHex } from '../mocks/clothes'
@@ -64,6 +65,84 @@ export default function CharacterPage() {
   }
 
   const a = data.analysis
+
+  // 옷장을 채우기 전: 캐릭터는 잠겨 있다. 얼마나 남았는지와 옷 등록으로 가는 길을 보여주고, 받을 수 있는 칭호는 미리 볼 수 있다.
+  if (!data.unlocked) {
+    const shownLocked = preview ? data.titles.find((t) => t.key === preview) : null
+    const left = Math.max(0, data.minClothes - a.count)
+    return (
+      <main className="character">
+        <div className="page-head">
+          <h1>내 캐릭터</h1>
+        </div>
+        <section className="char-hero">
+          <StickPerson mood="stand" size={200} wear={(shownLocked && PERSONA_WEAR[shownLocked.key]) || BASIC_WEAR} persona={shownLocked?.key ?? null} />
+          {shownLocked ? (
+            <>
+              <h2 className="char-title">{shownLocked.name}</h2>
+              <p className="char-tag">{shownLocked.tagline}</p>
+              <p className="tiny">미리보기예요 · {shownLocked.rule}</p>
+              <button type="button" className="dbtn small" onClick={() => setPreview(null)}>
+                닫기
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="char-title">옷장을 채우면 열려요</h2>
+              <p className="char-tag">
+                옷을 {data.minClothes}벌 이상 등록하면 내 옷장을 분석해서 <b>칭호</b>를 드리고, 캐릭터를 <b>꾸밀 수</b> 있어요.
+              </p>
+            </>
+          )}
+        </section>
+
+        <div className="char-lock box w2">
+          <div className="row between">
+            <b>
+              내 옷 {Math.min(a.count, data.minClothes)} / {data.minClothes}벌
+            </b>
+            <span className="tiny">{left > 0 ? `${left}벌 더 등록하면 열려요` : ''}</span>
+          </div>
+          <div className="char-bar">
+            <span />
+            <span className="track">
+              <i style={{ width: `${Math.max(4, (Math.min(a.count, data.minClothes) / data.minClothes) * 100)}%` }} />
+            </span>
+            <span />
+          </div>
+          <Link to="/wardrobe/add" className="dbtn w1 block">
+            + 옷 등록하러 가기
+          </Link>
+          <p className="tiny">말로 "검정 후드티, 청바지"라고 적거나 사진으로 한 번에 등록할 수 있어요.</p>
+        </div>
+
+        <hr className="scribble" />
+        <section>
+          <h2>받을 수 있는 칭호 ({data.titles.length})</h2>
+          <p className="tiny">눌러 보면 그 칭호의 캐릭터를 미리 볼 수 있어요.</p>
+          <ul className="char-dex">
+            {data.titles.map((t) => (
+              <li key={t.key}>
+                <button
+                  type="button"
+                  className="dex-btn"
+                  aria-label={`${t.name} 모습 미리보기`}
+                  onClick={() => {
+                    setPreview(t.key)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                >
+                  <b>{t.name}</b>
+                  <div className="tiny">{t.rule}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </main>
+    )
+  }
+
   const title = a.title
   const config = local ?? data.config
   const shown = preview ? (data.titles.find((t) => t.key === preview) ?? title) : title

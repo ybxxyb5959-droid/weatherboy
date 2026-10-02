@@ -2728,3 +2728,32 @@ a.card {
   border: 2.4px solid var(--ink);
   background: var(--pick);
 }
+
+/* 캐릭터 잠금 / 첫 시작 안내 */
+.char-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--paper);
+}
+.char-lock .char-bar {
+  grid-template-columns: 0 1fr 0;
+  gap: 0;
+}
+.char-lock .dbtn {
+  text-align: center;
+  justify-content: center;
+}
+.first-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 12px;
+  background: var(--paper);
+}
+.first-guide p {
+  margin: 0;
+}

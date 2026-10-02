@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../../db.js'
-import { analyze, TITLES } from '../../services/character/analysis.js'
+import { analyze, MIN_CLOTHES, TITLES } from '../../services/character/analysis.js'
 import { CATALOG, cleanConfig } from '../../services/character/catalog.js'
-import { badRequest } from '../../utils/errors.js'
+import { AppError, badRequest } from '../../utils/errors.js'
 import { requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
 export const characterRouter = Router()
@@ -15,7 +15,9 @@ async function view(userId: string) {
     // 예시 옷은 분석에 넣지 않는다 (내가 직접 담은 옷만)
     prisma.clothing.findMany({ where: { userId, active: true, isSample: false }, select: { type: true, color: true, pattern: true } }),
   ])
-  return { analysis: analyze(clothes), config: cleanConfig(user.characterJson), catalog: CATALOG, titles: TITLES }
+  const analysis = analyze(clothes)
+  // 옷장을 채워야(직접 담은 옷 MIN_CLOTHES벌) 칭호를 받고 캐릭터를 꾸밀 수 있다
+  return { unlocked: analysis.ready, minClothes: MIN_CLOTHES, analysis, config: cleanConfig(user.characterJson), catalog: CATALOG, titles: TITLES }
 }
 
 /** 내 캐릭터: 옷장 분석(칭호, 색·종류·무늬 비중) + 꾸미기 설정 + 꾸미기 목록 */
@@ -35,6 +37,7 @@ characterRouter.put(
     const userId = (req as AuthedRequest).userId
     const parsed = body.safeParse(req.body)
     if (!parsed.success) throw badRequest('꾸미기 설정이 올바르지 않아요.')
+    if (!(await view(userId)).unlocked) throw new AppError(409, 'CHARACTER_LOCKED', `옷장에 옷을 ${MIN_CLOTHES}벌 이상 담으면 캐릭터를 꾸밀 수 있어요.`)
     const next: Record<string, string> = {}
     for (const [slot, id] of Object.entries(parsed.data.config)) {
       if (id === null) continue

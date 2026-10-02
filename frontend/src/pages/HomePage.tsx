@@ -342,7 +342,7 @@ export default function HomePage() {
         )}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
-          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={character?.analysis.title?.key ?? null} accessories={character?.config} />
+          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={character?.unlocked ? (character.analysis.title?.key ?? null) : null} accessories={character?.unlocked ? character.config : undefined} />
           <ul className="look-items" aria-label="오늘 입을 옷">
             {items.map((it, i) => (
               <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>
@@ -400,6 +400,17 @@ export default function HomePage() {
       {header}
       {firstRun}
       {notice && <p role="alert">{notice}</p>}
+
+      {/* 첫 시작 안내: 내 옷이 하나도 없으면(일반 추천) 먼저 옷을 등록하도록 이끈다 */}
+      {rec && target.kind === 'home' && rec.items.every((it) => !it.owned) && (
+        <div className="box w2 first-guide" role="note">
+          <b>👋 먼저 내 옷을 등록해 볼까요?</b>
+          <p className="tiny">지금은 옷장이 비어 있어서 일반적인 추천이에요. 내 옷을 등록하면 진짜 내 옷으로 코디해 드려요. 5벌 이상 등록하면 내 캐릭터도 열려요!</p>
+          <Link to="/wardrobe/add" className="dbtn w1 small">
+            + 옷 등록하러 가기
+          </Link>
+        </div>
+      )}
 
       {layout.order.map((id, idx) => {
         const hidden = layout.hidden.includes(id)
