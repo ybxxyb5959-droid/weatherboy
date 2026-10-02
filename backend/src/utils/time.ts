@@ -34,7 +34,19 @@ export function fromKst(date: string, time: string): Date {
 /** KST 기준 자정 UTC Date */
 export const kstStartOfDay = (d: Date) => fromKst(kstDate(d), '00:00')
 
-/** 23:00~07:00 KST 야간 여부 (Push 금지 시간) */
+/** 지금이 사용자가 정한 방해금지 시간인가(KST). 시작이 끝보다 늦으면 자정을 넘기는 구간이다. 시작과 끝이 같으면 하루 종일로 본다. */
+export function isQuietNow(d: Date, q: { enabled: boolean; start: string; end: string }): boolean {
+  if (!q.enabled) return false
+  const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+  const p = toKstParts(d)
+  const now = p.hour * 60 + p.minute
+  const start = mins(q.start)
+  const end = mins(q.end)
+  if (start === end) return true
+  return start < end ? now >= start && now < end : now >= start || now < end
+}
+
+/** 23:00~07:00 KST 야간 여부 (기본 방해금지 시간) */
 export function isQuietHoursKst(d: Date): boolean {
   const h = toKstParts(d).hour
   return h >= 23 || h < 7

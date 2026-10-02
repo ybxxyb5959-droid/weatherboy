@@ -7,14 +7,15 @@ import HandText from '../components/HandText'
 import LocationPicker from '../components/LocationPicker'
 import KakaoLoginButton from '../components/KakaoLoginButton'
 import RoutineEditor from '../components/RoutineEditor'
+import TimePicker from '../components/TimePicker'
 import PushToggle from '../components/PushToggle'
 import { api, errorMessage } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
 import { faqs, OPERATOR, privacySections, termsSections } from './legalText'
 import type { LegalSection } from './legalText'
-import { defaultRoutine } from '../store'
-import type { Routine, Sensitivity, Settings } from '../store'
+import { defaultQuiet, defaultRoutine } from '../store'
+import type { Quiet, Routine, Sensitivity, Settings } from '../store'
 
 const sensOptions: Sensitivity[] = ['추위 많이 탐', '보통', '더위 많이 탐']
 const APP_VERSION = '0.1.0'
@@ -74,7 +75,7 @@ function Group({ seed, children }: { seed: number; children: ReactNode }) {
 function Legal({ sections }: { sections: LegalSection[] }) {
   return (
     <div className="legal">
-      <p className="tiny">초안 · 운영자: {OPERATOR.name}</p>
+      <p className="tiny">운영자: {OPERATOR.name} · 문의: {OPERATOR.contact}</p>
       {sections.map((s) => (
         <section key={s.title}>
           <h2>{s.title}</h2>
@@ -113,6 +114,7 @@ export default function SettingsPage() {
     setFailed(true)
     setMessage(errorMessage(e))
   }
+  const [quietDraft, setQuietDraft] = useState<Quiet | null>(null) // 방해금지 시간 편집 중인 값 (저장 누를 때 반영)
   const [routineDraft, setRoutineDraft] = useState<Routine | null>(null) // 하루 패턴 편집 중인 값 (저장 누를 때 반영)
   const [sensDraft, setSensDraft] = useState<Sensitivity | null>(null) // 개인 체감도 같은 화면에서 고르고 저장 때 한 번에 반영한다
 
@@ -250,10 +252,35 @@ export default function SettingsPage() {
               </div>
             </div>
             <PushToggle />
-            <Group seed={2}>
-              <Row label="방해금지 시간" value="밤 11시 ~ 아침 7시" />
-            </Group>
-            <p className="tiny">알림은 일정당 최대 3번까지, 방해금지 시간에는 보내지 않아요.</p>
+            <div>
+              <p style={{ marginBottom: 6 }}>방해금지 시간</p>
+              <OnOff value={(quietDraft ?? s.quiet ?? defaultQuiet).enabled} onChange={(v) => setQuietDraft({ ...(quietDraft ?? s.quiet ?? defaultQuiet), enabled: v })} />
+              {(quietDraft ?? s.quiet ?? defaultQuiet).enabled && (
+                <div className="routine">
+                  <div className="routine-row">
+                    <span className="routine-label">시작</span>
+                    <TimePicker value={(quietDraft ?? s.quiet ?? defaultQuiet).start} label="방해금지 시작" onChange={(v) => setQuietDraft({ ...(quietDraft ?? s.quiet ?? defaultQuiet), start: v })} />
+                  </div>
+                  <div className="routine-row">
+                    <span className="routine-label">끝</span>
+                    <TimePicker value={(quietDraft ?? s.quiet ?? defaultQuiet).end} label="방해금지 끝" onChange={(v) => setQuietDraft({ ...(quietDraft ?? s.quiet ?? defaultQuiet), end: v })} />
+                  </div>
+                </div>
+              )}
+              <p className="tiny">
+                {(quietDraft ?? s.quiet ?? defaultQuiet).enabled ? '이 시간에는 알림을 보내지 않아요. 시작이 끝보다 늦으면 다음 날까지 이어져요.' : '방해금지가 꺼져 있어요. 밤에도 알림이 올 수 있어요.'}
+              </p>
+              {quietDraft && (
+                <DoodleButton
+                  seed={2}
+                  className="block"
+                  onClick={() => void patch({ quiet: quietDraft }, '방해금지 시간을 저장했어요').then((ok) => ok && setQuietDraft(null))}
+                >
+                  저장
+                </DoodleButton>
+              )}
+            </div>
+            <p className="tiny">알림은 일정당 최대 3번까지 보내요.</p>
           </>
         )}
 

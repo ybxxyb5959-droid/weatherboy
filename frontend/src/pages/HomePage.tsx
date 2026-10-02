@@ -8,7 +8,7 @@ import GearDoodles, { type GearKind } from '../components/GearDoodles'
 import FeedbackCard from '../components/FeedbackCard'
 import { feedbackDueAt, firstSeenToday, getFeedbackDone, setFeedbackDone } from '../lib/feedbackTiming'
 import { Link } from 'react-router-dom'
-import FirstRunPrompt from '../components/FirstRunPrompt'
+import { ShareIcon } from '../components/icons'
 import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
 import DailyForecast from '../components/DailyForecast'
@@ -17,6 +17,9 @@ import { categories } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import { useAsync } from '../hooks'
 import { useCharacter } from '../lib/character'
+import { genericColor } from '../lib/genericColor'
+import { buildOutfitCard, shareImage } from '../lib/shareCard'
+import { useAuth } from '../auth'
 import type { Routine } from '../store'
 import type { ApiRecommendation, ApiWeather, Favorite, Target } from '../types'
 
@@ -44,6 +47,8 @@ export default function HomePage() {
   const [target, setTarget] = useState<Target>({ kind: 'home' })
   const [notice, setNotice] = useState('')
   const [savingFav, setSavingFav] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const { me } = useAuth()
 
   // 보고 있는 지역에 따라 날씨/추천 요청의 쿼리가 달라진다 (기본 위치면 쿼리 없음)
   const qs = target.kind === 'fav' ? `?favoriteId=${target.id}` : target.kind === 'place' ? `?place=${encodeURIComponent(target.name)}` : ''
@@ -136,16 +141,6 @@ export default function HomePage() {
     }
   }
 
-  const firstRun = (
-    <FirstRunPrompt
-      onLocationSet={() => {
-        settings.reload()
-        weather.reload()
-        recommendation.reload()
-      }}
-    />
-  )
-
   const header = (
     <div className="page-head">
       <LocationBar
@@ -207,13 +202,46 @@ export default function HomePage() {
     )
   }
 
-  const items = rec ? (altIdx < 0 ? rec.items : (rec.alternatives[altIdx] ?? rec.items)) : []
+  // 옷장에 없는 옷(일반 추천)은 색을 따로 뽑아 보여준다
+  const today = new Date().toDateString()
+  const items = (rec ? (altIdx < 0 ? rec.items : (rec.alternatives[altIdx] ?? rec.items)) : []).map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, today) }))
   // 지금 보여주는 조합(기본/대안)을 캐릭터가 그대로 입는다
   const pick = (types: string[]) => items.find((it) => types.includes(it.type))
   const wear = {
     top: pick(categories[0]!.types),
     bottom: pick(categories[1]!.types),
     outer: pick(categories[2]!.types),
+  }
+
+  // 오늘의 코디 카드를 이미지로 만들어 카카오톡 등으로 보낸다 (지금 보고 있는 지역과 조합 그대로)
+  const shareOutfit = async () => {
+    if (!rec || sharing) return
+    setSharing(true)
+    setNotice('')
+    try {
+      const card = await buildOutfitCard({
+        location: w.location,
+        temp: w.temp,
+        feels: w.feels,
+        rainChance: w.rainChance,
+        condition: w.condition,
+        headline: rec.headline,
+        sub: rec.sub,
+        items,
+        wear,
+        umbrella: rec.needUmbrella,
+        persona: null, // 칭호 소품은 홈/공유 카드에 넣지 않는다. 내가 꾸민 것만 보인다
+        accessories: character?.unlocked ? character.config : {},
+        code: (me?.id ?? '').slice(0, 8).toUpperCase(),
+        origin: window.location.origin,
+      })
+      const r = await shareImage(card, `${w.location} 오늘 ${w.temp}°C, 이렇게 입어! ${window.location.origin}`)
+      if (r === 'downloaded') setNotice('이미지로 저장했어요. 카카오톡에서 사진으로 보내 보세요.')
+    } catch (e) {
+      setNotice(errorMessage(e))
+    } finally {
+      setSharing(false)
+    }
   }
 
   const recId = rec?.id ?? null
@@ -273,6 +301,9 @@ export default function HomePage() {
     <p className="tiny" role="status">옷차림을 고르는 중이에요…</p>
   )
 
+  // 첫 시작: 아직 등록한 옷이 하나도 없으면(어느 지역을 보든) 오늘 추천 자리에 옷 등록 안내를 보여준다
+  const needCloset = closetEmpty
+
   const blocks: Record<BlockId, ReactNode> = {
     weather: (
       <>
@@ -323,7 +354,19 @@ export default function HomePage() {
 
       </>
     ),
-    recommend: !rec ? (
+    recommend: needCloset ? (
+      <section className="section">
+        <h2>오늘 추천</h2>
+        <hr className="scribble under-title" />
+        <div className="box w2 first-guide" role="note">
+          <b>👋 먼저 내 옷을 등록해 볼까요?</b>
+          <p className="tiny">지금은 옷장이 비어 있어서 추천을 드릴 수 없어요. 내 옷을 등록하면 진짜 내 옷으로 코디해 드려요. 5벌 이상 등록하면 내 캐릭터도 열려요!</p>
+          <Link to="/wardrobe/add" className="dbtn w1 small">
+            + 옷 등록하러 가기
+          </Link>
+        </div>
+      </section>
+    ) : !rec ? (
       <section className="section">
         <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
         <hr className="scribble under-title" />
@@ -331,7 +374,12 @@ export default function HomePage() {
       </section>
     ) : (
       <section className="section">
-        <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
+        <div className="rec-head">
+          <h2>{target.kind === 'home' ? '오늘 추천' : `${w.location} 추천`}</h2>
+          <button type="button" className="share-btn" onClick={() => void shareOutfit()} disabled={sharing} aria-label="오늘 코디 공유하기">
+            <ShareIcon />
+          </button>
+        </div>
         <hr className="scribble under-title" />
         {rec.basis?.reliability.level === 'CAUTION' && (
           <ul className="tiny caution" aria-label="예보 주의">
@@ -342,7 +390,7 @@ export default function HomePage() {
         )}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
-          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={character?.unlocked ? (character.analysis.title?.key ?? null) : null} accessories={character?.unlocked ? character.config : undefined} />
+          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={null} accessories={character?.unlocked ? character.config : undefined} />
           <ul className="look-items" aria-label="오늘 입을 옷">
             {items.map((it, i) => (
               <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>
@@ -398,19 +446,7 @@ export default function HomePage() {
   return (
     <main className="home">
       {header}
-      {firstRun}
       {notice && <p role="alert">{notice}</p>}
-
-      {/* 첫 시작 안내: 내 옷이 하나도 없으면(일반 추천) 먼저 옷을 등록하도록 이끈다 */}
-      {rec && target.kind === 'home' && rec.items.every((it) => !it.owned) && (
-        <div className="box w2 first-guide" role="note">
-          <b>👋 먼저 내 옷을 등록해 볼까요?</b>
-          <p className="tiny">지금은 옷장이 비어 있어서 일반적인 추천이에요. 내 옷을 등록하면 진짜 내 옷으로 코디해 드려요. 5벌 이상 등록하면 내 캐릭터도 열려요!</p>
-          <Link to="/wardrobe/add" className="dbtn w1 small">
-            + 옷 등록하러 가기
-          </Link>
-        </div>
-      )}
 
       {layout.order.map((id, idx) => {
         const hidden = layout.hidden.includes(id)

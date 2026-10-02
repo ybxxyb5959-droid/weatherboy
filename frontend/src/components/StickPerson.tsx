@@ -30,7 +30,7 @@ const ink = '#222'
  *  - 반팔: 소매 아래로 맨 팔뚝이 나오고 그 끝에 손
  *  - 긴 소매(긴팔·맨투맨·후드티 등)와 겉옷: 소매 끝에서 손만 삐져나온다
  */
-function Hands({ top, outer }: { top?: string; outer?: string }) {
+export function Hands({ top, outer }: { top?: string; outer?: string }) {
   // 옷 그림 좌표(100x100) -> 졸라맨 좌표. 상의는 scale .65 @ (27.5,39.6), 겉옷은 scale .72 @ (24,41)
   const at = (scale: number, tx: number, ty: number) => (x: number, y: number) => [tx + x * scale, ty + y * scale] as const
   const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
@@ -73,6 +73,7 @@ function Hands({ top, outer }: { top?: string; outer?: string }) {
 }
 
 export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, persona = null, accessories = {} }: Props) {
+  const clothed = !!(wear?.top || wear?.outer)
   const showUmbrella = mood === 'rain' || (mood === 'stand' && umbrella)
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
   return (
@@ -86,6 +87,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
       strokeWidth="2.6"
       strokeLinecap="round"
       strokeLinejoin="round"
+      overflow="visible"
       aria-hidden="true"
     >
       {showUmbrella && (
@@ -132,7 +134,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <path d="M61 100 L44 136 M61 100 L80 133" />
         )}
         {/* 머리 */}
-        <path d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
+        <path fill={mood === 'stand' ? '#fcfcfa' : undefined} d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
         {mood === 'stand' ? (
           // 오늘 추천: 작은 점 눈 + 작게 벌린 :D 입 (혀가 살짝 보이게)
           <g>
@@ -213,8 +215,9 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         {mood === 'stand' && (
           <g>
             {/* 팔은 내리고 가만히 서 있다. 우산이 필요하면 오른팔로 우산대를 잡는다. */}
-            <path d="M60 58 L45 92" />
-            <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />
+            {/* 옷을 입으면 팔은 소매 안에 가려지므로 뼈대를 그리지 않는다(허리께로 삐져나오지 않게). 팔뚝/손은 아래 Hands 가 그린다 */}
+            {!clothed && <path d="M60 58 L45 92" />}
+            {(!clothed || umbrella) && <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />}
             {/* 추천 옷 입히기: 하의 -> 상의 -> 겉옷 순으로 덧그린다 */}
             {wear?.bottom && (
               <g transform="translate(35 86) scale(0.5)" strokeWidth="3.6">

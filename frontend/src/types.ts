@@ -73,8 +73,24 @@ export interface ApiRecommendation {
   basis?: { startAt: string; endAt: string; source: 'ROUTINE' | 'DEFAULT' | 'NOW'; place: string | null; reliability: { level: 'OK' | 'CAUTION'; notes: string[] } }
 }
 
+export interface EventDaySlot {
+  temp: number
+  feels: number
+  pop: number
+}
+/** 일정 기간의 하루치 예보 (slots 가 null 이면 시간별 예보가 아직 없는 먼 날짜: 최저/최고만) */
+export interface EventDayWeather {
+  date: string
+  tempMin: number
+  tempMax: number
+  pop: number
+  rain: boolean
+  slots: { morning: EventDaySlot | null; afternoon: EventDaySlot | null; evening: EventDaySlot | null } | null
+}
+
 export interface EventOutfit {
   status: 'waiting' | 'ready'
+  weather?: EventDayWeather[]
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'
   recommendation: ApiRecommendation | null
   message: string | null

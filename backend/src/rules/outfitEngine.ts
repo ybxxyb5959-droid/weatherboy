@@ -75,7 +75,8 @@ const ALL_TYPES = clothingTypeMap.uiValues.map((k) => clothingTypeMap.toDb(k))
 
 /** 빈 옷장일 때 쓰는 일반 추천용 가상 옷장(보유 아님). */
 export function genericWardrobe(): WardrobeItem[] {
-  return ALL_TYPES.map((type) => {
+  // 성별을 모르므로 치마는 일반 추천에 넣지 않는다(치마는 사용자가 직접 담은 경우에만 추천된다)
+  return ALL_TYPES.filter((type) => type !== 'SKIRT').map((type) => {
     const d = deriveClothing(type, 'NORMAL')
     const outer = d.category === 'LIGHT_OUTER' || d.category === 'HEAVY_OUTER'
     return {

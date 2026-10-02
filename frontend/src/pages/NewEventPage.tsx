@@ -118,11 +118,12 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       if (event) {
         // 수정할 때는 끝나는 날을 항상 보낸다 (며칠짜리를 당일로 줄이는 경우도 반영되도록)
         const saved = await api<PlanEvent>('PATCH', `/api/events/${event.id}`, { ...body, endDate: multi && endDate > date ? endDate : date })
-        nav(`/events/${saved.id}`)
+        nav(`/events/${saved.id}`, { replace: true, state: { saved: 'edited' } })
         return
       }
       const created = await api<PlanEvent>('POST', '/api/events', body)
-      nav(`/events/${created.id}`)
+      // replace: 뒤로 가기를 눌렀을 때 방금 작성한 등록 화면이 아니라 일정 목록으로 가게 한다
+      nav(`/events/${created.id}`, { replace: true, state: { saved: 'created' } })
     } catch (e) {
       setError(errorMessage(e))
       setSaving(false)
@@ -163,7 +164,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
 
       {multi && (
         <div className="field">
-          <div className="name">며칠 가?</div>
+          <div className="name">일정</div>
           <div className="row wrap">
             {NIGHT_CHOICES.map((n, i) => (
               <DoodleButton key={n} seed={i} className="small" selected={nights === n} onClick={() => setNights(n)}>

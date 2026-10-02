@@ -1,7 +1,7 @@
 import webpush from 'web-push'
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
-import { isQuietHoursKst } from '../../utils/time.js'
+import { isQuietNow } from '../../utils/time.js'
 import { logger } from '../../utils/logger.js'
 
 export const pushConfigured = () => !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT)
@@ -38,7 +38,7 @@ const MAX_ATTEMPTS = 3
 
 /**
  * 사용자의 모든 구독으로 Push 전송.
- * - 23:00~07:00 KST 는 보내지 않는다(SKIPPED)
+ * - 사용자가 정한 방해금지 시간(기본 23:00~07:00 KST)에는 보내지 않는다(SKIPPED)
  * - 404/410 구독은 삭제
  * - 일시 오류는 제한적 재시도 후 NotifyLog FAILED
  * 반환: PushOutcome (한 곳이라도 성공하면 SENT)
@@ -54,7 +54,8 @@ export async function sendToUser(
   const kind = opts.kind ?? 'EVENT_FIRST'
   // 같은 키로 이미 보냈으면 다시 보내지 않는다(일정 알림이 아닌 하루 한 번짜리 알림용). 보류된(QUIET 등) 건은 키가 남지 않아 다시 시도된다.
   if (opts.dedupeKey && (await prisma.notifyLog.findFirst({ where: { userId, dedupeKey: opts.dedupeKey }, select: { id: true } }))) return 'DUPLICATE'
-  if (isQuietHoursKst(now)) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { quietEnabled: true, quietStart: true, quietEnd: true } })
+  if (u && isQuietNow(now, { enabled: u.quietEnabled, start: u.quietStart, end: u.quietEnd })) {
     await prisma.notifyLog.create({ data: { userId, eventId, kind, status: 'SKIPPED', message: 'quiet hours' } })
     return 'QUIET'
   }

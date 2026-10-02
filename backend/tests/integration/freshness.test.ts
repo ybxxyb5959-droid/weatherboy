@@ -68,7 +68,7 @@ describe('예시 옷은 확인 전에는 내 옷처럼 추천하지 않는다', 
     await a.post('/api/auth/guest').expect(201)
     await a.post('/api/onboarding/complete').send({ sensitivity: '보통', location: '서울 마포구', closetMode: 'sample' }).expect(200)
     const list = (await a.get('/api/clothes')).body
-    expect(list).toHaveLength(11)
+    expect(list).toHaveLength(10)
     expect(list.every((c: { isSample: boolean }) => c.isSample)).toBe(true)
     const r = (await a.get('/api/recommendations/today').expect(200)).body
     expect(r.items.every((i: { owned: boolean; clothingId: string | null }) => !i.owned && i.clothingId === null)).toBe(true)

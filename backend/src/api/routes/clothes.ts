@@ -4,7 +4,7 @@ import { clothingTypeMap, colorMap, patternMap, thicknessMap } from '../../confi
 import { prisma } from '../../db.js'
 import { defaultsForType, deriveClothing } from '../../rules/clothing.js'
 import { serializeClothing } from '../../services/serializers.js'
-import { notFound } from '../../utils/errors.js'
+import { badRequest, notFound } from '../../utils/errors.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
 export const clothesRouter = Router()
@@ -20,6 +20,8 @@ const base = z.object({
   waterproof: z.boolean().optional(),
 })
 const idParam = z.object({ id: z.string().uuid() })
+// 한 사람이 만들 수 있는 옷 수의 상한 (자동 입력 남용으로 DB 가 불어나는 것을 막는다)
+const MAX_CLOTHES = 500
 
 clothesRouter.get(
   '/',
@@ -33,11 +35,13 @@ clothesRouter.post(
   '/',
   wrap(async (req, res) => {
     const b = parse(base, req.body)
+    const userId = (req as AuthedRequest).userId
+    if ((await prisma.clothing.count({ where: { userId, active: true } })) >= MAX_CLOTHES) throw badRequest(`옷은 ${MAX_CLOTHES}벌까지 담을 수 있어요.`, 'LIMIT_REACHED')
     const type = clothingTypeMap.toDb(b.type)
     const d = defaultsForType(type)
     const thickness = b.thickness ? thicknessMap.toDb(b.thickness) : d.thickness
     const row = await prisma.clothing.create({
-      data: { userId: (req as AuthedRequest).userId, type, thickness, color: colorMap.toDb(b.color), pattern: b.pattern ? patternMap.toDb(b.pattern) : 'SOLID', windproof: b.windproof ?? d.windproof, waterproof: b.waterproof ?? d.waterproof, ...deriveClothing(type, thickness) },
+      data: { userId, type, thickness, color: colorMap.toDb(b.color), pattern: b.pattern ? patternMap.toDb(b.pattern) : 'SOLID', windproof: b.windproof ?? d.windproof, waterproof: b.waterproof ?? d.waterproof, ...deriveClothing(type, thickness) },
     })
     res.status(201).json(serializeClothing(row))
   }),

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import StickPerson from '../components/StickPerson'
+import { ShareIcon } from '../components/icons'
+import ThemeScribble from '../components/ThemeScribble'
 import { ItemThumb, type Accessories, type Slot } from '../components/CharacterDecor'
 import { colorHex } from '../mocks/clothes'
 import { BASIC_WEAR, PERSONA_WEAR, useCharacter, type Share } from '../lib/character'
@@ -10,15 +12,6 @@ import { errorMessage } from '../api'
 
 const pct = (s: number) => `${Math.round(s * 100)}%`
 const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
-
-/** 공유 아이콘 (상자에서 위로 나가는 화살표) */
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 28 28" width="26" height="26" fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 18 V4 M9 9 L14 4 L19 9 M6 13 V23 H22 V13" />
-    </svg>
-  )
-}
 
 /** 비중 막대. 색 비중은 그 옷 색으로 칠한다. */
 function Bars({ title, rows, colored = false, max = 5 }: { title: string; rows: Share[]; colored?: boolean; max?: number }) {
@@ -76,7 +69,10 @@ export default function CharacterPage() {
           <h1>내 캐릭터</h1>
         </div>
         <section className="char-hero">
-          <StickPerson mood="stand" size={200} wear={(shownLocked && PERSONA_WEAR[shownLocked.key]) || BASIC_WEAR} persona={shownLocked?.key ?? null} />
+          <div className="char-stage">
+            <ThemeScribble persona={shownLocked?.key ?? null} />
+            <StickPerson mood="stand" size={200} wear={(shownLocked && PERSONA_WEAR[shownLocked.key]) || BASIC_WEAR} persona={shownLocked?.key ?? null} />
+          </div>
           {shownLocked ? (
             <>
               <h2 className="char-title">{shownLocked.name}</h2>
@@ -113,13 +109,12 @@ export default function CharacterPage() {
           <Link to="/wardrobe/add" className="dbtn w1 block">
             + 옷 등록하러 가기
           </Link>
-          <p className="tiny">말로 "검정 후드티, 청바지"라고 적거나 사진으로 한 번에 등록할 수 있어요.</p>
         </div>
 
         <hr className="scribble" />
         <section>
           <h2>받을 수 있는 칭호 ({data.titles.length})</h2>
-          <p className="tiny">눌러 보면 그 칭호의 캐릭터를 미리 볼 수 있어요.</p>
+          <p className="tiny">눌러보면 칭호를 확인할 수 있어요.</p>
           <ul className="char-dex">
             {data.titles.map((t) => (
               <li key={t.key}>
@@ -179,18 +174,19 @@ export default function CharacterPage() {
     setSharing(true)
     setNote('')
     try {
+      // 미리보기 중이어도 공유에는 항상 내 실제 칭호를 쓴다
       const card = await buildCharacterCard({
-        title: shown?.name ?? '내 캐릭터',
-        tagline: shown?.tagline ?? '옷장을 채우면 칭호를 드려요',
-        persona: shown?.key ?? null,
-        wear,
+        title: title?.name ?? '내 캐릭터',
+        tagline: title?.tagline ?? '옷장을 채우면 칭호를 드려요',
+        persona: title?.key ?? null,
+        wear: (title && PERSONA_WEAR[title.key]) || BASIC_WEAR,
         accessories: config,
         colors: a.colors,
         count: a.count,
         code: (me?.id ?? '').slice(0, 8).toUpperCase(),
         origin: window.location.origin,
       })
-      const text = `내 옷장 칭호는 "${shown?.name ?? '???'}"! 너는 어떤 칭호야? ${window.location.origin}`
+      const text = `내 옷장 칭호는 "${title?.name ?? '???'}"! 너는 어떤 칭호야? ${window.location.origin}`
       const r = await shareImage(card, text)
       if (r === 'downloaded') setNote('이미지로 저장했어요. 카카오톡에서 사진으로 보내 보세요.')
     } catch (e) {
@@ -210,7 +206,10 @@ export default function CharacterPage() {
       </div>
 
       <section className="char-hero">
-        <StickPerson mood="stand" size={200} wear={wear} persona={shown?.key ?? null} accessories={config} />
+        <div className="char-stage">
+          <ThemeScribble persona={shown?.key ?? null} />
+          <StickPerson mood="stand" size={200} wear={wear} persona={shown?.key ?? null} accessories={config} />
+        </div>
         {preview && shown ? (
           <>
             <h2 className="char-title">{shown.name}</h2>
@@ -294,7 +293,7 @@ export default function CharacterPage() {
 
       <section>
         <h2>칭호 도감 ({data.titles.length})</h2>
-        <p className="tiny">눌러 보면 그 칭호의 캐릭터를 미리 볼 수 있어요.</p>
+        <p className="tiny">눌러보면 칭호를 확인할 수 있어요.</p>
         <ul className="char-dex">
           {data.titles.map((t) => (
             <li key={t.key} className={title?.key === t.key ? 'mine' : undefined}>

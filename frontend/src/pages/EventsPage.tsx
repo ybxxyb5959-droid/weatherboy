@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import HandText from '../components/HandText'
+import Toast, { useToast } from '../components/Toast'
 import CalendarConnectDialog, { ConnectionRow, type CalendarConn } from '../components/CalendarConnect'
 import { eventMood, isSceneMood } from '../lib/eventMood'
 import EventMenu from '../components/EventMenu'
@@ -29,6 +30,7 @@ export default function EventsPage() {
   const conns = useAsync(() => api<CalendarConn[]>('GET', '/api/calendar'))
   const [connecting, setConnecting] = useState(false)
   const [notice, setNotice] = useState('')
+  const toast = useToast()
 
   const afterChange = () => {
     reload()
@@ -58,7 +60,8 @@ export default function EventsPage() {
       <div className="page-head">
         <h1>내 일정</h1>
         <div className="row head-actions">
-          <button type="button" className="dbtn w3 small" onClick={() => setConnecting(true)}>
+          {/* 연동은 아직 준비중: 회색으로 두고, 누르면 안내만 띄운다 */}
+          <button type="button" className="dbtn w3 small is-soon" aria-disabled="true" onClick={() => toast.show('캘린더 연동은 아직 준비중이에요')}>
             <HandText>캘린더 연동</HandText>
           </button>
           <Link to="/events/new" className="dbtn w1 small">
@@ -117,6 +120,7 @@ export default function EventsPage() {
       </div>
 
       {!loading && !error && <MonthCalendar events={events} view={view} onViewChange={setView} />}
+      <Toast message={toast.message} />
       {connecting && (
         <CalendarConnectDialog
           onClose={() => setConnecting(false)}

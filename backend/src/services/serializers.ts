@@ -17,6 +17,7 @@ export function serializeSettings(u: User) {
     notifyCloset: u.notifyCloset,
     notifyNotice: u.notifyNotice,
     morningLeadMin: u.morningLeadMin,
+    quiet: { enabled: u.quietEnabled, start: u.quietStart, end: u.quietEnd },
     routine: { outAt: u.routineOutAt, homeAt: u.routineHomeAt, days: u.routineDays },
   }
 }

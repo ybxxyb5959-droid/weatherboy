@@ -42,6 +42,7 @@ const settingsSchema = z
     morningLeadMin: z.number().int().refine((n) => [15, 30, 45, 60].includes(n), '15/30/45/60분 중에서 골라주세요'),
     place: placeHintSchema.optional(),
     routine: routineSchema,
+    quiet: z.object({ enabled: z.boolean(), start: hhmm, end: hhmm }).partial(),
   })
   .partial()
 
@@ -64,6 +65,11 @@ async function applySettings(userId: string, body: z.infer<typeof settingsSchema
   if (body.notifyCloset !== undefined) data.notifyCloset = body.notifyCloset
   if (body.notifyNotice !== undefined) data.notifyNotice = body.notifyNotice
   if (body.morningLeadMin !== undefined) data.morningLeadMin = body.morningLeadMin
+  if (body.quiet) {
+    if (body.quiet.enabled !== undefined) data.quietEnabled = body.quiet.enabled
+    if (body.quiet.start !== undefined) data.quietStart = body.quiet.start
+    if (body.quiet.end !== undefined) data.quietEnd = body.quiet.end
+  }
   if (body.routine) {
     const r = body.routine
     if (r.outAt !== undefined) data.routineOutAt = r.outAt

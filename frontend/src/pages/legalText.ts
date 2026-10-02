@@ -1,8 +1,7 @@
 // 이용약관 / 개인정보처리방침 / FAQ 문구.
-// !! 초안이다. 실제 서비스 오픈 전에 운영자 정보(상호, 연락처, 책임자)를 채우고 법률 검토를 받아야 한다.
 export const OPERATOR = {
-  name: '(운영자 이름을 입력하세요)',
-  contact: '(문의 이메일을 입력하세요)',
+  name: '박용빈',
+  contact: 'ybxxyb5959@gmail.com',
 }
 
 export interface LegalSection {
@@ -13,7 +12,7 @@ export interface LegalSection {
 export const termsSections: LegalSection[] = [
   {
     title: '1. 서비스 소개',
-    body: ['"오늘 뭐 입지?"는 날씨, 일정, 개인 체감, 내 옷장을 바탕으로 오늘 입을 옷을 추천하는 서비스예요.'],
+    body: ['"뭐입을옷?"는 날씨, 일정, 개인 체감, 내 옷장을 바탕으로 오늘 입을 옷을 추천하는 서비스예요.'],
   },
   {
     title: '2. 계정',

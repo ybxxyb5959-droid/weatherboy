@@ -4,7 +4,7 @@ import { pickReading, pm10GradeOf, pm25GradeOf } from '../../src/services/airQua
 import { deriveCondition } from '../../src/services/weather/conditions.js'
 import { decideNotification } from '../../src/jobs/pushNotificationJob.js'
 import { normalizeSido } from '../../src/services/kakao/kakaoLocal.js'
-import { isQuietHoursKst, fromKst, kstDate } from '../../src/utils/time.js'
+import { isQuietHoursKst, isQuietNow, fromKst, kstDate } from '../../src/utils/time.js'
 import { templateExplanation, aiInput } from '../../src/services/ai/explain.js'
 import { recommend } from '../../src/rules/outfitEngine.js'
 
@@ -108,6 +108,22 @@ describe('시간/위치 유틸', () => {
     expect(isQuietHoursKst(new Date('2026-10-01T21:59:00Z'))).toBe(true) // 06:59
     expect(isQuietHoursKst(new Date('2026-10-01T22:00:00Z'))).toBe(false) // 07:00
     expect(isQuietHoursKst(new Date('2026-10-01T13:59:00Z'))).toBe(false) // 22:59
+  })
+  it('사용자가 정한 방해금지 시간', () => {
+    const at = (kst: string) => new Date(`2026-10-01T${kst}:00+09:00`)
+    const night = { enabled: true, start: '23:00', end: '07:00' }
+    expect(isQuietNow(at('23:30'), night)).toBe(true)
+    expect(isQuietNow(at('06:59'), night)).toBe(true)
+    expect(isQuietNow(at('07:00'), night)).toBe(false)
+    const custom = { enabled: true, start: '22:00', end: '08:30' } // 자정을 넘는 구간
+    expect(isQuietNow(at('08:29'), custom)).toBe(true)
+    expect(isQuietNow(at('08:30'), custom)).toBe(false)
+    expect(isQuietNow(at('21:59'), custom)).toBe(false)
+    const day = { enabled: true, start: '13:00', end: '15:00' } // 같은 날 안의 구간
+    expect(isQuietNow(at('14:00'), day)).toBe(true)
+    expect(isQuietNow(at('15:00'), day)).toBe(false)
+    expect(isQuietNow(at('03:00'), { ...night, enabled: false })).toBe(false) // 꺼짐
+    expect(isQuietNow(at('12:00'), { enabled: true, start: '09:00', end: '09:00' })).toBe(true) // 같으면 하루 종일
   })
   it('KST <-> UTC', () => {
     expect(fromKst('2026-10-18', '09:00').toISOString()).toBe('2026-10-18T00:00:00.000Z')

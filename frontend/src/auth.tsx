@@ -1,11 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, ApiError } from './api'
+import { disablePush } from './lib/push'
 import type { Me } from './types'
 
 interface AuthState {
   me: Me | null
   loading: boolean
+  /** 로그인 여부를 확인하지 못했다(오프라인/서버 오류). 로그아웃이 아니라 다시 시도가 필요한 상태 */
+  connectError: boolean
   refresh: () => Promise<Me | null>
   startGuest: () => Promise<Me>
   logout: () => Promise<void>
@@ -26,17 +29,24 @@ async function ensureOnboarded(m: Me): Promise<Me> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null)
   const [loading, setLoading] = useState(true)
+  const [connectError, setConnectError] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
       let m = await api<Me>('GET', '/api/me')
       m = await ensureOnboarded(m)
       setMe(m)
+      setConnectError(false)
       return m
     } catch (e) {
-      // 401 = 로그인 안 됨. 그 외 오류도 일단 로그아웃 상태로 보여준다.
-      if (!(e instanceof ApiError) || e.status !== 401) console.warn('me failed', e)
-      setMe(null)
+      // 401 = 로그인 안 됨. 네트워크/서버 오류는 로그아웃으로 오해하지 않도록 따로 알린다(이미 로그인했던 상태는 그대로 둔다).
+      if (e instanceof ApiError && e.status === 401) {
+        setMe(null)
+        setConnectError(false)
+      } else {
+        console.warn('me failed', e)
+        setConnectError(true)
+      }
       return null
     } finally {
       setLoading(false)
@@ -54,16 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    // 이 기기로 이 계정의 알림이 계속 오지 않게 먼저 구독을 푼다
+    await disablePush().catch(() => undefined)
     await api('POST', '/api/auth/logout')
     setMe(null)
   }, [])
 
   const deleteAccount = useCallback(async () => {
+    await disablePush().catch(() => undefined)
     await api('DELETE', '/api/me')
     setMe(null)
   }, [])
 
-  const value = useMemo(() => ({ me, loading, refresh, startGuest, logout, deleteAccount }), [me, loading, refresh, startGuest, logout, deleteAccount])
+  const value = useMemo(() => ({ me, loading, connectError, refresh, startGuest, logout, deleteAccount }), [me, loading, connectError, refresh, startGuest, logout, deleteAccount])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

@@ -4,7 +4,6 @@ import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Clothespin, ClosetScene } from '../components/Clothesline'
-import StickPerson from '../components/StickPerson'
 import { categories } from '../mocks/clothes'
 import type { Clothing } from '../mocks/clothes'
 import { api, errorMessage } from '../api'
@@ -72,10 +71,14 @@ export default function WardrobePage() {
     }
   }
 
+  // 옷이 하나도 없으면 위쪽 버튼은 숨기고 가운데 '옷 추가하기' 버튼만 둔다
+  const isEmpty = !loading && !error && groups.length === 0
+
   return (
     <main className={deleteMode ? 'deleting' : undefined}>
       <div className="page-head">
         <h1>내 옷장</h1>
+        {!isEmpty && (
         <div className="row head-actions">
           <Link to="/wardrobe/add" className="dbtn w1 small">
             <HandText>+ 옷 추가</HandText>
@@ -84,6 +87,7 @@ export default function WardrobePage() {
             <HandText>{deleteMode ? '완료' : '옷 삭제'}</HandText>
           </button>
         </div>
+        )}
       </div>
 
       {groups.length > 0 && <ClosetScene />}
@@ -109,11 +113,10 @@ export default function WardrobePage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="empty">
-          <StickPerson mood="empty" size={150} />
+          <ClosetScene empty />
           <p>옷장이 텅 비어있어</p>
-          <p className="tiny">말로 적거나 사진으로 한 번에 넣을 수 있어요.</p>
           <Link to="/wardrobe/add" className="dbtn w1">
-            <HandText>+ 첫 옷 추가하기</HandText>
+            <HandText>옷 추가하기</HandText>
           </Link>
         </div>
       ) : (

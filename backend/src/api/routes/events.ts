@@ -7,7 +7,8 @@ import { syncStaleInBackground } from '../../services/calendar/sync.js'
 import { compute, saveEventRecommendation, viewOf } from '../../services/recommendationService.js'
 import { serializeEvent } from '../../services/serializers.js'
 import { badRequest, notFound } from '../../utils/errors.js'
-import { fromKst, kstDate, kstTime } from '../../utils/time.js'
+import { fromKst, kstDate, kstTime, toKstParts } from '../../utils/time.js'
+import type { OutingPoint } from '../../rules/outfitEngine.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 import type { Event, Prisma } from '@prisma/client'
 
@@ -17,6 +18,7 @@ eventsRouter.use(requireAuth)
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 const idParam = z.string().uuid()
+const MAX_EVENTS = 1000 // 한 사람이 만들 수 있는 일정 수의 상한
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(100),
@@ -35,6 +37,48 @@ function buildTimes(startDate: string, endDate: string | undefined, startTime: s
   const endAt = fromKst(endDate ?? startDate, endTime)
   if (Number.isNaN(startAt.getTime()) || endAt.getTime() <= startAt.getTime()) throw badRequest('종료 시간이 시작보다 늦어야 해요.')
   return { startAt, endAt }
+}
+
+interface DaySlot {
+  temp: number
+  feels: number
+  pop: number
+}
+interface DayWeather {
+  date: string
+  tempMin: number
+  tempMax: number
+  pop: number
+  rain: boolean
+  /** 시간별 예보가 있는 날만: 아침(6~11시)/낮(12~17시)/저녁(18시~) 평균. 일정 시간 밖은 포함하지 않는다. 중기예보 날짜는 null */
+  slots: { morning: DaySlot | null; afternoon: DaySlot | null; evening: DaySlot | null } | null
+}
+
+const avg = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)
+const slotOf = (pts: OutingPoint[]): DaySlot | null => (pts.length ? { temp: avg(pts.map((p) => p.temp)), feels: avg(pts.map((p) => p.feels)), pop: Math.max(...pts.map((p) => p.pop)) } : null)
+
+/** 일정 기간의 예보를 날짜별로 정리한다 (아침/낮/저녁 기온, 최저/최고, 강수확률) */
+function weatherByDay(points: OutingPoint[]): DayWeather[] {
+  const byDay = new Map<string, OutingPoint[]>()
+  for (const p of points) {
+    const d = kstDate(p.at)
+    byDay.set(d, [...(byDay.get(d) ?? []), p])
+  }
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, pts]) => {
+      // 중기예보 날짜는 정오 한 시각에 최저/최고 두 점만 있다 -> 시간대 구분 없음
+      const hourly = new Set(pts.map((p) => p.at.getTime())).size > 1
+      const hourOf = (p: OutingPoint) => toKstParts(p.at).hour
+      return {
+        date,
+        tempMin: Math.round(Math.min(...pts.map((p) => p.temp))),
+        tempMax: Math.round(Math.max(...pts.map((p) => p.temp))),
+        pop: Math.max(...pts.map((p) => p.pop)),
+        rain: pts.some((p) => p.precip !== 'none'),
+        slots: hourly ? { morning: slotOf(pts.filter((p) => hourOf(p) >= 6 && hourOf(p) < 12)), afternoon: slotOf(pts.filter((p) => hourOf(p) >= 12 && hourOf(p) < 18)), evening: slotOf(pts.filter((p) => hourOf(p) >= 18 || hourOf(p) < 6)) } : null,
+      }
+    })
 }
 
 async function placeData(place: string, hint?: z.infer<typeof placeHintSchema>) {
@@ -72,8 +116,10 @@ eventsRouter.post(
   wrap(async (req, res) => {
     const b = parse(createSchema, req.body)
     const times = buildTimes(b.startDate, b.endDate, b.startTime, b.endTime)
+    const userId = (req as AuthedRequest).userId
+    if ((await prisma.event.count({ where: { userId } })) >= MAX_EVENTS) throw badRequest(`일정은 ${MAX_EVENTS}개까지 만들 수 있어요.`, 'LIMIT_REACHED')
     const row = await prisma.event.create({
-      data: { userId: (req as AuthedRequest).userId, title: b.title, kind: eventKindMap.toDb(b.kind), ...times, ...(await placeData(b.place, b.placeHint)) },
+      data: { userId, title: b.title, kind: eventKindMap.toDb(b.kind), ...times, ...(await placeData(b.place, b.placeHint)) },
     })
     res.status(201).json(serializeEvent(row))
   }),
@@ -128,11 +174,11 @@ eventsRouter.get(
     const e = await own(parse(idParam, req.params.id), userId)
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
     const waiting = (message: string) =>
-      res.json({ status: 'waiting', forecastStage: 'WAITING', recommendation: null, message })
+      res.json({ status: 'waiting', forecastStage: 'WAITING', recommendation: null, message, weather: [] })
     const c = await compute(user, e, e.startAt, e.endAt)
     if (!c) return waiting('아직 정확한 예보가 없어요.')
     const saved = await saveEventRecommendation(e, c)
     const stage = c.window.stage
-    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null })
+    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points) })
   }),
 )

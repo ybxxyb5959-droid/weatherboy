@@ -47,7 +47,17 @@ export interface Settings {
   notifyEvent: boolean
   notifyChange: boolean
   routine?: Routine
+  /** 방해금지 시간: 이 시간에는 알림을 보내지 않는다(시작이 끝보다 늦으면 자정을 넘는 구간) */
+  quiet?: Quiet
 }
+
+export interface Quiet {
+  enabled: boolean
+  start: string
+  end: string
+}
+
+export const defaultQuiet: Quiet = { enabled: true, start: '23:00', end: '07:00' }
 
 export const defaultSettings: Settings = {
   sensitivity: '보통',

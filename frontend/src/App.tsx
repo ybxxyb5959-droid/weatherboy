@@ -15,19 +15,35 @@ import WeatherPreviewPage from './pages/WeatherPreviewPage'
 import SettingsPage from './pages/SettingsPage'
 import CharacterPage from './pages/CharacterPage'
 import GuestDataNotice from './components/GuestDataNotice'
+import LocationGate from './components/LocationGate'
+import NotifyGate from './components/NotifyGate'
 import { useAuth } from './auth'
 
 // 세션(HttpOnly 쿠키)으로 로그인 여부를 판단한다. 첫 설정 화면은 없고 바로 홈으로 간다.
+function ConnectError() {
+  const { refresh } = useAuth()
+  return (
+    <main className="app-error" role="alert">
+      <p>서버에 연결하지 못했어요. 인터넷을 확인하고 다시 시도해주세요.</p>
+      <button type="button" className="dbtn w1" onClick={() => void refresh()}>
+        다시 시도
+      </button>
+    </main>
+  )
+}
+
 function Root() {
-  const { me, loading } = useAuth()
+  const { me, loading, connectError } = useAuth()
   if (loading) return null
+  if (!me && connectError) return <ConnectError />
   if (!me) return <IntroPage />
   return <Navigate to="/home" replace />
 }
 
 function Protected({ children }: { children: ReactElement }) {
-  const { me, loading } = useAuth()
+  const { me, loading, connectError } = useAuth()
   if (loading) return null
+  if (!me && connectError) return <ConnectError />
   if (!me) return <Navigate to="/" replace />
   return children
 }
@@ -52,7 +68,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Root />} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
-        <Route path="/home" element={<Protected><HomePage /></Protected>} />
+        <Route path="/home" element={<Protected><LocationGate><NotifyGate><HomePage /></NotifyGate></LocationGate></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />
         <Route path="/wardrobe/scan" element={<Protected><ScanClosetPage /></Protected>} />
         <Route path="/wardrobe/:id/edit" element={<Protected><EditClothingPage /></Protected>} />

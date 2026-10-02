@@ -7,3 +7,12 @@ export function Pin() {
     </svg>
   )
 }
+
+/** 공유 아이콘 (상자에서 위로 나가는 화살표) */
+export function ShareIcon() {
+  return (
+    <svg viewBox="0 0 28 28" width="26" height="26" fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 18 V4 M9 9 L14 4 L19 9 M6 13 V23 H22 V13" />
+    </svg>
+  )
+}

@@ -1,16 +1,16 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
-import PushMock from '../components/PushMock'
 import { eventMood } from '../lib/eventMood'
 import StickPerson from '../components/StickPerson'
 import { dDay, formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
 import { api, ApiError } from '../api'
 import { useAsync } from '../hooks'
-import type { EventOutfit } from '../types'
+import { genericColor } from '../lib/genericColor'
+import type { EventDayWeather, EventOutfit } from '../types'
 
 const steps = [
   { d: 'D-10', t: '예보 시작' },
@@ -24,6 +24,53 @@ const sample = [
   { type: '바람막이', color: '초록', pattern: '무지', label: '바람막이' },
   { type: null, color: '', pattern: '무지', label: '우산' },
 ]
+
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
+const dayLabel = (date: string) => {
+  const [, m, d] = date.split('-').map(Number)
+  return `${m}/${d} (${WEEKDAY[new Date(`${date}T00:00:00`).getDay()]})`
+}
+
+/** 일정 기간의 날씨: 하루씩, 아침/낮/저녁 기온과 비 소식. 먼 날짜는 최저/최고만 보여준다. */
+function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boolean }) {
+  return (
+    <section className="section">
+      <h2>일정 날씨</h2>
+      <div className="ev-weather">
+        {days.map((d) => (
+          <div key={d.date} className="box w2 ev-day">
+            <div className="ev-day-head">
+              <b>{dayLabel(d.date)}</b>
+              <span className="tiny">
+                최저 {d.tempMin}° · 최고 {d.tempMax}°{d.pop >= 30 || d.rain ? ` · 비 ${d.pop}%` : ''}
+              </span>
+            </div>
+            {d.slots ? (
+              <div className="ev-slots">
+                {(
+                  [
+                    ['아침', d.slots.morning],
+                    ['낮', d.slots.afternoon],
+                    ['저녁', d.slots.evening],
+                  ] as const
+                ).map(([label, slot]) => (
+                  <div key={label} className="ev-slot">
+                    <span className="tiny">{label}</span>
+                    <b>{slot ? `${slot.temp}°` : '-'}</b>
+                    {slot && slot.feels !== slot.temp && <span className="tiny">체감 {slot.feels}°</span>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="tiny">아직 먼 날짜라 하루 최저·최고만 알 수 있어요.</p>
+            )}
+          </div>
+        ))}
+      </div>
+      {approx && <p className="tiny">대략적인 예보예요. 가까워지면 아침·낮·저녁 기온으로 다시 알려줄게요.</p>}
+    </section>
+  )
+}
 
 function Umbrella() {
   return (
@@ -41,6 +88,7 @@ export default function EventDetailPage() {
 
 function EventDetail({ id }: { id: string }) {
   const nav = useNavigate()
+  const justSaved = (useLocation().state as { saved?: 'created' | 'edited' } | null)?.saved
   const ev = useAsync(() => api<PlanEvent>('GET', `/api/events/${id}`))
   const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit`).catch((e) => {
     if (e instanceof ApiError && e.status === 404) return null
@@ -68,7 +116,15 @@ function EventDetail({ id }: { id: string }) {
 
   return (
     <main>
-      <BackButton />
+      <BackButton to="/events" label="일정 목록으로" />
+      {justSaved && (
+        <div className="box w3 saved-note" role="status">
+          <b>{justSaved === 'created' ? '✓ 일정을 등록했어요' : '✓ 일정을 고쳤어요'}</b>
+          <Link to="/events" className="dbtn w1 small">
+            <HandText>내 일정 보기</HandText>
+          </Link>
+        </div>
+      )}
       <div className="page-head detail-head">
         <div>
           <h1>{e.title}</h1>
@@ -123,6 +179,8 @@ function EventDetail({ id }: { id: string }) {
 
       <hr className="scribble" />
 
+      {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
+
       <section className="section">
         <h2>{waiting ? '예보가 열리면 이렇게 보여드려요' : '이렇게 입어요'}</h2>
         <div className="box w3 outfit">
@@ -137,7 +195,7 @@ function EventDetail({ id }: { id: string }) {
                 </div>
               ))
             : [
-                ...rec.items.map((it) => ({ key: `${it.type}-${it.clothingId ?? it.label}`, type: it.type as string | null, color: it.color, pattern: it.pattern, label: it.label })),
+                ...rec.items.map((it) => ({ key: `${it.type}-${it.clothingId ?? it.label}`, type: it.type as string | null, color: it.owned ? it.color : genericColor(it.type, e.startDate), pattern: it.pattern, label: it.label })),
                 ...(rec.needUmbrella ? [{ key: 'umbrella', type: null, color: '', pattern: '무지', label: '우산' }] : []),
               ].map((s, i) => (
                 <div key={s.key} className="row">
@@ -160,11 +218,6 @@ function EventDetail({ id }: { id: string }) {
           <p className="tiny">{waiting ? '(예시예요)' : ''}</p>
           <StickPerson mood="trip" size={70} />
         </div>
-      </section>
-
-      <section className="section">
-        <h2>알림은 이렇게 와요</h2>
-        <PushMock title={e.title} to={`/events/${e.id}`} />
       </section>
     </main>
   )

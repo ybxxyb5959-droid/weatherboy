@@ -36,12 +36,12 @@ describe('Guest 전체 흐름', () => {
 
   it('Onboarding 재호출해도 예시 옷이 중복 생성되지 않는다', async () => {
     await a.post('/api/onboarding/complete').send({ closetMode: 'sample' }).expect(200)
-    expect((await a.get('/api/clothes')).body).toHaveLength(11)
+    expect((await a.get('/api/clothes')).body).toHaveLength(10)
   })
 
-  it('Clothes: 11벌 + 추가/수정/삭제(soft)', async () => {
+  it('Clothes: 10벌 + 추가/수정/삭제(soft)', async () => {
     const list = (await a.get('/api/clothes')).body
-    expect(list).toHaveLength(11)
+    expect(list).toHaveLength(10)
     expect(list[0]).toEqual({ id: expect.any(String), type: '반팔', thickness: '얇음', color: '흰색', pattern: '무지', windproof: false, waterproof: false, isSample: true })
     const added = await a.post('/api/clothes').send({ type: '코트', thickness: '두꺼움', color: '검정', windproof: true })
     expect(added.status).toBe(201)
@@ -71,7 +71,7 @@ describe('Guest 전체 흐름', () => {
     expect((await a.post('/api/clothes').send({ type: '긴팔', thickness: '보통', color: '네이비', pattern: '호피' })).status).toBe(400)
     expect((await a.post('/api/clothes').send({ type: '긴팔', thickness: '보통', color: '무지개' })).status).toBe(400)
     expect((await a.delete(`/api/clothes/${plaid.body.id}`)).status).toBe(204)
-    expect((await a.get('/api/clothes')).body).toHaveLength(11)
+    expect((await a.get('/api/clothes')).body).toHaveLength(10)
     expect((await a.post('/api/clothes').send({ type: '없는옷', thickness: '보통', color: '검정' })).status).toBe(400)
   })
 

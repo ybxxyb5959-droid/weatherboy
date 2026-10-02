@@ -153,6 +153,10 @@ model User {
   notifyCloset     Boolean @default(false) // 옷장 리마인드(주 1회)
   notifyNotice     Boolean @default(true) // 운영 공지
   morningLeadMin   Int     @default(30) // 아침 알림: 외출 몇 분 전
+  // 방해금지 시간(HH:mm, 한국 시간). 시작이 끝보다 늦으면 자정을 넘기는 구간(예: 23:00~07:00)
+  quietEnabled Boolean @default(true)
+  quietStart   String  @default("23:00")
+  quietEnd     String  @default("07:00")
 
   // 내 캐릭터 꾸미기: { hat, hairpin, glasses, neck, extra } 각 슬롯의 아이템 id (없으면 비어 있음)
   characterJson Json @default("{}")

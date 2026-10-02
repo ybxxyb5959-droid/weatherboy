@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StickPerson from '../components/StickPerson'
+import IntroFigure from '../components/IntroFigure'
 import { errorMessage } from '../api'
 import { useAuth } from '../auth'
 import HandText from '../components/HandText'
@@ -49,7 +49,10 @@ export default function IntroPage() {
       </span>
 
       <div style={{ marginTop: 40 }}>
-        <StickPerson mood="wave" size={200} />
+        <h1 className="hello">
+          <HandText>뭐입을옷?</HandText>
+        </h1>
+        <IntroFigure size={200} />
       </div>
 
       <div className="login-list ready">

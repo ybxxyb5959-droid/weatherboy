@@ -35,7 +35,7 @@ body {
   max-width: 460px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 16px 96px;
+  padding: calc(18px + env(safe-area-inset-top)) 16px 96px;
   background-color: var(--paper);
   /* 종이 결: 아주 약한 노이즈 */
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 0.4  0 0 0 0 0.4  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
@@ -230,8 +230,9 @@ input:focus-visible {
   justify-content: center;
   text-align: center;
   gap: 8px;
+  position: relative;
   min-height: calc(100dvh - 40px);
-  padding-bottom: 20px;
+  padding-bottom: 0;
 }
 .intro .hello {
   font-size: 46px;
@@ -726,12 +727,13 @@ a.card {
 .intro .wave-arm {
   animation: none;
 }
+/* 벌이 나는 자리: 로그인 버튼 아래 따로 확보해서(겹치지 않게) 그 안에서만 날고, 밖으로 나가면 잘린다 */
 .bee-lane {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  width: 100%;
+  flex: none;
   height: 130px;
+  overflow: hidden;
   pointer-events: none;
 }
 .bee-fly {
@@ -1296,6 +1298,13 @@ a.card {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+}
+.gear-caption {
+  margin: 8px 0 0;
+  opacity: 0.7;
+}
+.gear-wrap .gear {
+  margin-top: 2px;
 }
 .gear-label {
   font-size: 18px;
@@ -2548,6 +2557,22 @@ a.card {
   text-align: center;
   margin: 4px 0 8px;
 }
+.char-stage {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.char-stage .theme-scribble {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.char-stage .doodle {
+  position: relative;
+}
 .char-title {
   margin: 4px 0 2px;
   font-size: 28px;
@@ -2756,4 +2781,92 @@ a.card {
 }
 .first-guide p {
   margin: 0;
+}
+
+/* 화면 오류 안내 */
+.app-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 60dvh;
+  text-align: center;
+}
+
+/* 일정을 저장한 직후 안내: 일정 목록으로 돌아가는 길 */
+.saved-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+}
+
+/* 오늘 추천 제목 줄: 맨 오른쪽에 공유 아이콘 */
+.rec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rec-head > h2 {
+  margin: 0;
+}
+
+/* 일정 날씨: 하루씩 카드, 아침/낮/저녁 기온 */
+.ev-weather {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ev-day {
+  padding: 10px 12px;
+}
+.ev-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ev-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+  text-align: center;
+}
+.ev-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ev-slot > b {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+/* 아직 준비중인 버튼: 회색으로, 눌러도 안내만 뜬다 */
+.dbtn.is-soon {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+/* 토스트: 하단 메뉴 바로 위에 잠깐 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #222;
+  color: #fcfcfa;
+  font-size: 15px;
+  white-space: nowrap; /* 한 줄로 */
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
 }

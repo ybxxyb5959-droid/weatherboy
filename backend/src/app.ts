@@ -1,6 +1,8 @@
 import cors from 'cors'
 import connectPgSimple from 'connect-pg-simple'
 import express from 'express'
+import fs from 'node:fs'
+import path from 'node:path'
 import session from 'express-session'
 import helmet from 'helmet'
 import pg from 'pg'
@@ -75,6 +77,19 @@ export function createApp() {
   app.use('/api/admin', adminRouter)
   app.use('/api', userRouter) // /settings, /onboarding/complete, /geocode
   app.use('/api', placesRouter) // /places/suggest, /favorites
+
+  // 화면(정적 파일)도 같이 서비스: 같은 주소라 로그인 쿠키가 그대로 동작한다. /api 가 아닌 GET 은 화면(index.html)으로 보낸다.
+  if (env.SERVE_FRONTEND_DIR) {
+    const dir = path.resolve(env.SERVE_FRONTEND_DIR)
+    if (!fs.existsSync(path.join(dir, 'index.html'))) throw new Error(`SERVE_FRONTEND_DIR 에 index.html 이 없어요: ${dir}`)
+    // 서비스워커/설치 정보는 캐시하지 않아야 업데이트가 바로 반영된다
+    const noCache = new Set(['sw.js', 'manifest.webmanifest', 'index.html'])
+    app.use(express.static(dir, { setHeaders: (res, file) => { if (noCache.has(path.basename(file))) res.setHeader('Cache-Control', 'no-cache') } }))
+    app.get(/^\/(?!api\/|health|ready).*/, (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache')
+      res.sendFile(path.join(dir, 'index.html'))
+    })
+  }
 
   app.use(notFoundHandler)
   app.use(errorHandler)

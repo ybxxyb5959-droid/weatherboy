@@ -19,6 +19,5 @@ export const sampleClothes: Sample[] = [
   { type: '니트', thickness: '두꺼움', color: '기타', windproof: false, waterproof: false },
   { type: '자켓', thickness: '보통', color: '파랑', windproof: true, waterproof: false },
   { type: '바지', thickness: '보통', color: '파랑', windproof: false, waterproof: false },
-  { type: '치마', thickness: '얇음', color: '베이지', windproof: false, waterproof: false },
   { type: '코트', thickness: '두꺼움', color: '베이지', windproof: true, waterproof: false },
 ]

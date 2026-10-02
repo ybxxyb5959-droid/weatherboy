@@ -49,6 +49,8 @@ const tilt = [-4, 3, -2]
 export default function GearDoodles({ items }: { items: GearKind[] }) {
   if (items.length === 0) return null
   return (
+    <div className="gear-wrap">
+      <p className="tiny gear-caption">오늘 준비물</p>
     <ul className="gear" aria-label="오늘 준비물">
       {items.map((k, i) => (
         <li key={k} style={{ transform: `rotate(${tilt[i % tilt.length]}deg)` }}>
@@ -59,5 +61,6 @@ export default function GearDoodles({ items }: { items: GearKind[] }) {
         </li>
       ))}
     </ul>
+    </div>
   )
 }
