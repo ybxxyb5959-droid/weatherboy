@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../../db.js'
 import { analyze, TITLES } from '../../services/character/analysis.js'
-import { CATALOG, cleanConfig, type Slot } from '../../services/character/catalog.js'
+import { CATALOG, cleanConfig } from '../../services/character/catalog.js'
 import { badRequest } from '../../utils/errors.js'
 import { requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
@@ -26,8 +26,7 @@ characterRouter.get(
   }),
 )
 
-const slots = CATALOG.map((s) => s.slot) as [Slot, ...Slot[]]
-const body = z.object({ config: z.record(z.enum(slots), z.string().nullable()) })
+const body = z.object({ config: z.record(z.string(), z.string().nullable()) })
 
 /** 꾸미기 저장. 슬롯 값을 null 로 보내면 벗는다. 목록에 없는 아이템은 거부한다. */
 characterRouter.put(
@@ -39,7 +38,8 @@ characterRouter.put(
     const next: Record<string, string> = {}
     for (const [slot, id] of Object.entries(parsed.data.config)) {
       if (id === null) continue
-      const def = CATALOG.find((s) => s.slot === slot)!
+      const def = CATALOG.find((s) => s.slot === slot)
+      if (!def) throw badRequest('없는 꾸미기 칸이에요.')
       if (!def.items.some((i) => i.id === id)) throw badRequest('없는 꾸미기 아이템이에요.')
       next[slot] = id
     }
