@@ -100,6 +100,33 @@ export async function compute(user: User, event: Event | null, start: Date, end:
   return { result, window }
 }
 
+/**
+ * 화면에 보이는 추천 내용의 지문. decisionKey 는 Push 판단용이라 옷 "종류"만 보지만, 화면은 실제 옷(id·색·무늬)까지 같아야 재사용할 수 있다.
+ * 옷 삭제/수정, 감도 변경으로 실제 조합이 바뀌면 지문이 달라져 새 버전이 만들어진다.
+ */
+export function outfitFingerprint(r: Pick<EngineResult, 'items' | 'needOuter' | 'needUmbrella' | 'needMask' | 'insufficientWardrobe'>): string {
+  return JSON.stringify([
+    r.items.map((i) => [i.clothingId, i.type, i.color, i.pattern, i.owned]),
+    r.needOuter, r.needUmbrella, r.needMask, r.insufficientWardrobe,
+  ])
+}
+
+/**
+ * 저장된 최신 추천을 재사용할지 정한다. 조합이 같으면 같은 id(피드백 유지)를 쓰되 날씨 문구/수치는 최신으로 갱신하고,
+ * 조합이 다르면 null 을 돌려줘 호출자가 새 버전을 만든다. 이전 버전은 피드백 기록으로 보존된다.
+ */
+async function refreshIfSameOutfit(latest: Recommendation | null, result: EngineResult, stage: string): Promise<Recommendation | null> {
+  if (!latest) return null
+  const old = latest.resultJson as unknown as EngineResult
+  if (outfitFingerprint(old) !== outfitFingerprint(result)) return null
+  const next = { ...result, forecastStage: stage }
+  if (JSON.stringify(old) === JSON.stringify(next)) return latest
+  return prisma.recommendation.update({
+    where: { id: latest.id },
+    data: { resultJson: next as unknown as Prisma.InputJsonValue, reasonCodes: result.reasonCodes, decisionKey: result.decisionKey },
+  })
+}
+
 async function maybeExplain(result: EngineResult): Promise<string | null> {
   try {
     return await explain(result)
@@ -108,7 +135,7 @@ async function maybeExplain(result: EngineResult): Promise<string | null> {
   }
 }
 
-/** 오늘 추천: 같은 날 같은 판단이면 같은 Recommendation(id)을 재사용해 피드백이 안정적으로 붙게 한다. */
+/** 오늘 추천: 같은 날 같은 옷 조합이면 같은 Recommendation(id)을 재사용해 피드백이 안정적으로 붙게 한다. 조합이 바뀌면 새 버전. */
 export async function todayRecommendation(user: User, now = new Date(), regionOverride?: Region): Promise<RecommendationView> {
   const { start, end } = todayWindow(now)
   const c = await compute(user, null, start, end, now, regionOverride)
@@ -118,7 +145,8 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
   const dayStart = kstStartOfDay(now)
   const latest = await prisma.recommendation.findFirst({ where: { userId: user.id, eventId: null, targetStartAt: dayStart }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
-  if (latest && latest.decisionKey === c.result.decisionKey) return viewOf(latest, stage)
+  const reused = await refreshIfSameOutfit(latest, c.result, stage)
+  if (reused) return viewOf(reused, stage)
   const aiExplanation = await maybeExplain(c.result)
   const rec = await prisma.recommendation.create({
     data: {
@@ -143,8 +171,8 @@ export function eventWindow(e: Pick<Event, 'startAt' | 'endAt'>) {
 export async function saveEventRecommendation(event: Event, c: Computed): Promise<Recommendation> {
   const latest = await prisma.recommendation.findFirst({ where: { eventId: event.id }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
-  let saved = latest
-  if (!latest || latest.decisionKey !== c.result.decisionKey) {
+  let saved = await refreshIfSameOutfit(latest, c.result, stage)
+  if (!saved) {
     saved = await prisma.recommendation.create({
       data: {
         userId: event.userId,
