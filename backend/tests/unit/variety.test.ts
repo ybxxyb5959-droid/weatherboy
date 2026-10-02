@@ -12,6 +12,11 @@ const pts = (temp: number): OutingPoint[] => [
   { at: new Date('2026-10-02T00:00:00Z'), temp, feels: temp, pop: 10, precip: 'none', wind: 2 },
   { at: new Date('2026-10-02T06:00:00Z'), temp, feels: temp, pop: 10, precip: 'none', wind: 2 },
 ]
+// 날짜와 시간대별 기온을 직접 정해 만드는 외출 구간 (계절·낮 기온 규칙 확인용). temps 의 각 값은 3시간 간격의 체감=기온.
+const ptsOn = (date: string, temps: number[]): OutingPoint[] =>
+  temps.map((t, i) => ({ at: new Date(`${date}T${String(i * 3).padStart(2, '0')}:00:00Z`), temp: t, feels: t, pop: 10, precip: 'none' as const, wind: 2 }))
+const runOn = (clothes: WardrobeItem[], date: string, temps: number[], seed?: string) =>
+  recommend({ points: ptsOn(date, temps), sensitivity: 'NORMAL', feedbackOffset: 0, eventKind: null, clothes, airGrade: 2, varietySeed: seed } as EngineInput)
 const run = (clothes: WardrobeItem[], temp: number, seed?: string) =>
   recommend({ points: pts(temp), sensitivity: 'NORMAL', feedbackOffset: 0, eventKind: null, clothes, airGrade: 2, varietySeed: seed } as EngineInput)
 const ids = (r: ReturnType<typeof run>) => r.items.map((i) => i.clothingId).join('+')
@@ -196,8 +201,8 @@ describe('지나치게 두꺼운 조합은 권하지 않는다 (21℃에 패딩 
     }
   })
 
-  it('정말 추운 날(5℃)에는 패딩을 권한다', () => {
-    for (const seed of [undefined, ...days.slice(0, 4)]) expect(types(run(small(), 5, seed))).toContain('패딩')
+  it('정말 추운 겨울날(5℃)에는 패딩을 권한다', () => {
+    for (const seed of [undefined, ...days.slice(0, 4)]) expect(types(runOn(small(), '2026-01-15', [5, 5], seed))).toContain('패딩')
   })
 
   it('알맞은 가벼운 겉옷이 있으면 그걸 쓴다 (패딩이 아니라)', () => {
@@ -239,14 +244,57 @@ describe('두꺼운 겉옷(패딩·코트)은 충분히 추운 날에만 쓴다'
   })
 
   it('정말 추운 날(5℃)에는 두꺼운 겉옷(패딩·코트)을 권한다', () => {
-    const t = usedTypes(5)
+    const t = runOn(closet(), '2026-01-15', [5, 5]).items.map((i) => i.type)
     expect(t.includes('패딩') || t.includes('코트')).toBe(true)
     const onlyPadding = [cloth('SWEATSHIRT', 'GRAY'), cloth('PANTS', 'BLUE'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
-    expect(run(onlyPadding, 5).items.map((i) => i.type)).toContain('패딩')
+    expect(runOn(onlyPadding, '2026-01-15', [5, 5]).items.map((i) => i.type)).toContain('패딩')
   })
 
   it('패딩만 있는 옷장도 "옷이 비었다"로 취급하지 않는다', () => {
     const r = run([cloth('PADDING', 'BLACK', 'THICK')], 22)
     expect(r.reasonCodes).not.toContain('EMPTY_WARDROBE_GENERIC')
+  })
+})
+
+describe('계절과 낮 기온도 함께 본다 (패딩·코트)', () => {
+  const closet = () => [
+    cloth('SWEATSHIRT', 'GRAY'),
+    cloth('PANTS', 'BLUE'),
+    cloth('PADDING', 'BLACK', 'THICK', { windproof: true }),
+    cloth('COAT', 'BEIGE', 'THICK', { windproof: true }),
+  ]
+  const typesOn = (date: string, temps: number[], seed?: string) => runOn(closet(), date, temps, seed).items.map((i) => i.type)
+
+  it('철이 아닌 달(10월)에는 패딩을 쓰지 않는다 (8℃여도)', () => {
+    for (const seed of [undefined, ...days.slice(0, 4)]) expect(typesOn('2026-10-20', [8, 8], seed)).not.toContain('패딩')
+  })
+
+  it('같은 8℃라도 한겨울(1월)에는 패딩이 후보다', () => {
+    const t = typesOn('2026-01-15', [8, 8])
+    expect(t.includes('패딩') || t.includes('코트')).toBe(true)
+  })
+
+  it('10월에도 판단 기온이 아주 낮으면(3℃) 철과 상관없이 패딩을 허용한다', () => {
+    const only = [cloth('SWEATSHIRT', 'GRAY'), cloth('PANTS', 'BLUE'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
+    expect(runOn(only, '2026-10-20', [3, 3]).items.map((i) => i.type)).toContain('패딩')
+  })
+
+  it('봄·여름(5월·7월)에는 쌀쌀해도 패딩·코트를 쓰지 않는다', () => {
+    for (const date of ['2026-05-10', '2026-07-10']) for (const seed of [undefined, ...days.slice(0, 3)]) expect(typesOn(date, [8, 8], seed)).not.toEqual(expect.arrayContaining(['패딩']))
+    expect(typesOn('2026-07-10', [10, 10])).not.toContain('코트')
+  })
+
+  it('낮 기온이 따뜻하면(최고 18℃) 저녁이 추워도 패딩은 쓰지 않는다 (코트는 가능)', () => {
+    // 낮 18℃ → 밤 3℃: 판단 기온은 꽤 낮지만 낮에 패딩은 과하다
+    for (const seed of [undefined, ...days.slice(0, 4)]) expect(typesOn('2026-01-15', [18, 12, 3], seed)).not.toContain('패딩')
+  })
+
+  it('낮 최고가 12℃인 한겨울날에는 패딩이 후보다', () => {
+    const only = [cloth('SWEATSHIRT', 'GRAY'), cloth('PANTS', 'BLUE'), cloth('PADDING', 'BLACK', 'THICK', { windproof: true })]
+    expect(runOn(only, '2026-01-15', [12, 6, 2]).items.map((i) => i.type)).toContain('패딩')
+  })
+
+  it('낮 최고가 22℃ 넘으면 코트도 쓰지 않는다', () => {
+    for (const seed of [undefined, ...days.slice(0, 3)]) expect(typesOn('2026-04-10', [22, 10, 8], seed)).not.toContain('코트')
   })
 })

@@ -66,6 +66,13 @@ export const ruleConfig = {
   // 두꺼운 겉옷은 충분히 추울 때만 쓴다(필요 보온 기준: 6 = 판단 기온 17℃ 미만, 10 = 9℃ 미만). 그보다 따뜻한 날에는 옷장에 있어도 추천하지 않는다
   coatMinRequired: 6,
   paddingMinRequired: 10,
+  // 두꺼운 겉옷은 계절과 낮 기온도 본다: 외출 시간대의 최고 기온이 이 값을 넘으면(낮에 따뜻하면) 쓰지 않고, 철이 아니면 쓰지 않는다.
+  // 판단 기온이 아주 낮으면(필요 보온 veryColdRequired 이상, 약 5℃ 미만) 철과 상관없이 허용한다.
+  paddingMaxDayTemp: 15,
+  coatMaxDayTemp: 20,
+  paddingMonths: [11, 12, 1, 2, 3],
+  coatMonths: [10, 11, 12, 1, 2, 3, 4],
+  veryColdRequired: 13,
   maxShortfall: 4,
 }
 

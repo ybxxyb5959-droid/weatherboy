@@ -156,8 +156,16 @@ export function recommend(input: EngineInput): EngineResult {
   const temps = input.points.map((p) => p.temp)
   const diurnal = Math.max(...temps) - Math.min(...temps)
 
-  // 두꺼운 겉옷(코트·패딩)은 그만큼 추운 날에만 쓴다: 21℃ 안팎에 반팔+반바지 위에 패딩을 얹는 추천을 막는다.
-  const usable = (c: WardrobeItem) => !(c.type === 'PADDING' && required < ruleConfig.paddingMinRequired) && !(c.type === 'COAT' && required < ruleConfig.coatMinRequired)
+  // 두꺼운 겉옷(코트·패딩)은 충분히 춥고, 철이고, 낮에도 쌀쌀할 때만 쓴다: 21℃ 안팎에 반팔+반바지 위에 패딩을 얹는 추천을 막는다.
+  const dayMax = Math.max(...input.points.map((p) => p.temp)) // 외출 시간대의 최고 기온(낮 기온)
+  const month = toKstParts(input.points[0]!.at).month
+  const veryCold = required >= ruleConfig.veryColdRequired
+  const inSeason = (months: number[]) => veryCold || months.includes(month)
+  const usable = (c: WardrobeItem) => {
+    if (c.type === 'PADDING') return required >= ruleConfig.paddingMinRequired && dayMax <= ruleConfig.paddingMaxDayTemp && inSeason(ruleConfig.paddingMonths)
+    if (c.type === 'COAT') return required >= ruleConfig.coatMinRequired && dayMax <= ruleConfig.coatMaxDayTemp && inSeason(ruleConfig.coatMonths)
+    return true
+  }
   const own = input.clothes.filter((c) => c.owned && usable(c))
   const hasOwn = input.clothes.some((c) => c.owned) // 두꺼운 겉옷만 걸러져 own 이 비어도 "옷이 없다"가 아니다
 
