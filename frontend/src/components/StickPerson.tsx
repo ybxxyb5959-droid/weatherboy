@@ -24,6 +24,54 @@ interface Props {
 
 const ink = '#222'
 
+/**
+ * 소매 밖으로 나오는 팔과 손. 옷은 소매가 몸 옆으로 벌어진 모양이라, 옷을 입으면 안쪽의 팔 선이 옷 뒤로 숨는다.
+ * 그래서 입은 옷의 소매 길이에 맞게 손(과 반팔이면 맨 팔뚝)을 옷 위에 따로 그린다.
+ *  - 반팔: 소매 아래로 맨 팔뚝이 나오고 그 끝에 손
+ *  - 긴 소매(긴팔·맨투맨·후드티 등)와 겉옷: 소매 끝에서 손만 삐져나온다
+ */
+function Hands({ top, outer }: { top?: string; outer?: string }) {
+  // 옷 그림 좌표(100x100) -> 졸라맨 좌표. 상의는 scale .65 @ (27.5,39.6), 겉옷은 scale .72 @ (24,41)
+  const at = (scale: number, tx: number, ty: number) => (x: number, y: number) => [tx + x * scale, ty + y * scale] as const
+  const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+
+  if (outer) {
+    const w = at(0.72, 24, 41) // 겉옷 소매 끝(왼 14.5,69 / 오른 85.5,69) 바로 아래
+    const [lx, ly] = w(13.5, 75)
+    const [rx, ry] = w(86.5, 75)
+    return (
+      <g>
+        {hand(lx, ly, 'l')}
+        {hand(rx, ry, 'r')}
+      </g>
+    )
+  }
+  if (!top) return null
+  if (top === '반팔') {
+    const w = at(0.65, 27.5, 39.6)
+    const [lsx, lsy] = w(14.5, 38) // 반팔 소매 끝
+    const [lex, ley] = w(9, 66) // 손목
+    const [rsx, rsy] = w(85.5, 38)
+    const [rex, rey] = w(91, 66)
+    return (
+      <g>
+        <path d={`M${lsx} ${lsy} L${lex} ${ley} M${rsx} ${rsy} L${rex} ${rey}`} strokeWidth="2.6" />
+        {hand(lex - 0.5, ley + 3, 'l')}
+        {hand(rex + 0.5, rey + 3, 'r')}
+      </g>
+    )
+  }
+  const w = at(0.65, 27.5, 39.6) // 소매가 긴 옷: 소매 끝에서 손만
+  const [lx, ly] = w(13.5, 75)
+  const [rx, ry] = w(86.5, 75)
+  return (
+    <g>
+      {hand(lx, ly, 'l')}
+      {hand(rx, ry, 'r')}
+    </g>
+  )
+}
+
 export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, persona = null, accessories = {} }: Props) {
   const showUmbrella = mood === 'rain' || (mood === 'stand' && umbrella)
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
@@ -189,6 +237,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                 <ClothingArt type={wear.outer.type} color={wear.outer.color} pattern={wear.outer.pattern} />
               </g>
             )}
+            {/* 소매 밖의 팔/손 */}
+            <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
             {/* 칭호 소품과 꾸미기: 옷 위에 얹는다 */}
             <FrontDecor persona={persona} acc={accessories} />
           </g>

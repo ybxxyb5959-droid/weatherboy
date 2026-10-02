@@ -4,7 +4,22 @@ import { clothingTypeMap, colorMap, patternMap } from '../../config/mappings.js'
 /** 칭호가 붙으려면 직접 담은 옷이 이만큼은 있어야 한다 (한두 벌로 "어둠의 아이"가 되지 않게) */
 export const MIN_CLOTHES = 5
 
-export type TitleKey = 'DARK_CHILD' | 'MINIMALIST' | 'PATTERN_MASTER' | 'PASTEL_FAIRY' | 'HOODIE_ADDICT' | 'WARM_BEAR' | 'TEE_ONLY' | 'BALANCED'
+export type TitleKey =
+  | 'DARK_CHILD'
+  | 'MINIMALIST'
+  | 'PATTERN_MASTER'
+  | 'PASTEL_FAIRY'
+  | 'HOODIE_ADDICT'
+  | 'WARM_BEAR'
+  | 'TEE_ONLY'
+  | 'OUTER_FAN'
+  | 'SHIRT_GENTLE'
+  | 'SKIRT_LOVER'
+  | 'EARTH_TONE'
+  | 'BLUE_SEA'
+  | 'VITAMIN'
+  | 'RAINBOW'
+  | 'BALANCED'
 
 export interface TitleDef {
   key: TitleKey
@@ -24,6 +39,13 @@ export const TITLES: TitleDef[] = [
   { key: 'HOODIE_ADDICT', name: '후드티 중독자', tagline: '후드를 쓰면 마음이 편해져', rule: '후드티가 25% 이상(3벌 이상)' },
   { key: 'WARM_BEAR', name: '따뜻한 곰', tagline: '겨울잠을 준비하는 옷장', rule: '니트·패딩·코트가 35% 이상' },
   { key: 'TEE_ONLY', name: '반팔 한 장 인간', tagline: '추위? 그게 뭔데', rule: '반팔과 반바지가 절반 이상' },
+  { key: 'OUTER_FAN', name: '겉옷 수집가', tagline: '겉옷 하나면 인생이 한 겹 더 따뜻해', rule: '겉옷(바람막이·자켓·가디건·코트·패딩)이 40% 이상' },
+  { key: 'SHIRT_GENTLE', name: '셔츠 신사', tagline: '다림질은 마음에서부터', rule: '셔츠가 25% 이상(3벌 이상)' },
+  { key: 'SKIRT_LOVER', name: '스커트 러버', tagline: '걸을 때마다 살랑살랑', rule: '치마가 20% 이상(2벌 이상)' },
+  { key: 'EARTH_TONE', name: '모카 라떼 인간', tagline: '따뜻한 카페 같은 옷장', rule: '베이지·갈색·카키가 50% 이상' },
+  { key: 'BLUE_SEA', name: '푸른 바다', tagline: '파도처럼 시원한 옷장', rule: '파랑·네이비·하늘색이 50% 이상' },
+  { key: 'VITAMIN', name: '비타민 폭탄', tagline: '눈이 번쩍! 에너지 충전 완료', rule: '빨강·주황·노랑이 40% 이상' },
+  { key: 'RAINBOW', name: '무지개 수집가', tagline: '어느 색이든 환영이야', rule: '6가지 색 이상을 입고 한 색이 30%를 넘지 않음' },
   { key: 'BALANCED', name: '균형 잡힌 옷장', tagline: '무엇이든 소화하는 올라운더', rule: '어느 쪽으로도 치우치지 않음' },
 ]
 export const titleOf = (key: TitleKey) => TITLES.find((t) => t.key === key)!
@@ -72,6 +94,12 @@ export function analyze(clothes: ClothesForAnalysis[]): Analysis {
   const has = (c: ClothesForAnalysis, ...colorsIn: ClothingColor[]) => colorsIn.includes(c.color)
   const hoodie = clothes.filter((c) => c.type === 'HOODIE').length
 
+  const countOf = (pred: (c: ClothesForAnalysis) => boolean) => clothes.filter(pred).length
+  const distinctColors = new Set(clothes.filter((c) => c.color !== 'OTHER').map((c) => c.color)).size
+  const maxColorShare = Math.max(...colors.map((x) => x.share))
+  const shirts = countOf((c) => c.type === 'SHIRT')
+  const skirts = countOf((c) => c.type === 'SKIRT')
+
   const score: Record<Exclude<TitleKey, 'BALANCED'>, number> = {
     DARK_CHILD: frac((c) => has(c, 'BLACK')) / 0.5,
     MINIMALIST: Math.min(frac((c) => has(c, 'BLACK', 'GRAY', 'WHITE')) / 0.8, frac((c) => c.pattern === 'SOLID') / 0.8),
@@ -80,6 +108,13 @@ export function analyze(clothes: ClothesForAnalysis[]): Analysis {
     HOODIE_ADDICT: hoodie >= 3 ? hoodie / n / 0.25 : 0,
     WARM_BEAR: frac((c) => ['KNIT', 'PADDING', 'COAT'].includes(c.type)) / 0.35,
     TEE_ONLY: frac((c) => ['SHORT_SLEEVE', 'SHORTS'].includes(c.type)) / 0.5,
+    OUTER_FAN: frac((c) => ['WINDBREAKER', 'JACKET', 'CARDIGAN', 'COAT', 'PADDING'].includes(c.type)) / 0.4,
+    SHIRT_GENTLE: shirts >= 3 ? shirts / n / 0.25 : 0,
+    SKIRT_LOVER: skirts >= 2 ? skirts / n / 0.2 : 0,
+    EARTH_TONE: frac((c) => has(c, 'BEIGE', 'BROWN', 'KHAKI')) / 0.5,
+    BLUE_SEA: frac((c) => has(c, 'BLUE', 'NAVY', 'SKYBLUE')) / 0.5,
+    VITAMIN: frac((c) => has(c, 'RED', 'ORANGE', 'YELLOW')) / 0.4,
+    RAINBOW: Math.min(distinctColors / 6, 0.3 / maxColorShare),
   }
   let best: TitleKey = 'BALANCED'
   let bestScore = 0

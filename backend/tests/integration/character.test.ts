@@ -26,7 +26,7 @@ describe('내 캐릭터 API', () => {
     const r = (await a.get('/api/character').expect(200)).body
     expect(r.analysis).toMatchObject({ count: 0, ready: false, need: 5, title: null })
     expect(r.config).toEqual({})
-    expect(r.catalog.map((s: { slot: string }) => s.slot)).toEqual(['hat', 'hairpin', 'glasses', 'neck', 'extra'])
+    expect(r.catalog.map((s: { slot: string }) => s.slot)).toEqual(['hat', 'hairpin', 'glasses', 'neck', 'face', 'extra'])
   })
 
   it('검정 옷을 5벌 담으면 "어둠의 아이"가 되고 색 비중이 나온다', async () => {
@@ -35,7 +35,7 @@ describe('내 캐릭터 API', () => {
     expect(r.analysis.ready).toBe(true)
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 5, share: 1 })
-    expect(r.titles).toHaveLength(8)
+    expect(r.titles).toHaveLength(15)
   })
 
   it('꾸미기를 저장하고 다시 읽을 수 있다. 값을 null 로 보내면 벗는다', async () => {
