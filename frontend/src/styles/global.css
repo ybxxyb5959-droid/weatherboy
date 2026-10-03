@@ -540,7 +540,10 @@ input:focus-visible {
 }
 .tour-phone {
   position: relative;
-  width: min(300px, 100%);
+  box-sizing: content-box; /* 안쪽이 캡처 비율(390x844) 그대로 */
+  /* 화면 높이에 맞춰 줄여서, 이전/다음 버튼이 항상 한 화면에 보이게 한다 */
+  width: min(300px, calc((100dvh - 216px) * 0.462), calc(100% - 6px));
+  aspect-ratio: 390 / 844;
   margin-top: 8px;
   border: 2.6px solid var(--ink);
   border-radius: 22px 26px 20px 24px / 24px 20px 26px 22px;
@@ -549,10 +552,23 @@ input:focus-visible {
   background: var(--paper);
   box-shadow: 3px 4px 0 rgba(34, 34, 34, 0.18);
 }
+/* 화면 여러 장을 세로로 쌓아 두고, 설명이 끝나면 위로 밀어 올려 아래 화면이 스르륵 내려오는 것처럼 보이게 한다 */
+.tour-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.tour-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 390 / 844;
+}
 .tour-phone img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   user-select: none;
 }
 .tour-lines {
@@ -565,6 +581,8 @@ input:focus-visible {
 }
 .tour-arrow {
   opacity: 0;
+}
+.tour-frame.on .tour-arrow {
   animation: tour-fade 0.5s ease-out forwards;
 }
 .tour-bubble {
@@ -582,6 +600,8 @@ input:focus-visible {
   border: 2.2px solid var(--ink);
   border-radius: 9px 16px 11px 14px / 15px 8px 16px 10px;
   opacity: 0;
+}
+.tour-frame.on .tour-bubble {
   animation: tour-pop 0.45s ease-out forwards;
 }
 @keyframes tour-fade {
@@ -600,10 +620,13 @@ input:focus-visible {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tour-arrow,
-  .tour-bubble {
+  .tour-frame.on .tour-arrow,
+  .tour-frame.on .tour-bubble {
     animation-duration: 0.01s;
     animation-delay: 0s !important;
+  }
+  .tour-track {
+    transition: none;
   }
 }
 .tour-hint {
