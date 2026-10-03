@@ -2,6 +2,8 @@ import type { ReactElement } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import IntroPage from './pages/IntroPage'
+import LandingPage from './pages/LandingPage'
+import { isStandalone } from './lib/install'
 import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
 import EditEventPage from './pages/EditEventPage'
@@ -32,6 +34,7 @@ function ConnectError() {
   )
 }
 
+// 로그인 화면(/start). 로그인돼 있으면 바로 홈으로 간다.
 function Root() {
   const { me, loading, connectError } = useAuth()
   if (loading) return null
@@ -40,17 +43,22 @@ function Root() {
   return <Navigate to="/home" replace />
 }
 
+// 주소의 첫 화면(/): 브라우저로 들어오면 소개 페이지, 설치한 앱으로 열면 바로 로그인/홈
+function Front() {
+  return isStandalone() ? <Root /> : <LandingPage />
+}
+
 function Protected({ children }: { children: ReactElement }) {
   const { me, loading, connectError } = useAuth()
   if (loading) return null
   if (!me && connectError) return <ConnectError />
-  if (!me) return <Navigate to="/" replace />
+  if (!me) return <Navigate to="/start" replace />
   return children
 }
 
 export default function App() {
   const { pathname } = useLocation()
-  const showNav = pathname !== '/'
+  const showNav = pathname !== '/' && pathname !== '/start'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}
@@ -66,7 +74,8 @@ export default function App() {
       </svg>
       <GuestDataNotice />
       <Routes>
-        <Route path="/" element={<Root />} />
+        <Route path="/" element={<Front />} />
+        <Route path="/start" element={<Root />} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
         <Route path="/home" element={<Protected><LocationGate><NotifyGate><HomePage /></NotifyGate></LocationGate></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />
