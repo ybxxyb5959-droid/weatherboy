@@ -1,47 +1,18 @@
-import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import GreetingFigure from '../components/GreetingFigure'
 import GearDoodles from '../components/GearDoodles'
 import { ClosetScene } from '../components/Clothesline'
 import { Bee, Cloud, Flower, Sun, WeatherDoodle } from '../components/DoodleWeather'
-import { detectPlatform, openInExternalBrowser, useInstall } from '../lib/install'
-
-// 설치가 바로 안 될 때 보여 줄 안내
-const helpText: Record<'kakao' | 'ios' | 'android' | 'other', string> = {
-  kakao: '카카오톡 안에서는 설치할 수 없어요. 오른쪽 아래 ⋮(또는 공유) 버튼을 눌러 "다른 브라우저로 열기"를 한 뒤 다시 눌러주세요.',
-  ios: '아이폰은 사파리에서 하단의 공유 버튼(네모에 화살표)을 누르고 "홈 화면에 추가"를 눌러주세요.',
-  android: '크롬 오른쪽 위 ⋮ 메뉴에서 "홈 화면에 추가"(또는 "앱 설치")를 눌러주세요.',
-  other: '크롬이나 엣지 주소창 오른쪽의 설치 아이콘을 누르거나, 메뉴에서 "앱 설치"를 눌러주세요.',
-}
+import { helpText, useInstallAction } from '../lib/useInstallAction'
 
 export default function LandingPage() {
   const nav = useNavigate()
-  const { canPrompt, installed, prompt } = useInstall()
-  const [hint, setHint] = useState('')
-  const [helpOpen, setHelpOpen] = useState(false)
+  const { install, installed, hint, helpOpen, setHelpOpen } = useInstallAction()
 
   // 카카오 로그인 실패 등으로 /?login=... 로 돌아온 경우엔 로그인 화면으로 보낸다
   const search = window.location.search
   if (new URLSearchParams(search).has('login')) return <Navigate to={`/start${search}`} replace />
-
-  const install = async () => {
-    setHint('')
-    const platform = detectPlatform()
-    if (platform === 'kakao') {
-      setHint(helpText.kakao)
-      openInExternalBrowser()
-      return
-    }
-    if (canPrompt) {
-      const ok = await prompt()
-      if (!ok) setHint('설치를 취소했어요. 필요하면 다시 눌러주세요.')
-      return
-    }
-    // 바로 설치 창을 띄울 수 없는 환경(아이폰, 이미 설치됨 등): 방법을 안내한다
-    setHint(helpText[platform])
-    setHelpOpen(true)
-  }
 
   return (
     <main className="landing">
@@ -77,7 +48,7 @@ export default function LandingPage() {
               {hint}
             </p>
           )}
-          <button type="button" className="guest-link" onClick={() => nav('/start')}>
+          <button type="button" className="guest-link" onClick={() => nav('/tour')}>
             <HandText>설치 없이 웹에서 먼저 볼래요</HandText>
           </button>
         </div>
@@ -143,10 +114,10 @@ export default function LandingPage() {
 
       <section className="thanks">
         <p>
-          <HandText>사용 후에 후기를 남겨주시면 안될까용?</HandText>
+          <HandText>사용 후에 후기를 남겨주시면</HandText>
         </p>
         <p>
-          <HandText>추후에 더 나은 서비스로 찾아뵙겠습니다 ^_^</HandText>
+          <HandText>추후에 더 나은 서비스로 찾아뵙겠습니다 ^__^</HandText>
         </p>
       </section>
 

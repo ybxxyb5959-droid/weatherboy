@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import IntroPage from './pages/IntroPage'
 import LandingPage from './pages/LandingPage'
+import TourPage from './pages/TourPage'
 import { isStandalone } from './lib/install'
 import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
@@ -58,7 +59,7 @@ function Protected({ children }: { children: ReactElement }) {
 
 export default function App() {
   const { pathname } = useLocation()
-  const showNav = pathname !== '/' && pathname !== '/start'
+  const showNav = pathname !== '/' && pathname !== '/start' && pathname !== '/tour'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}
@@ -76,6 +77,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Front />} />
         <Route path="/start" element={<Root />} />
+        <Route path="/tour" element={<TourPage />} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
         <Route path="/home" element={<Protected><LocationGate><NotifyGate><HomePage /></NotifyGate></LocationGate></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />

@@ -1,152 +1,272 @@
-import { useId, useState } from 'react'
-import { FigureBody } from './IntroFigure'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { buildPose, type Pose } from './greetingPose'
 import { figureSvgProps } from './figureProps'
 
-// 졸라맨(옷 입은 그대로)을 '누군가의 손'이 펜으로 그리고, 다 그리면 한 손을 흔들며 인사한다.
-// 그림은 마스크로 숨겨 두고, 펜이 지나가는 길(stroke)마다 마스크를 따라 그려서 드러낸다.
-// 펜 손은 같은 길을 같은 시간에 따라가서(SMIL) 그리는 것처럼 보인다.
+// 졸라맨(흰 반팔, 네이비 바지)을 펜으로 한 획씩 그리고, 다 그리면 한 손을 흔들며 인사한다.
+// 각 획은 stroke-dashoffset 으로 실제 선이 이어져 그려지고(마스크로 가리지 않아 잘리지 않음), 펜은 그 선 끝을 따라간다.
 
-const WAVE_A = 125 // 오른팔(그림 기준) 올린 각도 두 가지를 번갈아 보여 손 흔드는 느낌을 낸다
+const ARM_LEFT = 30
+const WAVE_A = 125 // 오른팔을 든 두 가지 각도를 번갈아 보여 손을 흔든다
 const WAVE_B = 152
-const ARM_LEFT = 30 // 왼팔은 편하게 내린다
+const POSE_A = buildPose(ARM_LEFT, WAVE_A)
+const POSE_B = buildPose(ARM_LEFT, WAVE_B)
 
-interface Stroke {
-  d: string
-  w: number // 마스크 붓 굵기: 선은 가늘게, 옷은 넓게 문질러 칠한다
-  dur: number
+type Kind = 'stroke' | 'dot' | 'fill'
+interface StepDef {
+  key: string
+  kind: Kind
+  speed?: number // 초당 그리는 길이(클수록 빨리)
+  fillAfter?: boolean // 선을 다 그린 뒤 안쪽을 채운다
 }
 
-// 좌표는 졸라맨 그림(IntroFigure) 안쪽 좌표
-const STROKES: Stroke[] = [
-  { d: 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5', w: 7, dur: 0.9 }, // 머리
-  { d: 'M52 30 L68 30 M55 36 Q60.5 41 66 35', w: 8, dur: 0.5 }, // 눈과 입
-  { d: 'M60 47 L61 100', w: 7, dur: 0.4 }, // 몸통
-  { d: 'M47 52 L71 56 L47 62 L71 66 L47 72 L71 76 L47 82 L71 86 L47 92 L71 96', w: 9, dur: 1.0 }, // 티셔츠 칠하기
-  { d: 'M50 50 L36 62 L27.6 83', w: 9, dur: 0.4 }, // 왼팔
-  { d: 'M70 50 L86 40 L95.7 23', w: 9, dur: 0.45 }, // 인사하는 오른팔
-  { d: 'M48 99 L72 99 L48 106 L72 106 L48 112 L72 112', w: 9, dur: 0.5 }, // 바지 칠하기
-  { d: 'M54 100 L40 128 L37 137', w: 12, dur: 0.4 }, // 왼다리
-  { d: 'M66 100 L78 128 L79 137', w: 12, dur: 0.4 }, // 오른다리
+// 사람이 그리는 순서: 머리 -> 얼굴 -> 몸통 -> 팔 -> 다리 -> 바지(색칠) -> 티셔츠
+const STEPS: StepDef[] = [
+  { key: 'head', kind: 'stroke', speed: 190 },
+  { key: 'eyeL', kind: 'dot' },
+  { key: 'eyeR', kind: 'dot' },
+  { key: 'smile', kind: 'stroke', speed: 120 },
+  { key: 'body', kind: 'stroke', speed: 170 },
+  { key: 'armL', kind: 'stroke', speed: 170 },
+  { key: 'handL', kind: 'stroke', speed: 110, fillAfter: true },
+  { key: 'armR', kind: 'stroke', speed: 170 },
+  { key: 'handR', kind: 'stroke', speed: 110, fillAfter: true },
+  { key: 'legL', kind: 'stroke', speed: 190 },
+  { key: 'legR', kind: 'stroke', speed: 190 },
+  { key: 'pants', kind: 'stroke', speed: 260 },
+  { key: 'hatch', kind: 'stroke', speed: 560 },
+  { key: 'pants', kind: 'fill' },
+  { key: 'waist', kind: 'stroke', speed: 120 },
+  { key: 'tee', kind: 'stroke', speed: 280 },
+  { key: 'tee', kind: 'fill' },
+  { key: 'neck', kind: 'stroke', speed: 120 },
 ]
 
-const START = 0.4 // 펜 손이 등장하기까지
-const LIFT = 0.14 // 펜을 들어 다음 획으로 옮기는 시간
-const LEAVE = 0.6 // 다 그리고 손이 빠지는 시간
+const START = 0.45 // 펜이 들어오는 시간
+const LIFT = 0.09 // 펜을 들어 다음 획으로 옮기는 시간
+const HOLD = 0.2 // 다 그리고 잠깐 멈춤
+const LEAVE = 0.55 // 펜이 빠지는 시간
+const DOT_DUR = 0.12
+const FILL_DUR = 0.26
 
-const nums = (d: string) => (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
-const startOf = (d: string) => {
-  const n = nums(d)
-  return [n[0]!, n[1]!] as const
-}
-const endOf = (d: string) => {
-  const n = nums(d)
-  return [n[n.length - 2]!, n[n.length - 1]!] as const
-}
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+const easeSine = (u: number) => 0.5 - 0.5 * Math.cos(Math.PI * u) // 선을 그을 때 처음과 끝이 살짝 느리다
+const easeOut = (u: number) => 1 - (1 - u) * (1 - u)
+const lerp = (a: number, b: number, u: number) => a + (b - a) * u
 
-interface Step {
-  kind: 'draw' | 'lift'
-  d: string
-  begin: number
-  dur: number
-  stroke?: Stroke
-}
+type Reg = (key: string) => (el: SVGGeometryElement | null) => void
 
-// 획을 순서대로 이어 붙여 각 동작의 시작 시각을 계산한다
-function buildTimeline() {
-  const steps: Step[] = []
-  let t = START
-  STROKES.forEach((s, i) => {
-    if (i > 0) {
-      const [px, py] = endOf(STROKES[i - 1]!.d)
-      const [nx, ny] = startOf(s.d)
-      steps.push({ kind: 'lift', d: `M${px} ${py} L${nx} ${ny}`, begin: t, dur: LIFT })
-      t += LIFT
-    }
-    steps.push({ kind: 'draw', d: s.d, begin: t, dur: s.dur, stroke: s })
-    t += s.dur
-  })
-  const [ex, ey] = endOf(STROKES[STROKES.length - 1]!.d)
-  return { steps, end: t, leave: `M${ex} ${ey} L${ex + 70} ${ey - 50}` }
-}
-const TIMELINE = buildTimeline()
-
-// 펜을 든 손: 펜 끝이 (0,0)
-function PenHand() {
+/** 한 자세의 그림. reg 가 있으면 그리는 중(획마다 요소를 등록), 없으면 완성된 그림 */
+function FigureArt({ pose, id, reg }: { pose: Pose; id: string; reg?: Reg }) {
+  const r = (k: string) => reg?.(k)
   return (
-    <g strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" stroke="#222">
-      <path d="M0 0 L3 -7 L25 -38 L32 -33 L7 1Z" fill="#fff" />
-      <path d="M0 0 L3 -7 L7 1Z" fill="#222" />
-      <path d="M22 -34 L29 -29" stroke="#4a7fc1" strokeWidth="3" />
-      {/* 손 */}
-      <path d="M20 -27 C15 -37 24 -47 33 -45 C44 -43 47 -31 42 -23 C37 -15 25 -17 20 -27Z" fill="#fde0c4" />
-      <path d="M25 -31 L34 -27 M27 -37 L37 -33 M31 -41 L40 -37" strokeWidth="1.4" />
-      {/* 소매 */}
-      <path d="M37 -40 L52 -58 L62 -48 L46 -30Z" fill="#fcfcfa" />
+    <g transform="translate(10 0)">
+      <clipPath id={`${id}-pants`}>
+        <path d={pose.pants} />
+      </clipPath>
+      <path ref={r('head')} d={pose.head} />
+      <circle ref={r('eyeL')} cx={pose.eyes[0]![0]} cy={pose.eyes[0]![1]} r="1.9" fill="#222" stroke="none" />
+      <circle ref={r('eyeR')} cx={pose.eyes[1]![0]} cy={pose.eyes[1]![1]} r="1.9" fill="#222" stroke="none" />
+      <path ref={r('smile')} d={pose.smile} strokeWidth="2" />
+      <path ref={r('body')} d={pose.body} />
+      <path ref={r('armL')} d={pose.armL} />
+      <circle ref={r('handL')} cx={pose.handL[0]} cy={pose.handL[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+      <path ref={r('armR')} d={pose.armR} />
+      <circle ref={r('handR')} cx={pose.handR[0]} cy={pose.handR[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+      <path ref={r('legL')} d={pose.legL} />
+      <path ref={r('legR')} d={pose.legR} />
+      <path ref={r('pants')} d={pose.pants} fill={pose.pantsFill} strokeWidth="3.6" />
+      {reg && (
+        <g clipPath={`url(#${id}-pants)`}>
+          <path ref={r('hatch')} d={pose.hatch} stroke={pose.pantsFill} strokeWidth="5.5" />
+        </g>
+      )}
+      <path ref={r('waist')} d={pose.pantsWaist} stroke="#d6d6d6" strokeWidth="1.8" />
+      <path ref={r('tee')} d={pose.tee} fill={pose.teeFill} strokeWidth="3.4" />
+      <path ref={r('neck')} d={pose.teeNeck} strokeWidth="1.8" />
     </g>
   )
 }
 
+/** 펜: 끝이 (0,0), 오른손잡이처럼 오른쪽으로 기울어 있다 */
+function Pen() {
+  return (
+    <g transform="rotate(30)" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M0 0 L-2 -7 L2 -7Z" fill="#222" stroke="#222" strokeWidth="1" />
+      <rect x="-2.7" y="-36" width="5.4" height="29" rx="1.7" fill="#fcfcfa" stroke="#222" strokeWidth="1.6" />
+      <rect x="-2.7" y="-36" width="5.4" height="9" rx="1.7" fill="#4a7fc1" stroke="#222" strokeWidth="1.6" />
+      <path d="M2.7 -25 L2.7 -14" stroke="#222" strokeWidth="1.3" />
+    </g>
+  )
+}
+
+interface PlanStep {
+  def: StepDef
+  el: SVGGeometryElement
+  len: number
+  begin: number
+  dur: number
+  a: [number, number] // 펜 시작 위치
+  b: [number, number] // 펜 끝 위치
+}
+
 export default function GreetingFigure({ size = 220 }: { size?: number }) {
   const uid = useId().replace(/:/g, '')
-  const maskId = `gf-mask-${uid}`
   const [reduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const tl = TIMELINE
-  const total = tl.end + LEAVE
+  const [done, setDone] = useState(reduced)
+  const els = useRef<Record<string, SVGGeometryElement | null>>({})
+  const penRef = useRef<SVGGElement>(null)
+  const skip = useRef<() => void>(() => undefined)
+  const reg: Reg = (key) => (el) => {
+    els.current[key] = el
+  }
 
-  // 움직임 줄이기 설정이면 그리는 과정 없이 인사하는 그림만 보여 준다
-  if (reduced) {
+  useLayoutEffect(() => {
+    if (done) return
+    // 1) 각 획의 길이를 재서 시간표를 만든다
+    const plan: PlanStep[] = []
+    let t = START
+    let prev: [number, number] | null = null
+    for (const def of STEPS) {
+      const el = els.current[def.key]
+      if (!el) continue
+      let len = 0
+      let a: [number, number]
+      let b: [number, number]
+      let dur: number
+      if (def.kind === 'stroke') {
+        len = el.getTotalLength()
+        const p0 = el.getPointAtLength(0)
+        const p1 = el.getPointAtLength(len)
+        a = [p0.x, p0.y]
+        b = [p1.x, p1.y]
+        dur = Math.min(1.5, Math.max(0.16, len / (def.speed ?? 200)))
+      } else if (def.kind === 'dot') {
+        const c = el as unknown as SVGCircleElement
+        a = b = [c.cx.baseVal.value, c.cy.baseVal.value]
+        dur = DOT_DUR
+      } else {
+        a = b = prev ?? [0, 0]
+        dur = FILL_DUR
+      }
+      const gap = plan.length > 0 && def.kind !== 'fill' ? LIFT : 0
+      const begin = t + gap
+      plan.push({ def, el, len, begin, dur, a, b })
+      t = begin + dur
+      prev = b
+    }
+    const drawEnd = t + HOLD
+    const total = drawEnd + LEAVE
+
+    // 2) 처음에는 모두 숨긴다
+    for (const s of plan) {
+      if (s.def.kind === 'stroke') {
+        s.el.style.strokeDasharray = `${s.len} ${s.len * 3}`
+        s.el.style.strokeDashoffset = `${s.len}`
+        if (s.def.fillAfter) s.el.style.fillOpacity = '0'
+      } else if (s.def.kind === 'dot') {
+        s.el.setAttribute('r', '0')
+      } else {
+        s.el.style.fillOpacity = '0'
+      }
+    }
+    const pen = penRef.current
+    const first = plan[0]!
+    const setPen = (x: number, y: number, opacity: number) => {
+      pen?.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`)
+      pen?.setAttribute('opacity', String(opacity))
+    }
+    setPen(first.a[0] + 30, first.a[1] - 34, 0)
+
+    // 3) 프레임마다 시간에 맞게 선을 그린다
+    const apply = (time: number) => {
+      for (const s of plan) {
+        const u = clamp01((time - s.begin) / s.dur)
+        if (s.def.kind === 'stroke') {
+          s.el.style.strokeDashoffset = `${s.len * (1 - easeSine(u))}`
+          if (s.def.fillAfter) s.el.style.fillOpacity = u >= 1 ? '1' : '0'
+        } else if (s.def.kind === 'dot') {
+          s.el.setAttribute('r', String(1.9 * easeOut(u)))
+        } else {
+          s.el.style.fillOpacity = String(easeOut(u))
+        }
+      }
+      // 펜 위치: 지금 그리는 획의 끝 -> 다음 획 시작으로 들어 옮기기
+      if (time < first.begin) {
+        const u = easeOut(clamp01(time / first.begin))
+        setPen(lerp(first.a[0] + 30, first.a[0], u), lerp(first.a[1] - 34, first.a[1], u), u)
+        return
+      }
+      let idx = 0
+      for (let i = 0; i < plan.length; i++) if (plan[i]!.begin <= time) idx = i
+      const cur = plan[idx]!
+      const endCur = cur.begin + cur.dur
+      const next = plan[idx + 1]
+      if (time < endCur) {
+        if (cur.def.kind === 'stroke') {
+          const p = cur.el.getPointAtLength(cur.len * easeSine(clamp01((time - cur.begin) / cur.dur)))
+          setPen(p.x, p.y, 1)
+        } else {
+          setPen(cur.b[0], cur.b[1], 1)
+        }
+      } else if (next) {
+        const u = easeSine(clamp01((time - endCur) / Math.max(0.001, next.begin - endCur)))
+        setPen(lerp(cur.b[0], next.a[0], u), lerp(cur.b[1], next.a[1], u), 1)
+      } else {
+        const u = clamp01((time - drawEnd) / LEAVE)
+        setPen(cur.b[0] + 40 * easeOut(u), cur.b[1] - 46 * easeOut(u), 1 - u)
+      }
+    }
+
+    apply(0)
+    let raf = 0
+    let stopped = false
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      if (stopped) return
+      const time = (now - t0) / 1000
+      if (time >= total) {
+        setDone(true)
+        return
+      }
+      apply(time)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    skip.current = () => setDone(true)
+    return () => {
+      stopped = true
+      cancelAnimationFrame(raf)
+    }
+  }, [done])
+
+  // 그리는 중에 누르면 바로 완성
+  const finish = () => skip.current()
+
+  if (done) {
     return (
       <svg className="doodle greeting-figure" width={size} height={size * 1.15} {...figureSvgProps}>
-        <FigureBody armL={ARM_LEFT} armR={WAVE_A} idKey={`${uid}a`} />
+        {reduced ? (
+          <FigureArt pose={POSE_A} id={`${uid}a`} />
+        ) : (
+          <>
+            <g className="gf-a">
+              <FigureArt pose={POSE_A} id={`${uid}a`} />
+            </g>
+            <g className="gf-b">
+              <FigureArt pose={POSE_B} id={`${uid}b`} />
+            </g>
+          </>
+        )}
       </svg>
     )
   }
 
   return (
-    <svg
-      className="doodle greeting-figure"
-      width={size}
-      height={size * 1.15}
-      {...figureSvgProps}
-      style={{ ['--gf-t' as string]: `${total}s` }}
-    >
-      <defs>
-        <mask id={maskId} maskUnits="userSpaceOnUse" x="-40" y="-40" width="220" height="240">
-          <g transform="translate(10 0)" stroke="#fff" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            {tl.steps
-              .filter((s) => s.kind === 'draw')
-              .map((s) => (
-                <path key={s.begin} d={s.d} strokeWidth={s.stroke!.w} pathLength={1} strokeDasharray="1 2" strokeDashoffset={1}>
-                  <animate attributeName="stroke-dashoffset" from="1" to="0" begin={`${s.begin}s`} dur={`${s.dur}s`} fill="freeze" />
-                </path>
-              ))}
-          </g>
-        </mask>
-      </defs>
-
-      {/* 그리는 중 + 인사 1: 마스크로 펜이 지나간 곳만 드러난다 */}
-      <g className="gf-a">
-        <g mask={`url(#${maskId})`}>
-          <FigureBody armL={ARM_LEFT} armR={WAVE_A} idKey={`${uid}a`} />
-        </g>
-      </g>
-      {/* 다 그린 뒤 인사 2: 손 든 각도만 다른 같은 그림과 번갈아 보여 손을 흔든다 */}
-      <g className="gf-b">
-        <FigureBody armL={ARM_LEFT} armR={WAVE_B} idKey={`${uid}b`} />
-      </g>
-
-      {/* 그리는 손 */}
+    <svg className="doodle greeting-figure" width={size} height={size * 1.15} {...figureSvgProps} onClick={finish}>
+      <FigureArt pose={POSE_A} id={`${uid}a`} reg={reg} />
       <g transform="translate(10 0)">
-        <g opacity="0">
-          <set attributeName="opacity" to="1" begin={`${START}s`} fill="freeze" />
-          {tl.steps.map((s) => (
-            <animateMotion key={s.begin} path={s.d} begin={`${s.begin}s`} dur={`${s.dur}s`} fill="freeze" />
-          ))}
-          <animateMotion path={tl.leave} begin={`${tl.end}s`} dur={`${LEAVE}s`} fill="freeze" />
-          <animate attributeName="opacity" from="1" to="0" begin={`${tl.end}s`} dur={`${LEAVE}s`} fill="freeze" />
-          <g transform="scale(0.72)">
-            <PenHand />
-          </g>
+        <g ref={penRef} opacity="0">
+          <Pen />
         </g>
       </g>
     </svg>
