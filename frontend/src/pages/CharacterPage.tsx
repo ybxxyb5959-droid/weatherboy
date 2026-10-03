@@ -10,7 +10,8 @@ import { buildCharacterCard, shareImage } from '../lib/shareCard'
 import { useAuth } from '../auth'
 import { errorMessage } from '../api'
 
-const pct = (s: number) => `${Math.round(s * 100)}%`
+const pct = (s: number) => `${Math.floor(s * 1000 + 1e-9) / 10}%`
+const dexGuide = '비율은 내 옷 전체 기준이며, 적힌 조건을 모두 만족해야 해요. 주·부칭호는 특징의 실제 비중순으로, 동점은 정해진 순서로 골라요. 다양성·사계절·균형 칭호는 특징 칭호 다음이에요. 눌러보면 모습을 확인할 수 있어요.'
 const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
 
 /** 비중 막대. 색 비중은 그 옷 색으로 칠한다. */
@@ -86,7 +87,7 @@ export default function CharacterPage() {
             <>
               <h2 className="char-title">옷장을 채우면 열려요</h2>
               <p className="char-tag">
-                옷을 {data.minClothes}벌 이상 등록하면 내 옷장을 분석해서 <b>칭호</b>를 드리고, 캐릭터를 <b>꾸밀 수</b> 있어요.
+                옷을 {data.minClothes}벌 이상 등록하면 내 옷장을 분석해서 <b>조건에 맞는 칭호</b>를 찾고, 캐릭터를 <b>꾸밀 수</b> 있어요.
               </p>
             </>
           )}
@@ -114,7 +115,7 @@ export default function CharacterPage() {
         <hr className="scribble" />
         <section>
           <h2>받을 수 있는 칭호 ({data.titles.length})</h2>
-          <p className="tiny">눌러보면 칭호를 확인할 수 있어요.</p>
+          <p className="tiny">{dexGuide}</p>
           <ul className="char-dex">
             {data.titles.map((t) => (
               <li key={t.key}>
@@ -177,7 +178,7 @@ export default function CharacterPage() {
       // 미리보기 중이어도 공유에는 항상 내 실제 칭호를 쓴다
       const card = await buildCharacterCard({
         title: title?.name ?? '내 캐릭터',
-        tagline: title?.tagline ?? '옷장을 채우면 칭호를 드려요',
+        tagline: title?.tagline ?? '내 옷장의 특징을 찾아가는 중이에요',
         persona: title?.key ?? null,
         wear: (title && PERSONA_WEAR[title.key]) || BASIC_WEAR,
         accessories: config,
@@ -186,7 +187,7 @@ export default function CharacterPage() {
         code: (me?.id ?? '').slice(0, 8).toUpperCase(),
         origin: window.location.origin,
       })
-      const text = `내 옷장 칭호는 "${title?.name ?? '???'}"! 너는 어떤 칭호야? ${window.location.origin}`
+      const text = title ? `내 옷장 칭호는 "${title.name}"! 너는 어떤 칭호야? ${window.location.origin}` : `내 옷장의 특징을 찾아가는 중이에요! ${window.location.origin}`
       const r = await shareImage(card, text)
       if (r === 'downloaded') setNote('이미지로 저장했어요. 카카오톡에서 사진으로 보내 보세요.')
     } catch (e) {
@@ -222,13 +223,13 @@ export default function CharacterPage() {
         ) : title ? (
           <>
             <h2 className="char-title">{title.name}</h2>
-            <p className="char-tag">{title.tagline}</p>
+            <p className="char-tag">{title.tagline}{title.reason ? ` · ${title.reason}` : ''}</p>
             {a.subTitle && <p className="tiny char-sub">부칭호 · {a.subTitle.name}</p>}
           </>
         ) : (
           <>
             <h2 className="char-title">아직 칭호가 없어요</h2>
-            <p className="char-tag">{a.count === 0 ? '옷장에 옷을 담으면 내 옷장을 분석해서 칭호를 드려요.' : `옷을 ${a.need}벌 더 담으면 칭호를 드려요. (지금 ${a.count}벌)`}</p>
+            <p className="char-tag">{a.ready ? `내 옷 ${a.count}벌을 분석했지만 아직 칭호 조건을 충족하지 않았어요. 아래 도감에서 정확한 조건을 확인해 보세요. 꾸미기는 그대로 사용할 수 있어요.` : `옷을 ${a.need}벌 더 담으면 칭호 분석을 시작해요. (지금 ${a.count}벌)`}</p>
           </>
         )}
       </section>
@@ -294,7 +295,7 @@ export default function CharacterPage() {
 
       <section>
         <h2>칭호 도감 ({data.titles.length})</h2>
-        <p className="tiny">눌러보면 칭호를 확인할 수 있어요.</p>
+        <p className="tiny">{dexGuide}</p>
         <ul className="char-dex">
           {data.titles.map((t) => (
             <li key={t.key} className={title?.key === t.key ? 'mine' : undefined}>
@@ -308,7 +309,7 @@ export default function CharacterPage() {
                 }}
               >
                 <b>{t.name}</b>
-                {title?.key === t.key && <span className="tiny"> · 내 칭호</span>}
+                {(title?.key === t.key || a.matchedTitles?.some((m) => m.key === t.key)) && <span className="tiny"> · {title?.key === t.key ? '내 칭호' : a.subTitle?.key === t.key ? '부칭호' : '조건 충족'}</span>}
                 <div className="tiny">{t.rule}</div>
               </button>
             </li>

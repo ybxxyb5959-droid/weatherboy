@@ -13,7 +13,7 @@ async function view(userId: string) {
   const [user, clothes] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { characterJson: true } }),
     // 예시 옷은 분석에 넣지 않는다 (내가 직접 담은 옷만)
-    prisma.clothing.findMany({ where: { userId, active: true, isSample: false }, select: { type: true, color: true, pattern: true } }),
+    prisma.clothing.findMany({ where: { userId, active: true, isSample: false }, select: { type: true, color: true, pattern: true, thickness: true } }),
   ])
   const analysis = analyze(clothes)
   // 옷장을 채워야(직접 담은 옷 MIN_CLOTHES벌) 칭호를 받고 캐릭터를 꾸밀 수 있다

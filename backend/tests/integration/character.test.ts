@@ -44,6 +44,8 @@ describe('내 캐릭터 API', () => {
     expect(r.analysis.ready).toBe(true)
     expect(r.unlocked).toBe(true) // 옷장을 채우면 캐릭터가 열린다
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
+    expect(r.analysis.title.reason).toContain('5/5벌(100%)')
+    expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['DARK_CHILD', 'MINIMALIST'])
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 5, share: 1 })
     expect(r.titles).toHaveLength(17)
   })
@@ -70,5 +72,32 @@ describe('내 캐릭터 API', () => {
     const r = (await b.get('/api/character')).body
     expect(r.config).toEqual({})
     expect(r.analysis.count).toBe(0)
+  })
+
+  it('5벌로 꾸미기는 열려도 칭호 조건이 안 맞으면 억지로 균형 칭호를 주지 않는다', async () => {
+    const b = agent()
+    await b.post('/api/auth/guest').expect(201)
+    for (let i = 0; i < 5; i++) await b.post('/api/clothes').send({ type: '바지', color: '기타' }).expect(201)
+    const r = (await b.get('/api/character').expect(200)).body
+    expect(r.unlocked).toBe(true)
+    expect(r.analysis).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
+    await b.put('/api/character').send({ config: { hat: 'beanie' } }).expect(200)
+  })
+
+  it('실제 저장한 두께를 칭호에 반영하고 옷 수정·삭제 후 다시 판정한다', async () => {
+    const b = agent()
+    await b.post('/api/auth/guest').expect(201)
+    const ids: string[] = []
+    for (const color of ['초록', '보라', '빨강', '초록', '보라']) {
+      const r = await b.post('/api/clothes').send({ type: '니트', color, thickness: '얇음' }).expect(201)
+      ids.push(r.body.id)
+    }
+    const keys = async () => (await b.get('/api/character').expect(200)).body.analysis.matchedTitles.map((t: { key: string }) => t.key)
+    expect(await keys()).not.toContain('WARM_BEAR')
+    for (const id of ids.slice(0, 3)) await b.patch(`/api/clothes/${id}`).send({ thickness: '두꺼움' }).expect(200)
+    expect(await keys()).toContain('WARM_BEAR')
+    await b.delete(`/api/clothes/${ids[0]}`).expect(204)
+    const r = (await b.get('/api/character').expect(200)).body
+    expect(r).toMatchObject({ unlocked: false, analysis: { count: 4, ready: false, need: 1, title: null, matchedTitles: [] } })
   })
 })

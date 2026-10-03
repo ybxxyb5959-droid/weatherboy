@@ -13,12 +13,13 @@ export interface TitleInfo {
   name: string
   tagline: string
   rule: string
+  reason?: string
 }
 export interface CharacterData {
   /** 옷장을 채웠는가(직접 담은 옷 minClothes벌 이상). 잠겨 있으면 칭호도 꾸미기도 없다 */
   unlocked: boolean
   minClothes: number
-  analysis: { count: number; ready: boolean; need: number; title: TitleInfo | null; strength: number; subTitle?: TitleInfo | null; next?: { title: TitleInfo; more: number; what: string } | null; colors: Share[]; types: Share[]; patterns: Share[] }
+  analysis: { count: number; ready: boolean; need: number; title: TitleInfo | null; strength: number; subTitle?: TitleInfo | null; matchedTitles?: TitleInfo[]; next?: { title: TitleInfo; more: number; what: string } | null; colors: Share[]; types: Share[]; patterns: Share[] }
   config: Accessories
   catalog: { slot: keyof Accessories; label: string; items: { id: string; label: string }[] }[]
   titles: TitleInfo[]
