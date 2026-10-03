@@ -78,10 +78,10 @@ adminRouter.get(
       prisma.authIdentity.groupBy({ by: ['provider'], _count: { userId: true } }),
       prisma.user.count({ where: { lastSeenAt: { gte: new Date(now - day) } } }),
       prisma.user.count({ where: { lastSeenAt: { gte: new Date(now - 7 * day) } } }),
-      // 최근 14일 일별 신규 가입(한국 시간 기준 날짜)
+      // 최근 7일 일별 신규 가입(한국 시간 기준 날짜)
       prisma.$queryRaw<{ d: string; c: number }[]>`
         SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS d, count(*)::int AS c
-        FROM "User" WHERE "createdAt" >= NOW() - INTERVAL '14 days' GROUP BY 1 ORDER BY 1`,
+        FROM "User" WHERE "createdAt" >= NOW() - INTERVAL '7 days' GROUP BY 1 ORDER BY 1`,
       // 직접 담은 옷(예시 옷 제외)이 1벌 이상 / 5벌 이상인 사용자 수
       prisma.$queryRaw<{ c1: number; c5: number }[]>`
         SELECT (count(*) FILTER (WHERE n >= 1))::int AS c1, (count(*) FILTER (WHERE n >= 5))::int AS c5

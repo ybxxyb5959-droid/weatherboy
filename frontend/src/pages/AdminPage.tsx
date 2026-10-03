@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, errorMessage } from '../api'
+import DoodleCheck from '../components/DoodleCheck'
 import HandText from '../components/HandText'
 
 // 관리자 페이지(/admin): 가입자 수, 접속, 사용 단계(퍼널), 후기. 비밀번호로 로그인하고 12시간 뒤에 풀린다.
@@ -63,6 +64,65 @@ function Bars({ rows }: { rows: { label: string; value: number }[] }) {
         </div>
       ))}
     </div>
+  )
+}
+
+/** 최근 7일(한국 날짜) 신규 가입: 가입이 없는 날은 0으로 채운 꺾은선 그래프 */
+function LineChart({ rows }: { rows: { d: string; c: number }[] }) {
+  const byDay = new Map(rows.map((r) => [r.d, r.c]))
+  const [now] = useState(() => Date.now()) // 화면을 연 시점의 한국 날짜 기준
+  const kstNow = now + 9 * 3600_000
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(kstNow - (6 - i) * 86400_000).toISOString().slice(0, 10)
+    return { d, c: byDay.get(d) ?? 0 }
+  })
+  const W = 340
+  const H = 160
+  const L = 26
+  const R = 20 // 마지막 날짜 라벨이 잘리지 않을 여백
+  const T = 22
+  const B = 28
+  const max = Math.max(4, ...days.map((x) => x.c))
+  const x = (i: number) => L + ((W - L - R) * i) / (days.length - 1)
+  const y = (c: number) => T + (H - T - B) * (1 - c / max)
+  const pts = days.map((p, i) => `${x(i)},${y(p.c)}`).join(' ')
+  const total = days.reduce((a, p) => a + p.c, 0)
+  return (
+    <figure className="admin-chart" aria-label={`최근 7일 신규 가입 ${total}명`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
+        {/* 가로 눈금 */}
+        {[0, 0.5, 1].map((f) => (
+          <g key={f}>
+            <path d={`M${L} ${y(max * f)} H${W - R}`} stroke="#222" strokeOpacity="0.18" strokeDasharray="4 4" />
+            <text x={L - 5} y={y(max * f) + 4} textAnchor="end" fontSize="11" fill="#222" opacity="0.7">
+              {Math.round(max * f)}
+            </text>
+          </g>
+        ))}
+        {/* 선과 점(살짝 흔들어 손으로 그은 느낌) */}
+        <g className="doodle" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points={pts} />
+          {days.map((p, i) => (
+            <circle key={p.d} cx={x(i)} cy={y(p.c)} r="3.4" fill="#fcfcfa" />
+          ))}
+        </g>
+        {/* 값(가입이 있는 날만) */}
+        {days.map((p, i) =>
+          p.c > 0 ? (
+            <text key={p.d} x={x(i)} y={y(p.c) - 8} textAnchor="middle" fontSize="12" fontWeight="700" fill="#222">
+              {p.c}
+            </text>
+          ) : null,
+        )}
+        {/* 날짜: 7일이라 매일 표시 */}
+        {days.map((p, i) => (
+          <text key={p.d} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="#222" opacity="0.75">
+            {p.d.slice(5).replace('-', '/')}
+          </text>
+        ))}
+      </svg>
+      <figcaption className="tiny">7일 합계 {total}명</figcaption>
+    </figure>
   )
 }
 
@@ -189,9 +249,9 @@ export default function AdminPage() {
           <hr className="scribble" />
           <section>
             <h2>
-              <HandText>최근 14일 신규 가입</HandText>
+              <HandText>최근 7일 신규 가입</HandText>
             </h2>
-            {dash.daily.length === 0 ? <p className="tiny">없어요.</p> : <Bars rows={dash.daily.map((x) => ({ label: x.d.slice(5), value: x.c }))} />}
+            <LineChart rows={dash.daily} />
           </section>
         </>
       )}
@@ -202,9 +262,9 @@ export default function AdminPage() {
           <h2>
             <HandText>후기</HandText>
           </h2>
-          <label className="tiny admin-filter">
-            <input type="checkbox" checked={onlyUnread} onChange={(e) => setOnlyUnread(e.target.checked)} /> 안 읽은 것만
-          </label>
+          <DoodleCheck checked={onlyUnread} onChange={setOnlyUnread}>
+            안 읽은 것만
+          </DoodleCheck>
         </div>
         {shown.length === 0 && <p className="tiny">{reviews.length === 0 ? '아직 후기가 없어요.' : '안 읽은 후기가 없어요.'}</p>}
         <ul className="admin-reviews">

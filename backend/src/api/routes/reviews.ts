@@ -2,7 +2,7 @@ import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { prisma } from '../../db.js'
-import { nextSnooze, shouldPromptReview } from '../../services/review/reviewPrompt.js'
+import { nextSnooze, shouldPromptReview, usedAllFeatures } from '../../services/review/reviewPrompt.js'
 import { notifyNewReview } from '../../services/review/notifyOwner.js'
 import { AppError } from '../../utils/errors.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
@@ -31,10 +31,21 @@ reviewsRouter.get(
     const userId = (req as AuthedRequest).userId
     const u = await prisma.user.findUnique({
       where: { id: userId },
-      select: { activeDays: true, reviewDismissed: true, reviewSnoozeUntil: true, appReview: { select: { id: true } } },
+      select: {
+        createdAt: true,
+        characterJson: true,
+        reviewDismissed: true,
+        reviewSnoozeUntil: true,
+        appReview: { select: { id: true } },
+        _count: { select: { events: true, clothes: { where: { isSample: false, active: true } } } },
+      },
     })
     const reviewed = !!u?.appReview
-    const show = !!u && shouldPromptReview({ activeDays: u.activeDays, reviewed, dismissed: u.reviewDismissed, snoozeUntil: u.reviewSnoozeUntil }, new Date())
+    // 캐릭터를 하나라도 꾸몄는가
+    const cfg = u?.characterJson
+    const decorated = !!cfg && typeof cfg === 'object' && !Array.isArray(cfg) && Object.values(cfg).some(Boolean)
+    const usedAll = !!u && usedAllFeatures({ ownClothes: u._count.clothes, events: u._count.events, decorated })
+    const show = !!u && shouldPromptReview({ createdAt: u.createdAt, usedAll, reviewed, dismissed: u.reviewDismissed, snoozeUntil: u.reviewSnoozeUntil }, new Date())
     res.json({ reviewed, show })
   }),
 )

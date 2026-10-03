@@ -3464,3 +3464,147 @@ a.card {
   border: 2px solid var(--ink);
   border-radius: 8px 12px 7px 11px / 11px 7px 12px 8px;
 }
+
+/* ---------- 홈 오른쪽 위: 후기 요청 편지 ---------- */
+.letter {
+  position: relative;
+  margin-left: auto;
+}
+.letter-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 2px 4px;
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.letter-btn:not(.open) svg {
+  transform-origin: 50% 90%;
+  animation: letter-wiggle 4.5s ease-in-out infinite;
+}
+.letter-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.letter-dot {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 11px;
+  height: 11px;
+  background: #e5533d;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+.letter-paper {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: min(300px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 14px 14px 10px;
+  background: #fffdf3;
+  border: 2.4px solid var(--ink);
+  border-radius: 10px 18px 11px 16px / 16px 9px 17px 11px;
+  box-shadow: 3px 4px 0 rgba(34, 34, 34, 0.2);
+  transform-origin: top right;
+  animation: letter-unfold 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.letter-paper h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.letter-paper .row {
+  margin-top: 4px;
+}
+@keyframes letter-unfold {
+  from {
+    opacity: 0;
+    transform: scale(0.4, 0.1) rotate(2deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes letter-wiggle {
+  0%,
+  84%,
+  100% {
+    transform: rotate(0);
+  }
+  87% {
+    transform: rotate(-10deg);
+  }
+  91% {
+    transform: rotate(9deg);
+  }
+  95% {
+    transform: rotate(-5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .letter-btn:not(.open) svg,
+  .letter-paper {
+    animation: none;
+  }
+}
+
+.admin-chart {
+  margin: 4px 0 0;
+}
+.admin-chart text {
+  font-family: var(--font);
+}
+.admin-chart figcaption {
+  text-align: right;
+}
+
+/* 낙서 체크박스: 진짜 checkbox 는 숨기고(접근성은 유지) 손으로 그린 네모와 체크 표시를 보여 준다 */
+.dcheck {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dcheck input {
+  position: absolute;
+  opacity: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  cursor: pointer;
+}
+.dcheck:focus-within .dcheck-box {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+.dcheck-mark {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 0;
+  animation: dcheck-draw 0.25s ease-out;
+}
+@keyframes dcheck-draw {
+  from {
+    stroke-dashoffset: 30;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dcheck-mark {
+    animation: none;
+  }
+}
