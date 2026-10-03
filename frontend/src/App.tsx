@@ -4,6 +4,8 @@ import BottomNav from './components/BottomNav'
 import IntroPage from './pages/IntroPage'
 import LandingPage from './pages/LandingPage'
 import TourPage from './pages/TourPage'
+import AdminPage from './pages/AdminPage'
+import ReviewPage from './pages/ReviewPage'
 import { isStandalone } from './lib/install'
 import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
@@ -59,7 +61,7 @@ function Protected({ children }: { children: ReactElement }) {
 
 export default function App() {
   const { pathname } = useLocation()
-  const showNav = pathname !== '/' && pathname !== '/start' && pathname !== '/tour'
+  const showNav = pathname !== '/' && pathname !== '/start' && pathname !== '/tour' && pathname !== '/admin'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}
@@ -78,6 +80,8 @@ export default function App() {
         <Route path="/" element={<Front />} />
         <Route path="/start" element={<Root />} />
         <Route path="/tour" element={<TourPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/review" element={<Protected><ReviewPage /></Protected>} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
         <Route path="/home" element={<Protected><LocationGate><NotifyGate><HomePage /></NotifyGate></LocationGate></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />

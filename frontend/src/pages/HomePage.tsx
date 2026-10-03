@@ -6,6 +6,7 @@ import { blockLabels, useHomeLayout, type BlockId } from '../lib/homeLayout'
 import CommuteLine from '../components/CommuteLine'
 import GearDoodles, { type GearKind } from '../components/GearDoodles'
 import FeedbackCard from '../components/FeedbackCard'
+import ReviewCard from '../components/ReviewCard'
 import { feedbackDueAt, firstSeenToday, getFeedbackDone, setFeedbackDone } from '../lib/feedbackTiming'
 import { Link } from 'react-router-dom'
 import { ShareIcon } from '../components/icons'
@@ -468,6 +469,8 @@ export default function HomePage() {
           </div>
         )
       })}
+
+      <ReviewCard />
 
       <div className="edit-foot">
         {editing && (

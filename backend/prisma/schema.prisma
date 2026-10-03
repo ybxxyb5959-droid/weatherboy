@@ -162,6 +162,13 @@ model User {
   characterJson Json @default("{}")
   isAdmin      Boolean @default(false)
 
+  // 접속 기록(KST 기준 서로 다른 날 수)과 후기 요청 카드 상태. 후기는 사용자당 한 번만 받는다.
+  lastSeenAt        DateTime?
+  activeDays        Int       @default(1)
+  reviewSnoozeUntil DateTime? // 나중에 하기: 이 시각 전에는 카드를 다시 보여주지 않는다
+  reviewSnoozeCount Int       @default(0)
+  reviewDismissed   Boolean   @default(false) // 다시 안 볼래요(또는 나중에를 두 번 누름)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -174,6 +181,21 @@ model User {
   pushSubscriptions   PushSubscription[]
   notifyLogs          NotifyLog[]
   favorites           FavoritePlace[]
+  appReview           AppReview?
+}
+
+// 앱 후기(사용자당 한 번). 추천에 대한 피드백(Feedback)과는 다른 것이다.
+model AppReview {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @unique @db.Uuid
+  rating    Int // 1~5
+  message   String    @default("")
+  readAt    DateTime? // 관리자가 읽음 표시한 시각
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 // 사용자가 담아둔 지역(즐겨찾기). 좌표/격자를 미리 저장해서 누르면 바로 날씨를 볼 수 있다.

@@ -20,6 +20,7 @@ import { placesRouter } from './api/routes/places.js'
 import { pushRouter } from './api/routes/push.js'
 import { userRouter } from './api/routes/user.js'
 import { recommendationsRouter, weatherRouter } from './api/routes/weather.js'
+import { reviewsRouter } from './api/routes/reviews.js'
 import { errorHandler, notFoundHandler, originGuard } from './api/middleware/common.js'
 import { logger } from './utils/logger.js'
 
@@ -74,6 +75,7 @@ export function createApp() {
   app.use('/api/weather', weatherRouter)
   app.use('/api/recommendations', recommendationsRouter)
   app.use('/api/push', pushRouter)
+  app.use('/api/reviews', reviewsRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api', userRouter) // /settings, /onboarding/complete, /geocode
   app.use('/api', placesRouter) // /places/suggest, /favorites

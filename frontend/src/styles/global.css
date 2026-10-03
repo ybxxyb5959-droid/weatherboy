@@ -412,6 +412,7 @@ input:focus-visible {
 
 /* ---------- 둘러보기(튜토리얼) ---------- */
 .tour {
+  padding-bottom: 84px; /* 고정된 이전/다음 줄에 가리지 않게 */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -542,7 +543,9 @@ input:focus-visible {
   position: relative;
   box-sizing: content-box; /* 안쪽이 캡처 비율(390x844) 그대로 */
   /* 화면 높이에 맞춰 줄여서, 이전/다음 버튼이 항상 한 화면에 보이게 한다 */
-  width: min(300px, calc((100dvh - 216px) * 0.462), calc(100% - 6px));
+  /* 화면 높이에 맞춰 줄이되 300px 아래로는 줄이지 않는다(작아지면 말풍선이 겹친다). 넘치면 페이지가 스크롤된다. */
+  width: min(max(300px, calc((100dvh - 216px) * 0.462)), 340px, calc(100% + 24px));
+  container-type: inline-size; /* 말풍선 글자를 캡처 크기에 비례시키려고 */
   aspect-ratio: 390 / 844;
   margin-top: 8px;
   border: 2.6px solid var(--ink);
@@ -617,6 +620,7 @@ input:focus-visible {
   justify-content: center;
   padding: 4px 7px;
   font-size: 14px;
+  font-size: clamp(12px, 4.8cqw, 15px);
   font-weight: 700;
   line-height: 1.22;
   text-align: center;
@@ -661,16 +665,20 @@ input:focus-visible {
   gap: 10px;
   padding-top: 18px;
 }
+/* 이전/다음은 화면 아래에 고정: 캡처가 길어 페이지가 스크롤돼도 항상 누를 수 있다 */
 .tour-nav {
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, 100%);
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-top: auto;
-  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   background: var(--paper);
   border-top: 2px dashed rgba(34, 34, 34, 0.35);
 }
@@ -3295,4 +3303,136 @@ a.card {
   text-align: center;
   z-index: 50;
   pointer-events: none;
+}
+
+/* ---------- 앱 후기 / 관리자 ---------- */
+.review-card {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.review-card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.review-card .row {
+  margin-top: 4px;
+}
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.review-faces {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.review-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2.2px dashed rgba(34, 34, 34, 0.4);
+  border-radius: 12px 16px 11px 15px / 15px 11px 16px 12px;
+  cursor: pointer;
+}
+.review-face.on {
+  background: var(--pick);
+  border: 2.6px solid var(--ink);
+}
+.review-text {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2.4px solid var(--ink);
+  border-radius: 10px 16px 9px 14px / 14px 9px 16px 10px;
+  resize: vertical;
+}
+.review-text:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 3px;
+}
+.review-count {
+  text-align: right;
+}
+.review-thanks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding-top: 24px;
+}
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-input {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 20px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2.4px solid var(--ink);
+  border-radius: 10px 16px 9px 14px / 14px 9px 16px 10px;
+}
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 4px;
+}
+.admin-stat b {
+  font-size: 30px;
+  line-height: 1.1;
+}
+.admin-bar {
+  grid-template-columns: 76px 1fr 36px;
+}
+.admin-reviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin-reviews li.read {
+  opacity: 0.55;
+}
+.admin-stars {
+  color: #c98a00;
+  letter-spacing: 1px;
+}
+.admin-msg {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.admin-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }

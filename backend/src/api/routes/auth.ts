@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit'
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
 import { buildAuthorizeUrl, fetchKakaoProfile, kakaoConfigured } from '../../services/kakao/kakaoAuth.js'
+import { touchActivity } from '../../services/review/reviewPrompt.js'
 import { serializeMe } from '../../services/serializers.js'
 import { AppError, unauthorized } from '../../utils/errors.js'
 import { logger } from '../../utils/logger.js'
@@ -146,6 +147,10 @@ meRouter.get(
       await new Promise<void>((resolve) => req.session.destroy(() => resolve()))
       throw unauthorized()
     }
+    // 접속 기록(후기 요청 카드와 관리자 통계에 쓴다). 실패해도 응답에는 영향이 없다.
+    const now = new Date()
+    const t = touchActivity(u.lastSeenAt, u.activeDays, now)
+    if (t.update) prisma.user.update({ where: { id: u.id }, data: { lastSeenAt: now, activeDays: t.activeDays } }).catch(() => undefined)
     res.json(serializeMe(u, u.identities))
   }),
 )

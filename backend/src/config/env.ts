@@ -27,6 +27,10 @@ const schema = z.object({
   SERVE_FRONTEND_DIR: z.string().default(''),
   // true 면 알림/수집 예약 작업(worker)을 이 서버 프로세스 안에서 같이 돌린다. 서버를 한 개만 둘 수 있는 무료 호스팅용. 별도 worker 가 있으면 켜지 말 것(알림이 두 번 갈 수 있다).
   RUN_JOBS_IN_API: bool,
+  // 관리자 페이지(/admin) 로그인 비밀번호. 비워 두면 비밀번호 로그인은 꺼진다(users.isAdmin 계정으로는 계속 가능).
+  ADMIN_PASSWORD: z.string().default(''),
+  // 새 후기가 오면 디스코드로 알려 준다. 비워 두면 알림 없이 관리자 페이지에서만 본다.
+  DISCORD_WEBHOOK_URL: z.string().default(''),
 })
 
 export const env = schema.parse(process.env)

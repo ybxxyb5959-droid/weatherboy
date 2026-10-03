@@ -9,6 +9,7 @@ import KakaoLoginButton from '../components/KakaoLoginButton'
 import RoutineEditor from '../components/RoutineEditor'
 import TimePicker from '../components/TimePicker'
 import PushToggle from '../components/PushToggle'
+import { getReviewStatus } from '../lib/reviews'
 import { api, errorMessage } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
@@ -103,6 +104,7 @@ export default function SettingsPage() {
   const { section } = useParams()
   const nav = useNavigate()
   const { me, logout, deleteAccount } = useAuth()
+  const review = useAsync(getReviewStatus) // 후기를 이미 남겼는지(설정 메뉴에 표시)
   const { data: s, error: loadError, loading, setData } = useAsync(() => api<ServerSettings>('GET', '/api/settings'))
   // 하위 화면에서 저장하고 돌아오면 설정 메인에 저장했다는 안내를 보여준다(화면이 새로 만들어져도 남도록 이동 정보로도 받는다)
   const location = useLocation()
@@ -391,6 +393,7 @@ export default function SettingsPage() {
 
       <Group seed={3}>
         <Row label="자주 묻는 질문" onClick={go('faq')} />
+        <Row label="후기 남기기" value={review.data?.reviewed ? '남겨주셨어요 ✓' : undefined} onClick={() => nav('/review')} />
       </Group>
 
       <Group seed={0}>

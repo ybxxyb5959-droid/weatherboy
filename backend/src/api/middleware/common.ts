@@ -9,6 +9,8 @@ declare module 'express-session' {
   interface SessionData {
     userId?: string
     oauthState?: string
+    /** 관리자 비밀번호로 로그인한 시각(ms). 12시간 동안만 유효 */
+    adminAt?: number
   }
 }
 
@@ -33,7 +35,12 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
   next()
 }
 
+export const ADMIN_SESSION_MS = 12 * 3600_000
+
 export const requireAdmin: RequestHandler = wrap(async (req, _res, next) => {
+  // 관리자 비밀번호로 로그인한 세션
+  const at = req.session?.adminAt
+  if (at && Date.now() - at < ADMIN_SESSION_MS) return next()
   const id = req.session?.userId
   if (!id) throw unauthorized()
   const u = await prisma.user.findUnique({ where: { id }, select: { isAdmin: true } })
