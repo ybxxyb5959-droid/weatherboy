@@ -10,6 +10,8 @@ import { AppError } from '../../utils/errors.js'
 import { kstDate, toKstParts } from '../../utils/time.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 import { feedbackMap } from '../../config/mappings.js'
+import { applyFeedback, averageOf, bandOfRecommendation, bandsOf } from '../../services/feedbackBands.js'
+import type { FeedbackBand } from '../../rules/outfitEngine.js'
 import { ruleConfig } from '../../config/ruleConfig.js'
 import { z } from 'zod'
 import { notFound } from '../../utils/errors.js'
@@ -141,6 +143,8 @@ const feedbackSchema = z.object({
   rating: z.enum(feedbackMap.uiValues),
   period: z.enum(['MORNING', 'DAY', 'EVENING']).optional(),
   actualTemperature: z.number().min(-60).max(60).optional(),
+  // 추천대로 입었는지(기본 예). 아니면 후기는 남기되 보정에는 반영하지 않는다
+  followed: z.boolean().optional(),
 })
 
 recommendationsRouter.post(
@@ -153,14 +157,17 @@ recommendationsRouter.post(
     const rec = await prisma.recommendation.findFirst({ where: { id, userId } })
     if (!rec) throw notFound('추천을 찾을 수 없어요.')
     const rating = feedbackMap.toDb(body.rating)
+    const followed = body.followed ?? true
     const result = await prisma.$transaction(async (tx) => {
       const dup = await tx.feedback.findUnique({ where: { userId_recommendationId: { userId, recommendationId: id } } })
       if (dup) return { created: false }
-      await tx.feedback.create({ data: { userId, recommendationId: id, rating, period: body.period ?? null, actualTemperature: body.actualTemperature ?? null } })
-      const u = await tx.user.findUniqueOrThrow({ where: { id: userId } })
-      const lim = ruleConfig.feedbackOffsetLimit
-      const next = Math.max(-lim, Math.min(lim, u.feedbackOffset + ruleConfig.feedbackStep[rating]))
-      await tx.user.update({ where: { id: userId }, data: { feedbackOffset: next } })
+      await tx.feedback.create({ data: { userId, recommendationId: id, rating, period: body.period ?? null, actualTemperature: body.actualTemperature ?? null, followed } })
+      if (followed) {
+        const u = await tx.user.findUniqueOrThrow({ where: { id: userId } })
+        const recent = await tx.feedback.findMany({ where: { userId, followed: true, NOT: { recommendationId: id } }, orderBy: { createdAt: 'desc' }, take: ruleConfig.feedbackDampenWindow, select: { rating: true } })
+        const bands = applyFeedback(bandsOf(u), bandOfRecommendation(rec.resultJson as { feedbackBand?: FeedbackBand; judgedTemp?: number }), rating, recent.map((r) => r.rating))
+        await tx.user.update({ where: { id: userId }, data: { feedbackBandsJson: bands, feedbackOffset: averageOf(bands) } })
+      }
       return { created: true }
     })
     if (!result.created) throw new AppError(409, 'FEEDBACK_EXISTS', '이미 피드백을 남겼어요.')

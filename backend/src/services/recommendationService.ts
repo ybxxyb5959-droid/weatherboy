@@ -4,6 +4,7 @@ import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } fro
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
 import { aiEnabled, explain } from './ai/explain.js'
+import { bandsOf } from './feedbackBands.js'
 import { forecastForWindow, getAirQuality, type Region, type WindowForecast } from './weather/weatherService.js'
 
 export const TODAY_OUTING = { start: '07:00', end: '22:00' }
@@ -147,6 +148,7 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     points,
     sensitivity: user.sensitivity,
     feedbackOffset: user.feedbackOffset,
+    feedbackBands: bandsOf(user),
     eventKind: event?.kind ?? null,
     clothes: wardrobe,
     airGrade: grade,
@@ -187,6 +189,7 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
       points,
       sensitivity: user.sensitivity,
       feedbackOffset: user.feedbackOffset,
+      feedbackBands: bandsOf(user),
       eventKind: event.kind,
       clothes: c.wardrobe,
       airGrade: c.airGrade,

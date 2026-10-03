@@ -20,6 +20,17 @@ import { defaultQuiet, defaultRoutine } from '../store'
 import type { Quiet, Routine, Sensitivity, Settings } from '../store'
 
 const sensOptions: Sensitivity[] = ['추위 많이 탐', '보통', '더위 많이 탐']
+const feelBands: { key: 'low' | 'mid' | 'high'; label: string }[] = [
+  { key: 'low', label: '쌀쌀한 날 (10° 미만)' },
+  { key: 'mid', label: '선선한 날 (10~20°)' },
+  { key: 'high', label: '따뜻한 날 (20° 이상)' },
+]
+function feelText(v: number) {
+  if (v <= -0.5) return `${Math.abs(v)}° 더 춥게 느끼는 걸로 반영 중`
+  if (v >= 0.5) return `${v}° 더 덥게 느끼는 걸로 반영 중`
+  return '기본 그대로'
+}
+
 const APP_VERSION = '0.1.0'
 
 function routineLabel(r?: Routine) {
@@ -212,6 +223,24 @@ export default function SettingsPage() {
             <div className="field">
               <div className="name">개인 체감</div>
               <ChoiceRow options={sensOptions} value={sensDraft ?? s.sensitivity} onChange={setSensDraft} />
+            </div>
+
+            <div className="field">
+              <div className="name">후기로 배운 내 체감</div>
+              {s.feel && Object.values(s.feel).some((v) => Math.abs(v) >= 0.5) ? (
+                <>
+                  {feelBands.map((b) => (
+                    <p key={b.key} className="tiny">
+                      {b.label}: {feelText(s.feel![b.key])}
+                    </p>
+                  ))}
+                  <DoodleButton seed={2} onClick={() => void patch({ resetFeel: true } as Partial<Settings>, "후기로 쌓인 체감을 처음으로 되돌렸어요.")}>
+                    처음으로 되돌리기
+                  </DoodleButton>
+                </>
+              ) : (
+                <p className="tiny">후기를 남기면 기온대별로 내 체감을 배워서 여기에 쌓여요.</p>
+              )}
             </div>
 
             <hr className="scribble" />

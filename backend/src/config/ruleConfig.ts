@@ -8,6 +8,13 @@ export const ruleConfig = {
   // 피드백 보정(추웠어요 -0.5 / 더웠어요 +0.5), 누적 한계
   feedbackStep: { COLD: -0.5, OK: 0, HOT: 0.5 } as Record<'COLD' | 'OK' | 'HOT', number>,
   feedbackOffsetLimit: 3,
+  // 보정은 기온대마다 따로 쌓는다: 추위는 타도 더위는 안 타는 사람이 있어서. 기준은 보정 전 판단 기온(체감 + 감도 + 일정 보정).
+  feedbackBandLowBelow: 10, // 이 미만이면 '낮음'
+  feedbackBandHighFrom: 20, // 이 이상이면 '높음', 그 사이는 '보통'
+  // 최근 후기 중 '딱 좋아요'가 많을수록 다음 조정 폭을 줄인다(출렁임 방지). 폭 = 기본 폭 x max(min, 1 - perOk x 딱 좋아요 수)
+  feedbackDampenWindow: 5,
+  feedbackDampenPerOk: 0.15,
+  feedbackDampenMin: 0.4,
 
   // 기본 보온 점수
   baseWarmth: {

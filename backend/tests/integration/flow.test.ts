@@ -102,8 +102,34 @@ describe('Guest 전체 흐름', () => {
     expect((await a.post(`/api/recommendations/${recId}/feedback`).send({ rating: '추웠어요' })).status).toBe(201)
     expect((await a.post(`/api/recommendations/${recId}/feedback`).send({ rating: '더웠어요' })).status).toBe(409)
     const u = await prisma.user.findFirstOrThrow({ where: { identities: { some: { provider: 'GUEST' } }, feedbackOffset: { not: 0 } }, orderBy: { updatedAt: 'desc' } })
-    expect(u.feedbackOffset).toBe(-0.5)
+    // 후기는 그 추천의 기온대 한 곳에만 쌓이고, feedbackOffset 은 세 기온대의 평균이다
+    expect(Object.values(u.feedbackBandsJson as Record<string, number>).sort()).toEqual([-0.5, 0, 0])
+    expect(u.feedbackOffset).toBe(-0.17)
     expect((await a.post(`/api/recommendations/${recId}/feedback`).send({ rating: '이상한값' })).status).toBe(400)
+  })
+
+  it('다른 옷을 입고 남긴 후기는 기록만 하고, 기온대별로 따로 쌓인다', async () => {
+    const u = await prisma.user.findFirstOrThrow({ where: { identities: { some: { provider: 'GUEST' } }, feedbackOffset: { not: 0 } }, orderBy: { updatedAt: 'desc' } })
+    const before = u.feedbackBandsJson as Record<string, number>
+    const mk = (judgedTemp: number, feedbackBand: string) =>
+      prisma.recommendation.create({ data: { userId: u.id, targetStartAt: new Date(), targetEndAt: new Date(), resultJson: { judgedTemp, feedbackBand }, reasonCodes: [], decisionKey: `band-${feedbackBand}-${Math.random()}` } })
+    const skipped = await mk(5, 'low')
+    expect((await a.post(`/api/recommendations/${skipped.id}/feedback`).send({ rating: '추웠어요', followed: false })).status).toBe(201)
+    expect(((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).feedbackBandsJson as Record<string, number>)).toEqual(before)
+    expect((await prisma.feedback.findFirstOrThrow({ where: { recommendationId: skipped.id } })).followed).toBe(false)
+
+    const hot = await mk(25, 'high')
+    expect((await a.post(`/api/recommendations/${hot.id}/feedback`).send({ rating: '더웠어요' })).status).toBe(201)
+    const after = (await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).feedbackBandsJson as Record<string, number>
+    expect(after.high).toBe((before.high ?? 0) + 0.5)
+    expect(after.low).toBe(before.low)
+    expect(after.mid).toBe(before.mid)
+
+    // 설정에서 보이고, 되돌리면 모두 0
+    expect(((await a.get('/api/settings')).body.feel as Record<string, number>).high).toBe(after.high)
+    const reset = await a.put('/api/settings').send({ resetFeel: true })
+    expect(reset.body.feel).toEqual({ low: 0, mid: 0, high: 0 })
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).feedbackOffset).toBe(0)
   })
 
   it('Event 등록 -> 조회 -> outfit', async () => {

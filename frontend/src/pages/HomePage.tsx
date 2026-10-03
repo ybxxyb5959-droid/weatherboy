@@ -253,11 +253,11 @@ export default function HomePage() {
   if (rec?.needMask) gear.push('mask')
   if (['clear', 'heat', 'uv'].includes(w.condition)) gear.push('sunscreen')
   // 저장되면(이미 저장돼 있어도) true. 실패하면 false 를 돌려줘 후기 카드가 원래대로 돌아가게 한다.
-  const sendFeedback = async (f: '추웠어요' | '딱 좋아요' | '더웠어요'): Promise<boolean> => {
+  const sendFeedback = async (f: '추웠어요' | '딱 좋아요' | '더웠어요', followed: boolean): Promise<boolean> => {
     if (!recId) return false
     setFeedbackMsg('')
     try {
-      await api('POST', `/api/recommendations/${recId}/feedback`, { rating: f })
+      await api('POST', `/api/recommendations/${recId}/feedback`, { rating: f, followed })
       setFeedback(f)
       setFeedbackDone(recId, f)
       setFeedbackMsg('알려줘서 고마워요 :D. 다음엔 더 잘 고를게요.')

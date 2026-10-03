@@ -31,10 +31,19 @@ export interface WardrobeItem {
   createdAt?: Date
 }
 
+export type FeedbackBand = 'low' | 'mid' | 'high'
+export type FeedbackBands = Record<FeedbackBand, number>
+
+export function feedbackBandOf(temp: number): FeedbackBand {
+  return temp < ruleConfig.feedbackBandLowBelow ? 'low' : temp >= ruleConfig.feedbackBandHighFrom ? 'high' : 'mid'
+}
+
 export interface EngineInput {
   points: OutingPoint[]
   sensitivity: Sensitivity
   feedbackOffset: number
+  /** 있으면 판단 기온대에 맞는 값을 쓰고, 없으면 feedbackOffset 하나를 모든 기온대에 쓴다 */
+  feedbackBands?: FeedbackBands
   eventKind: EventKind | null
   clothes: WardrobeItem[]
   airGrade: number | null // AirKorea 1~4, 데이터 없으면 null
@@ -71,6 +80,9 @@ export interface EngineResult {
   comboWhy: ComboWhy[]
   insufficientWardrobe: boolean
   judgedTemp: number
+  /** 이 추천에 쓴 피드백 보정의 기온대와 값(후기를 같은 기온대에 쌓는 데 쓴다). 예전에 저장된 추천에는 없다 */
+  feedbackBand?: FeedbackBand
+  feedbackApplied?: number
   requiredWarmth: number
   decisionKey: string
 }
@@ -102,15 +114,23 @@ export function requiredWarmthFor(temp: number): number {
   return 13
 }
 
-export function judgeTemperature(input: Pick<EngineInput, 'points' | 'sensitivity' | 'feedbackOffset' | 'eventKind'>): number {
+type JudgeInput = Pick<EngineInput, 'points' | 'sensitivity' | 'feedbackOffset' | 'feedbackBands' | 'eventKind'>
+
+export function judgeDetail(input: JudgeInput): { judged: number; band: FeedbackBand; offset: number } {
   const feels = input.points.map((p) => p.feels)
   const avg = feels.reduce((a, b) => a + b, 0) / feels.length
   const min = Math.min(...feels)
   const kind = input.eventKind ?? 'OTHER'
   const w = ruleConfig.minTempWeight[kind]
   const blended = (1 - w) * avg + w * min
-  const adj = ruleConfig.sensitivityOffset[input.sensitivity] + input.feedbackOffset + ruleConfig.eventTempAdjust[kind]
-  return Math.round((blended + adj) * 10) / 10
+  const base = blended + ruleConfig.sensitivityOffset[input.sensitivity] + ruleConfig.eventTempAdjust[kind]
+  const band = feedbackBandOf(base)
+  const offset = input.feedbackBands ? input.feedbackBands[band] : input.feedbackOffset
+  return { judged: Math.round((base + offset) * 10) / 10, band, offset }
+}
+
+export function judgeTemperature(input: JudgeInput): number {
+  return judgeDetail(input).judged
 }
 
 function itemOf(c: WardrobeItem): OutfitItem {
@@ -156,7 +176,7 @@ const keyOf = (c: Candidate) => `${c.top.id}|${c.bottom.id}|${c.outer?.id ?? ''}
 
 export function recommend(input: EngineInput): EngineResult {
   if (input.points.length === 0) throw new Error('points must not be empty')
-  const judged = judgeTemperature(input)
+  const { judged, band: feedbackBand, offset: feedbackApplied } = judgeDetail(input)
   const required = requiredWarmthFor(judged)
   const maxWind = Math.max(...input.points.map((p) => p.wind))
   const needUmbrella = input.points.some((p) => p.pop >= ruleConfig.umbrellaPopThreshold || p.precip !== 'none')
@@ -305,8 +325,8 @@ export function recommend(input: EngineInput): EngineResult {
   if (input.feelsMethod === 'FALLBACK_TEMP') reasonCodes.push('FEELS_FALLBACK_TEMP')
   if (input.sensitivity === 'COLD') push('SENSITIVITY_COLD', '추위를 많이 타는 설정을 반영했어요')
   if (input.sensitivity === 'HOT') push('SENSITIVITY_HOT', '더위를 많이 타는 설정을 반영했어요')
-  if (input.feedbackOffset <= -0.5) push('FEEDBACK_COLD', '지난 피드백(추웠어요)을 반영해 조금 따뜻하게 맞췄어요')
-  if (input.feedbackOffset >= 0.5) push('FEEDBACK_HOT', '지난 피드백(더웠어요)을 반영해 조금 가볍게 맞췄어요')
+  if (feedbackApplied <= -0.5) push('FEEDBACK_COLD', '지난 피드백(추웠어요)을 반영해 조금 따뜻하게 맞췄어요')
+  if (feedbackApplied >= 0.5) push('FEEDBACK_HOT', '지난 피드백(더웠어요)을 반영해 조금 가볍게 맞췄어요')
   if (input.eventKind === 'CAMPING') push('EVENT_CAMPING', '캠핑이라 밤 기온을 더 신경 썼어요')
   if (input.eventKind === 'EXERCISE') push('EVENT_EXERCISE', '움직이면 더워져서 조금 가볍게 맞췄어요')
   if (input.eventKind === 'HIKING') push('EVENT_HIKING', '등산은 움직이면 더워지고 산 위는 더 추워서, 벗고 입기 쉽게 맞췄어요')
@@ -339,6 +359,8 @@ export function recommend(input: EngineInput): EngineResult {
     comboWhy,
     insufficientWardrobe: insufficient,
     judgedTemp: judged,
+    feedbackBand,
+    feedbackApplied,
     requiredWarmth: required,
     decisionKey,
   }

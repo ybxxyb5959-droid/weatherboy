@@ -1,5 +1,6 @@
 import type { AuthIdentity, Clothing, Event, User } from '@prisma/client'
 import { clothingTypeMap, colorMap, eventKindMap, sensitivityMap, thicknessMap, patternMap } from '../config/mappings.js'
+import { bandsOf } from './feedbackBands.js'
 import { kstDate, kstTime } from '../utils/time.js'
 
 export function serializeSettings(u: User) {
@@ -19,6 +20,8 @@ export function serializeSettings(u: User) {
     morningLeadMin: u.morningLeadMin,
     quiet: { enabled: u.quietEnabled, start: u.quietStart, end: u.quietEnd },
     routine: { outAt: u.routineOutAt, homeAt: u.routineHomeAt, days: u.routineDays },
+    // 후기로 배운 기온대별 체감 보정(℃). 음수면 더 춥게, 양수면 더 덥게 느끼는 걸로 반영 중
+    feel: bandsOf(u),
   }
 }
 

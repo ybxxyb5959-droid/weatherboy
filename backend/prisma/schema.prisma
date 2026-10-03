@@ -128,7 +128,9 @@ model User {
   onboardingDone Boolean @default(false)
 
   sensitivity    Sensitivity @default(NORMAL)
-  feedbackOffset Float       @default(0)
+  feedbackOffset Float       @default(0) // 기온대별 보정의 단순 평균(예전 값). 실제 추천은 feedbackBandsJson 을 쓴다
+  // 기온대별 피드백 보정(℃): { low, mid, high }. 비어 있으면 0
+  feedbackBandsJson Json @default("{}")
 
   locationName   String  @default("서울 마포구")
   regionSido     String?
@@ -402,6 +404,8 @@ model Feedback {
   rating            FeedbackRating
   period            FeedbackPeriod?
   actualTemperature Float?
+  // 추천대로 입었는지. 다른 옷을 입고 남긴 후기는 기록만 하고 보정에는 쓰지 않는다
+  followed          Boolean         @default(true)
   createdAt         DateTime        @default(now())
 
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)

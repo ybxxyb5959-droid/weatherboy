@@ -47,6 +47,8 @@ export interface Settings {
   notifyEvent: boolean
   notifyChange: boolean
   routine?: Routine
+  /** 후기로 배운 기온대별 체감 보정(℃). 음수면 더 춥게, 양수면 더 덥게 느끼는 걸로 반영 중 */
+  feel?: { low: number; mid: number; high: number }
   /** 방해금지 시간: 이 시간에는 알림을 보내지 않는다(시작이 끝보다 늦으면 자정을 넘는 구간) */
   quiet?: Quiet
 }

@@ -43,6 +43,8 @@ const settingsSchema = z
     place: placeHintSchema.optional(),
     routine: routineSchema,
     quiet: z.object({ enabled: z.boolean(), start: hhmm, end: hhmm }).partial(),
+    // 후기로 쌓인 체감 보정을 처음으로 되돌린다
+    resetFeel: z.literal(true),
   })
   .partial()
 
@@ -65,6 +67,10 @@ async function applySettings(userId: string, body: z.infer<typeof settingsSchema
   if (body.notifyCloset !== undefined) data.notifyCloset = body.notifyCloset
   if (body.notifyNotice !== undefined) data.notifyNotice = body.notifyNotice
   if (body.morningLeadMin !== undefined) data.morningLeadMin = body.morningLeadMin
+  if (body.resetFeel) {
+    data.feedbackBandsJson = {}
+    data.feedbackOffset = 0
+  }
   if (body.quiet) {
     if (body.quiet.enabled !== undefined) data.quietEnabled = body.quiet.enabled
     if (body.quiet.start !== undefined) data.quietStart = body.quiet.start

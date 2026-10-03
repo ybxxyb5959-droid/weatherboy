@@ -13,7 +13,7 @@ interface Props {
   selected: string
   message: string
   /** 저장에 성공(또는 이미 저장됨)하면 true. 실패하면 false 를 돌려줘 카드를 원래대로 되돌린다. */
-  onPick: (label: Label) => Promise<boolean>
+  onPick: (label: Label, followed: boolean) => Promise<boolean>
 }
 
 // 나머지 카드가 사라지는 시간 -> 고른 카드가 첫 칸으로 이동하는 시간(ms). global.css 의 fb-* 와 맞춘다.
@@ -29,6 +29,8 @@ export default function FeedbackCard({ selected, message, onPick }: Props) {
   const [phase, setPhase] = useState<'idle' | 'leaving' | 'moving' | 'done'>(selected ? 'done' : 'idle')
   const [dx, setDx] = useState(0)
   const [instant] = useState(!!selected) // 이미 고른 상태로 나타날 때는 애니메이션 없이 최종 모습으로
+  // 추천대로 입지 않았으면 후기는 남기되 추천 보정에는 쓰지 않는다
+  const [followed, setFollowed] = useState(true)
   const btns = useRef<(HTMLButtonElement | null)[]>([])
 
   const shiftOf = (label: string) => {
@@ -47,7 +49,7 @@ export default function FeedbackCard({ selected, message, onPick }: Props) {
     setPicked(label)
     setPhase('leaving')
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
-    const [ok] = await Promise.all([onPick(label), wait(FADE_MS)])
+    const [ok] = await Promise.all([onPick(label, followed), wait(FADE_MS)])
     if (!ok) {
       setPhase('idle')
       setPicked('')
@@ -67,6 +69,12 @@ export default function FeedbackCard({ selected, message, onPick }: Props) {
       <div className="box w1">
         <h2>오늘 어땠나요?</h2>
         <p className="tiny">(후기는 다음 추천에 반영돼요)</p>
+        {phase === "idle" && (
+          <label className="tiny fb-followed">
+            <input type="checkbox" checked={!followed} onChange={(e) => setFollowed(!e.target.checked)} /> 추천과 다른 옷을 입었어요
+            {!followed && <span className="fb-followed-note">이번 후기는 추천에 반영하지 않아요</span>}
+          </label>
+        )}
         <div className={`row stretch fb-row fb-${phase}${instant ? ' fb-instant' : ''}`}>
           {feelOptions.map((o, i) => {
             const mine = picked === o.label
