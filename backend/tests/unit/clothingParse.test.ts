@@ -18,6 +18,14 @@ describe('옷 문장 해석', () => {
     expect(labels('연청 반바지, 베이지 스커트')).toEqual(['하늘색 반바지', '베이지 치마'])
     expect(labels('회색 후드 집업\n흰색 도트 치마')).toEqual(['회색 후드티', '흰색 도트 치마'])
   })
+  it('나누는 말 없이 이어서 말해도 옷마다 나눈다 (음성은 "이랑"을 자주 빼먹는다)', () => {
+    expect(labels('검정반팔이랑 흰반팔티')).toEqual(['검정 반팔', '흰색 반팔'])
+    expect(labels('검정 반팔 흰 반팔티')).toEqual(['검정 반팔', '흰색 반팔'])
+    expect(labels('검정반팔이랑흰반팔티')).toEqual(['검정 반팔', '흰색 반팔'])
+    expect(labels('네이비 체크 셔츠 청바지 회색 맨투맨')).toEqual(['네이비 체크 셔츠', '파랑 바지', '회색 맨투맨'])
+    expect(labels('반팔 검정')).toEqual(['검정 반팔'])
+    expect(labels('니트 가디건 데님 자켓')).toEqual(['가디건', '자켓'])
+  })
   it('반바지는 바지가 아니라 반바지, 와이드의 와는 나누지 않는다', () => {
     expect(parseClothing('반바지').items[0]!.type).toBe('반바지')
     expect(labels('베이지 와이드 슬랙스')).toEqual(['베이지 바지'])

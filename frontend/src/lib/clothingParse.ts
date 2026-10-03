@@ -28,8 +28,8 @@ const TYPES: Record<string, string[]> = {
   반바지: ['반바지', '숏팬츠', '쇼츠', '핫팬츠'],
   치마: ['치마', '스커트', '원피스'],
   바람막이: ['바람막이', '윈드브레이커', '윈드자켓'],
-  자켓: ['자켓', '재킷', '잠바', '점퍼', '블레이저', '야상', '바시티', '라이더'],
-  가디건: ['가디건', '카디건', '볼레로'],
+  자켓: ['데님 자켓', '데님자켓', '청자켓', '자켓', '재킷', '잠바', '점퍼', '블레이저', '야상', '바시티', '라이더'],
+  가디건: ['니트 가디건', '니트가디건', '가디건', '카디건', '볼레로'],
   코트: ['코트', '트렌치', '트렌치코트', '롱코트'],
   패딩: ['패딩', '롱패딩', '숏패딩', '패딩점퍼', '다운자켓', '구스', '덕다운'],
 }
@@ -97,18 +97,42 @@ export function parseClothing(input: string): ParseResult {
   const items: ParsedClothing[] = []
   const unknown: string[] = []
   for (const part of parts) {
-    const t = take(part, TYPE_ENTRIES)
-    if (!t.value) {
+    // 한 조각에 옷이 여러 벌일 수 있다("검정 반팔 흰 반팔티", 음성은 '이랑'을 자주 빼먹는다).
+    // 옷 종류 말마다 한 벌로 보고, 그 앞(앞 옷 뒤부터)의 말에서 색·무늬를 찾는다.
+    const found = findTypes(part)
+    if (found.length === 0) {
       unknown.push(part)
       continue
     }
-    const c = take(t.rest, COLOR_ENTRIES)
-    const p = take(c.rest, PATTERN_ENTRIES)
-    const implied = t.word ? TYPE_IMPLIED_COLOR[t.word] : undefined
-    const color = c.value ?? implied ?? '기타'
-    items.push({ type: t.value, color, pattern: p.value ?? '무지', colorGuessed: c.value === null && !implied })
+    found.forEach((t, i) => {
+      const prefix = part.slice(i === 0 ? 0 : found[i - 1]!.end, t.start)
+      // 색을 옷 뒤에 말한 경우("반팔 검정"): 마지막 옷만 뒤의 말도 본다
+      const suffix = i === found.length - 1 ? part.slice(t.end) : ''
+      const c = take(prefix, COLOR_ENTRIES).value ? take(prefix, COLOR_ENTRIES) : take(suffix, COLOR_ENTRIES)
+      const p = take(prefix, PATTERN_ENTRIES).value ? take(prefix, PATTERN_ENTRIES) : take(suffix, PATTERN_ENTRIES)
+      const implied = TYPE_IMPLIED_COLOR[t.word]
+      const color = c.value ?? implied ?? '기타'
+      items.push({ type: t.value, color, pattern: p.value ?? '무지', colorGuessed: c.value === null && !implied })
+    })
   }
   return { items, unknown }
+}
+
+/** 조각 안의 옷 종류 말을 앞에서부터 모두 찾는다. 같은 자리에서는 긴 말이 먼저(반팔티 > 반팔 > 티), 찾은 말은 겹쳐 세지 않는다. */
+function findTypes(text: string): { value: string; word: string; start: number; end: number }[] {
+  const out: { value: string; word: string; start: number; end: number }[] = []
+  let i = 0
+  while (i < text.length) {
+    const e = TYPE_ENTRIES.find((x) => text.startsWith(x.word, i))
+    if (e) {
+      const prev = out[out.length - 1]
+      // 같은 종류의 말이 띄어쓰기만 두고 이어지면 한 벌의 이름이다("후드 집업"). 다른 종류면("셔츠 청바지") 두 벌
+      if (prev && prev.value === e.value && text.slice(prev.end, i).trim() === '') out[out.length - 1] = { ...prev, end: i + e.word.length }
+      else out.push({ value: e.value, word: e.word, start: i, end: i + e.word.length })
+      i += e.word.length
+    } else i++
+  }
+  return out
 }
 
 /** 화면에 보여줄 이름 (예: "검정 체크 맨투맨") */
