@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
+import EventStylist from '../components/EventStylist'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import { eventMood } from '../lib/eventMood'
@@ -153,6 +154,9 @@ function EventDetail({ id }: { id: string }) {
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
   const days = outfit.data?.days ?? []
+  const styleLabel = outfit.data?.styleLabel ?? null
+  // 코디 도우미의 캐릭터가 입는 옷: 지금 일정에 보이는 코디
+  const stylistItems = rec ? rec.items.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) })) : []
 
   return (
     <main>
@@ -252,17 +256,21 @@ function EventDetail({ id }: { id: string }) {
         </div>
         {!waiting && (
           <p className="tiny" style={{ marginTop: 8 }}>
+            {styleLabel ? `${styleLabel} 느낌 · ` : ''}
             {rec.headline} · {rec.sub}
             {rec.needMask ? ' · 마스크도 챙겨요' : ''}
           </p>
         )}
         {outfit.error && <p className="tiny" role="alert">{outfit.error}</p>}
         <div className="row between" style={{ marginTop: 6 }}>
-          <p className="tiny">{waiting ? '(예시예요)' : ''}</p>
+          <p className="tiny">{waiting ? (styleLabel ? `(예시예요. 예보가 열리면 ${styleLabel} 느낌으로 골라드려요)` : '(예시예요)') : ''}</p>
           <StickPerson mood="trip" size={70} />
         </div>
       </section>
       )}
+
+      <hr className="scribble" />
+      <EventStylist eventId={e.id} items={stylistItems} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} onChanged={outfit.reload} />
     </main>
   )
 }

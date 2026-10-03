@@ -111,6 +111,9 @@ export interface EventOutfit {
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'
   recommendation: ApiRecommendation | null
   message: string | null
+  /** 코디 도우미에서 일정에 고른 분위기(없으면 날씨만 보고 고른 코디) */
+  style?: 'FORMAL' | 'SMART' | 'CASUAL' | 'COMFORT' | null
+  styleLabel?: string | null
 }
 
 export interface Favorite {

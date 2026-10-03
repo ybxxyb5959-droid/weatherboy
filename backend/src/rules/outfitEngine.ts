@@ -5,6 +5,7 @@ import { ruleConfig } from '../config/ruleConfig.js'
 import { kstDate, toKstParts } from '../utils/time.js'
 import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
 import { colorIssueOf, colorIssueTip, comboColorScore, type ColorIssue } from './colorHarmony.js'
+import { comboStyleScore, type OutfitStyle } from './outfitStyle.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -55,6 +56,8 @@ export interface EngineInput {
   feelsMethod?: string // 체감온도 산출 방식(Reason Code용)
   /** 며칠짜리 일정에서 앞선 날에 이미 고른 옷. 알맞은 조합 중 이 옷과 덜 겹치는 조합을 먼저 고른다(상의 > 하의 > 겉옷 순으로 비중) */
   avoidIds?: string[]
+  /** 있으면 보온 조건을 만족하는 조합 중 이 분위기에 가장 가까운 옷을 먼저 고른다 (varietySeed 와 함께 쓰지 않는다) */
+  style?: OutfitStyle
 }
 
 export interface OutfitItem {
@@ -89,6 +92,9 @@ export interface EngineResult {
   colorIssue?: ColorIssue | null
   requiredWarmth: number
   decisionKey: string
+  /** style 을 요청했을 때: 고른 조합의 분위기 점수와, 옷장에 그 분위기에 맞는 옷이 충분했는지 */
+  styleScore?: number
+  styleMatched?: boolean
 }
 
 const ALL_TYPES = clothingTypeMap.uiValues.map((k) => clothingTypeMap.toDb(k))
@@ -176,6 +182,9 @@ function hashOf(s: string): number {
   return h
 }
 
+/** 고른 조합의 분위기 점수가 이 이상이면 '분위기에 맞는 옷'이 있다고 본다 */
+const STYLE_MATCH_MIN = 4
+
 const colorOf = (c: Candidate) => comboColorScore(c.top, c.bottom, c.outer)
 const keyOf = (c: Candidate) => `${c.top.id}|${c.bottom.id}|${c.outer?.id ?? ''}`
 
@@ -250,6 +259,16 @@ export function recommend(input: EngineInput): EngineResult {
     }
   }
   valid.sort(cmp)
+  // 분위기 취향: 바람/비 대응이 같고 보온이 가장 가벼운 조합과 slack 이내인 조합 중 분위기 점수가 높은 순으로 앞에 둔다.
+  const styleOf = (c: Candidate) => (input.style ? comboStyleScore(input.style, c.top, c.bottom, c.outer) : 0)
+  const styled = (list: Candidate[]): Candidate[] => {
+    if (!input.style || list.length === 0) return list
+    const [wp, rp] = rank(list[0]!)
+    const near = list.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && c.total <= list[0]!.total + ruleConfig.varietyWarmthSlack)
+    const rest = list.filter((c) => !near.includes(c))
+    return [...near.sort((a, b) => styleOf(b) - styleOf(a) || cmp(a, b)), ...rest]
+  }
+  if (!insufficient) valid = styled(valid)
   let best = valid[0]!
   const newSince = (input.now ?? new Date()).getTime() - ruleConfig.newItemDays * 86400_000
   const isNew = (i: WardrobeItem | null) => !!i?.createdAt && i.createdAt.getTime() >= newSince
@@ -260,6 +279,11 @@ export function recommend(input: EngineInput): EngineResult {
     const [wp, rp] = rank(first)
     const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
     let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
+    // 분위기를 골랐으면 분위기 점수가 가장 높은 조합만 남긴다(여러 날 일정에서 날마다 돌려 고를 때도 분위기는 지킨다)
+    if (input.style && group.length > 1) {
+      const bestStyle = Math.max(...group.map(styleOf))
+      group = group.filter((c) => styleOf(c) === bestStyle)
+    }
     // 색이 어울리는 조합을 먼저 남긴다(보온 조건이 같은 후보끼리만 비교하므로 날씨 판단은 그대로)
     if (group.length > 1) {
       const bestColor = Math.max(...group.map(colorOf))
@@ -280,7 +304,7 @@ export function recommend(input: EngineInput): EngineResult {
   const toCombo = (c: Candidate): OutfitItem[] => [itemOf(c.top), itemOf(c.bottom), ...(c.outer ? [itemOf(c.outer)] : [])]
 
   // 대안: 최선과 다른 조합 (insufficient가 아니면 요구 보온을 만족하는 조합 중에서)
-  const altSource = (insufficient ? valid : cands.filter((c) => c.total >= required)).slice().sort(cmp)
+  const altSource = styled((insufficient ? valid : cands.filter((c) => c.total >= required)).slice().sort(cmp))
   const alternatives: OutfitItem[][] = []
   const altCands: Candidate[] = []
   const seen = new Set<string>([keyOf(best)])
@@ -376,6 +400,7 @@ export function recommend(input: EngineInput): EngineResult {
     colorIssue: colorIssueOf(best.top, best.bottom),
     requiredWarmth: required,
     decisionKey,
+    ...(input.style ? { styleScore: styleOf(best), styleMatched: hasOwn && styleOf(best) >= STYLE_MATCH_MIN } : {}),
   }
 }
 

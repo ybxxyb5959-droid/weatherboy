@@ -92,6 +92,14 @@ enum EventKind {
   OUTDOOR
 }
 
+// 일정에 대해 사용자가 고른 옷차림 분위기(코디 도우미). 없으면 날씨만 보고 고른다
+enum EventOutfitStyle {
+  FORMAL
+  SMART
+  CASUAL
+  COMFORT
+}
+
 enum ForecastStage {
   WAITING
   MIDTERM
@@ -296,6 +304,8 @@ model Event {
   gridNx         Int?
   gridNy         Int?
 
+  // 코디 도우미에서 고른 분위기. 일정 추천이 보온 조건을 만족하는 조합 중 이 분위기에 가까운 옷을 고른다
+  outfitStyle           EventOutfitStyle?
   forecastStage         ForecastStage @default(WAITING)
   recommendationVersion Int           @default(0)
   lastDecisionKey       String?
