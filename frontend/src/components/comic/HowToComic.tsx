@@ -11,6 +11,22 @@ type Pt = readonly [number, number]
 const INK = '#222'
 const PAPER = '#fcfcfa'
 
+/** 자로 댄 듯한 직사각형 대신, 모서리마다 조금씩 어긋나고 변이 살짝 휜 손그림 사각형 */
+function Rough({ x, y, width, height, fill, stroke, strokeWidth }: { x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }) {
+  const j = (n: number, amp = 2.4) => Math.sin(x * 12.9898 + y * 78.233 + n * 37.719) * amp
+  const f = (v: number) => v.toFixed(1)
+  const x2 = x + width
+  const y2 = y + height
+  const mx = x + width / 2
+  const my = y + height / 2
+  const d =
+    `M${f(x + j(1))} ${f(y + j(2))} Q${f(mx)} ${f(y + j(3, 3.5))} ${f(x2 + j(4))} ${f(y + j(5))} ` +
+    `Q${f(x2 + j(6, 3.5))} ${f(my)} ${f(x2 + j(7))} ${f(y2 + j(8))} ` +
+    `Q${f(mx)} ${f(y2 + j(9, 3.5))} ${f(x + j(10))} ${f(y2 + j(11))} ` +
+    `Q${f(x + j(12, 3.5))} ${f(my)} ${f(x + j(1) + 2.5)} ${f(y + j(2) - 3)}`
+  return <path d={d} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+}
+
 /** 졸라맨 한 명을 (tx,ty)에 s 배로 놓는다 */
 function Fig({ pose, id, tx, ty, s, face }: { pose: Pose; id: string; tx: number; ty: number; s: number; face?: 'smile' | 'flat' | 'cry' }) {
   return (
@@ -56,7 +72,7 @@ const Scene1 = memo(function Scene1() {
   return (
     <>
       {/* 옷장 */}
-      <rect x="6" y="16" width="86" height="158" rx="3" />
+      <Rough x={6} y={16} width={86} height={158} />
       <path d="M49 16 V174 M6 100 H92" />
       <path d="M12 36 H44 M54 36 H86" />
       <Cloth type="반팔" color="주황" x={11} y={40} s={0.34} />
@@ -71,7 +87,7 @@ const Scene1 = memo(function Scene1() {
       </g>
       {/* 앱에 등록된 옷 */}
       <Arrow d={`M${hx - 6} ${hy - 22} Q150 -2 224 34`} head="M213 28 L225 35 L211 40" />
-      <rect x="226" y="40" width="68" height="104" rx="6" fill={PAPER} />
+      <Rough x={226} y={40} width={68} height={104} fill={PAPER} />
       <Cloth type="반팔" color="주황" x={235} y={48} s={0.5} w={4} />
       <path d="M247 116 l8 9 l16 -18" stroke="#3f9a52" strokeWidth="3.4" />
     </>
@@ -100,7 +116,7 @@ const Scene2 = memo(function Scene2() {
       {/* 날아가는 코디 카드 */}
       <Arrow d={`M${ax + 12} ${ay - 18} Q${mx} -6 ${bx - 12} ${by - 18}`} head={`M${bx - 22} ${by - 28} L${bx - 11} ${by - 18} L${bx - 24} ${by - 14}`} />
       <g>
-        <rect x={mx - 26} y="44" width="52" height="44" rx="5" fill={PAPER} />
+        <Rough x={mx - 26} y={44} width={52} height={44} fill={PAPER} />
         <Cloth type="코트" color="베이지" x={mx - 23} y={46} s={0.22} w={7} />
         <Cloth type="바지" color="검정" x={mx + 1} y={48} s={0.22} w={7} />
       </g>
@@ -114,7 +130,7 @@ const Scene3 = memo(function Scene3() {
   return (
     <>
       {/* 달력 */}
-      <rect x="6" y="30" width="80" height="86" rx="5" fill={PAPER} />
+      <Rough x={6} y={30} width={80} height={86} fill={PAPER} />
       <path d="M6 50 H86 M24 24 V36 M68 24 V36" />
       <path d="M18 62 h.1 M34 62 h.1 M50 62 h.1 M66 62 h.1 M18 76 h.1 M34 76 h.1 M66 76 h.1 M18 90 h.1 M34 90 h.1 M50 90 h.1 M66 90 h.1" strokeWidth="3.4" />
       <circle cx="50" cy="76" r="9" stroke="#d9503f" strokeWidth="2.6" />
@@ -126,7 +142,7 @@ const Scene3 = memo(function Scene3() {
       </g>
       {/* 어울리는 코디 */}
       <Arrow d="M190 100 Q206 92 220 96" head="M211 88 L221 96 L209 101" />
-      <rect x="224" y="30" width="70" height="124" rx="6" fill={PAPER} />
+      <Rough x={224} y={30} width={70} height={124} fill={PAPER} />
       <Cloth type="셔츠" color="흰색" x={231} y={38} s={0.56} w={4} />
       <Cloth type="바지" color="검정" x={231} y={92} s={0.56} w={4} />
       <g>
@@ -154,11 +170,11 @@ const Scene4 = memo(function Scene4() {
         <Heart x={92} y={30} s={1} />
       </g>
       {/* 후기 카드 */}
-      <rect x="108" y="64" width="186" height="104" rx="8" fill={PAPER} />
+      <Rough x={108} y={64} width={186} height={104} fill={PAPER} />
       <g transform="translate(118 74)"><FeedbackFace kind="cold" size={48} /></g>
       <g transform="translate(174 74)"><FeedbackFace kind="good" size={48} /></g>
       <g transform="translate(232 74)"><FeedbackFace kind="hot" size={48} /></g>
-      <rect x="168" y="70" width="60" height="70" rx="8" stroke="#3f9a52" strokeWidth="3.2" />
+      <Rough x={168} y={70} width={60} height={70} stroke="#3f9a52" strokeWidth={3.2} />
       <path d="M198 152 l6 7 l14 -15" stroke="#3f9a52" strokeWidth="3.4" />
     </>
   )
@@ -217,7 +233,7 @@ function Panel({ n, def }: { n: number; def: PanelDef }) {
           <HandText>{`${n}`}</HandText>
         </span>
         <div className="comic-scene">
-          <svg viewBox="0 0 300 190" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" overflow="visible" aria-hidden="true">
+          <svg className="doodle" viewBox="0 0 300 190" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" overflow="visible" aria-hidden="true">
             {def.scene}
           </svg>
           {def.bubbles.map((b) => (
