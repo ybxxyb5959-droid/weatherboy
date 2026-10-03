@@ -114,6 +114,8 @@ export interface EventOutfit {
   /** 코디 도우미에서 일정에 고른 분위기(없으면 날씨만 보고 고른 코디) */
   style?: 'FORMAL' | 'SMART' | 'CASUAL' | 'COMFORT' | null
   styleLabel?: string | null
+  /** 고른 코디에서 그 자리(면접·결혼식 등)에 어색한 점. 옷장에 대안이 없어 피하지 못한 경우만 온다 */
+  situationNotes?: string[]
 }
 
 export interface Favorite {

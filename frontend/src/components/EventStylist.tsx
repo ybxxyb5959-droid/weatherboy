@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorMessage } from '../api'
 import { BASIC_WEAR, useCharacter } from '../lib/character'
+import { feel } from '../lib/styleText'
 import { categories } from '../mocks/clothes'
 import DoodleButton from './DoodleButton'
 import SayBox from './SayBox'
@@ -15,6 +16,8 @@ interface StyleOption {
 interface Talk {
   reply: string
   options: StyleOption[]
+  /** false 면 이 일정에는 도우미를 보여주지 않는다(별 조건 없는 여행·등산 등) */
+  applicable?: boolean
 }
 interface StylistResponse extends Talk {
   style?: StyleId
@@ -39,6 +42,8 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
   const character = useCharacter().data
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말(다시 고를 때 돌아온다)
   const [talk, setTalk] = useState<Talk | null>(null)
+  const touched = useRef(false) // 사용자가 직접 고르거나 바꾸기 시작했는가
+  const [applicable, setApplicable] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [say, setSay] = useState(false)
@@ -51,7 +56,8 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
       .then((start) => {
         if (!alive) return
         setOpening(start)
-        setTalk((cur) => cur ?? (style ? { reply: `${styleLabel ?? ''} 느낌으로 골랐어요. 다른 느낌이 좋으면 바꿔볼까요?`, options: [] } : start))
+        setApplicable(start.applicable !== false)
+        setTalk((cur) => cur ?? (style ? { reply: `${feel(styleLabel ?? '')}으로 골랐어요. 다른 느낌이 좋으면 바꿔볼까요?`, options: [] } : start))
       })
       .catch((e) => alive && setError(errorMessage(e)))
     return () => {
@@ -61,8 +67,14 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
+  // 저장된 분위기는 일정 코디와 같이 늦게 도착할 수 있다: 아직 아무것도 건드리지 않았다면 그 상태로 말을 바꿔준다
+  useEffect(() => {
+    if (style && !touched.current) setTalk({ reply: `${feel(styleLabel ?? '')}으로 골랐어요. 다른 느낌이 좋으면 바꿔볼까요?`, options: [] })
+  }, [style, styleLabel])
+
   const ask = useCallback(
     async (body: { style?: StyleId; text?: string }, lastReply?: string) => {
+      touched.current = true
       setBusy(true)
       setError('')
       try {
@@ -81,6 +93,7 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
   )
 
   const clear = async () => {
+    touched.current = true
     setBusy(true)
     setError('')
     try {
@@ -98,7 +111,12 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
   const wear = items.length > 0 ? { top: pick(categories[0]!.types), bottom: pick(categories[1]!.types), outer: pick(categories[2]!.types) } : BASIC_WEAR
   const choosing = !!talk && talk.options.length > 0
 
+  // 별 조건 없는 여행·등산 같은 일정은 날씨 엔진이 이미 반영하므로 보여주지 않는다(이미 분위기를 골라 둔 일정은 바꿀 수 있게 계속 보여준다)
+  if (applicable === false && !style) return null
+
   return (
+    <>
+    <hr className="scribble" />
     <section className="section stylist">
       <div className="stylist-talk">
         <div className="stylist-figure">
@@ -121,7 +139,7 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
 
       {!busy && !choosing && opening && (
         <div className="stylist-options">
-          <DoodleButton seed={1} onClick={() => setTalk(opening)}>
+          <DoodleButton seed={1} onClick={() => { touched.current = true; setTalk(opening) }}>
             {style ? '다른 느낌으로' : '느낌 고르기'}
           </DoodleButton>
           {style && (
@@ -164,5 +182,6 @@ export default function EventStylist({ eventId, items, style, styleLabel, onChan
         </div>
       )}
     </section>
+    </>
   )
 }

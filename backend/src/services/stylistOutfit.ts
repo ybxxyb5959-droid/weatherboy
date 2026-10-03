@@ -1,7 +1,7 @@
 // 코디 상담 결과: 고른 분위기로 일정 기간 날씨에 맞는 코디를 옷장에서 뽑는다 (저장하지 않는 계산).
 import type { Event, User } from '@prisma/client'
 import { eventKindMap } from '../config/mappings.js'
-import { styleLabel, type OutfitStyle } from '../rules/outfitStyle.js'
+import { styleGapHint, styleLabel, type OutfitStyle } from '../rules/outfitStyle.js'
 import type { OutingPoint } from '../rules/outfitEngine.js'
 import { kstDate } from '../utils/time.js'
 import type { StylistContext } from './ai/stylist.js'
@@ -52,6 +52,10 @@ export interface StylistOutfit {
   /** 옷장에 그 분위기에 맞는 옷이 충분했는지 (false 면 가장 가까운 옷으로 골랐다) */
   styleMatched: boolean
   insufficientWardrobe: boolean
+  /** 그 분위기에 맞는 옷이 옷장에 부족할 때, 무엇이 있으면 좋은지 한 줄(없으면 null) */
+  gap: string | null
+  /** 고른 조합에서 그 자리에 어색한 점(대안이 없어 피하지 못한 경우) */
+  tabooReasons: string[]
 }
 
 /** 예보가 아직 없으면 null */
@@ -70,5 +74,7 @@ export async function stylistOutfit(user: User, e: Event, style: OutfitStyle): P
     needMask: r.needMask,
     styleMatched: r.styleMatched ?? false,
     insufficientWardrobe: r.insufficientWardrobe,
+    gap: styleGapHint(style, c.wardrobe.filter((w) => w.owned).map((w) => w.type)),
+    tabooReasons: r.tabooReasons ?? [],
   }
 }

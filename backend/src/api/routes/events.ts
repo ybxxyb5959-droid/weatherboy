@@ -180,6 +180,6 @@ eventsRouter.get(
     if (!c) return waiting('아직 정확한 예보가 없어요.')
     const saved = await saveEventRecommendation(e, c)
     const stage = c.window.stage
-    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c), style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null })
+    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c), style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null, situationNotes: c.result.tabooReasons ?? [] })
   }),
 )

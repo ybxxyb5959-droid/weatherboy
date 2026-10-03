@@ -7,6 +7,7 @@ import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingV
 import { parseEventText } from '../../services/ai/eventParse.js'
 import { prisma } from '../../db.js'
 import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
+import { stylistApplicable } from '../../rules/outfitStyle.js'
 import { defaultOptions, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
@@ -95,7 +96,8 @@ aiRouter.get(
     const event = await prisma.event.findFirst({ where: { id: eventId, userId: (req as AuthedRequest).userId } })
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const ctx = { title: event.title, kind: eventKindMap.toUi(event.kind) }
-    res.json({ reply: fallbackReply(ctx), options: defaultOptions(ctx) })
+    // 여행·등산 같은 야외 일정은 날씨 엔진이 이미 반영하므로, 격식 있는 자리가 아니면 분위기를 묻지 않는다
+    res.json({ reply: fallbackReply(ctx), options: defaultOptions(ctx), applicable: stylistApplicable(ctx.kind, ctx.title) })
   }),
 )
 
@@ -122,8 +124,12 @@ aiRouter.post(
     const saved = await setEventStyle(user, event, style)
     const outfit = await stylistOutfit(user, saved, style)
     if (!outfit) return res.json({ reply: `${styleLabel[style]} 느낌으로 기억해 둘게요. 아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 그 느낌으로 골라드릴게요.`, options: [], outfit: null, style })
-    const closing = outfit.styleMatched ? '옷장에서 골라봤어요.' : '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
-    res.json({ reply: reply ? `${reply} ${closing}` : `${styleLabel[style]} 스타일로 ${closing}`, options: [], outfit, style })
+    const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
+    // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다
+    const lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style]} 스타일로 골라보고 싶었지만, ${lack}`
+    // 옷이 부족하면 무엇이 있으면 좋은지, 피하지 못한 어색한 점이 있으면 솔직하게 알린다
+    const extra = [!outfit.styleMatched ? outfit.gap : null, ...outfit.tabooReasons.slice(0, 2)].filter((t): t is string => !!t)
+    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style })
   }),
 )
 

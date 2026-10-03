@@ -5,7 +5,7 @@ import { ruleConfig } from '../config/ruleConfig.js'
 import { kstDate, toKstParts } from '../utils/time.js'
 import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
 import { colorIssueOf, colorIssueTip, comboColorScore, type ColorIssue } from './colorHarmony.js'
-import { comboStyleScore, type OutfitStyle } from './outfitStyle.js'
+import { comboStyleScore, comboTaboo, type OutfitStyle, type Situation } from './outfitStyle.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -58,6 +58,8 @@ export interface EngineInput {
   avoidIds?: string[]
   /** 있으면 보온 조건을 만족하는 조합 중 이 분위기에 가장 가까운 옷을 먼저 고른다 (varietySeed 와 함께 쓰지 않는다) */
   style?: OutfitStyle
+  /** 일정 제목에서 알아낸 자리(면접·결혼식·장례식·데이트). 그 자리에 어색한 옷은 강하게 감점한다(완전히 빼지는 않는다) */
+  situation?: Situation
 }
 
 export interface OutfitItem {
@@ -95,6 +97,8 @@ export interface EngineResult {
   /** style 을 요청했을 때: 고른 조합의 분위기 점수와, 옷장에 그 분위기에 맞는 옷이 충분했는지 */
   styleScore?: number
   styleMatched?: boolean
+  /** 고른 조합에서 그 자리에 어색한 점(옷장에 대안이 없어 피하지 못한 경우) */
+  tabooReasons?: string[]
 }
 
 const ALL_TYPES = clothingTypeMap.uiValues.map((k) => clothingTypeMap.toDb(k))
@@ -261,12 +265,14 @@ export function recommend(input: EngineInput): EngineResult {
   valid.sort(cmp)
   // 분위기 취향: 바람/비 대응이 같고 보온이 가장 가벼운 조합과 slack 이내인 조합 중 분위기 점수가 높은 순으로 앞에 둔다.
   const styleOf = (c: Candidate) => (input.style ? comboStyleScore(input.style, c.top, c.bottom, c.outer) : 0)
+  const tabooOf = (c: Candidate) => (input.situation ? comboTaboo(input.situation, c.top, c.bottom, c.outer).score : 0)
+  const fitOf = (c: Candidate) => styleOf(c) + tabooOf(c)
   const styled = (list: Candidate[]): Candidate[] => {
-    if (!input.style || list.length === 0) return list
+    if ((!input.style && !input.situation) || list.length === 0) return list
     const [wp, rp] = rank(list[0]!)
     const near = list.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && c.total <= list[0]!.total + ruleConfig.varietyWarmthSlack)
     const rest = list.filter((c) => !near.includes(c))
-    return [...near.sort((a, b) => styleOf(b) - styleOf(a) || cmp(a, b)), ...rest]
+    return [...near.sort((a, b) => fitOf(b) - fitOf(a) || cmp(a, b)), ...rest]
   }
   if (!insufficient) valid = styled(valid)
   let best = valid[0]!
@@ -280,9 +286,9 @@ export function recommend(input: EngineInput): EngineResult {
     const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
     let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
     // 분위기를 골랐으면 분위기 점수가 가장 높은 조합만 남긴다(여러 날 일정에서 날마다 돌려 고를 때도 분위기는 지킨다)
-    if (input.style && group.length > 1) {
-      const bestStyle = Math.max(...group.map(styleOf))
-      group = group.filter((c) => styleOf(c) === bestStyle)
+    if ((input.style || input.situation) && group.length > 1) {
+      const bestFit = Math.max(...group.map(fitOf))
+      group = group.filter((c) => fitOf(c) === bestFit)
     }
     // 색이 어울리는 조합을 먼저 남긴다(보온 조건이 같은 후보끼리만 비교하므로 날씨 판단은 그대로)
     if (group.length > 1) {
@@ -330,7 +336,8 @@ export function recommend(input: EngineInput): EngineResult {
         if (seen.has(keyOf(c)) || shown.has(labelKey(c))) continue
         const score =
           (used.has(c.top.id) ? 0 : 4) + (used.has(c.bottom.id) ? 0 : 2) + (c.outer && !used.has(c.outer.id) ? 2 : 0) + (isNew(c.top) || isNew(c.bottom) || isNew(c.outer) ? 1 : 0) -
-          (colorIssueOf(c.top, c.bottom) ? 6 : 0) // 색이 어색한 조합은 다른 대안이 있으면 뒤로
+          (colorIssueOf(c.top, c.bottom) ? 6 : 0) - // 색이 어색한 조합은 다른 대안이 있으면 뒤로
+          (tabooOf(c) < 0 ? 6 : 0) // 그 자리에 어색한 옷이 든 조합도 뒤로
         if (score > pickScore) {
           pickScore = score
           pick = c
@@ -376,7 +383,7 @@ export function recommend(input: EngineInput): EngineResult {
   if (!hasOwn) reasonCodes.push('EMPTY_WARDROBE_GENERIC')
 
   const [headline, sub] = headlineFor(judged, needOuter)
-  const ctx: WhyContext = { judged, required, windy, needUmbrella, diurnal, insufficient, isNew }
+  const ctx: WhyContext = { judged, required, windy, needUmbrella, diurnal, insufficient, isNew, situation: input.situation }
   const comboWhy = [best, ...altCands].map((c) => whyOf(c, ctx))
   const decisionKey = [best.top.type, best.bottom.type, best.outer?.type ?? 'NONE', `UMB${needUmbrella ? 1 : 0}`, `MASK${needMask ? 1 : 0}`].join('_')
 
@@ -400,6 +407,7 @@ export function recommend(input: EngineInput): EngineResult {
     colorIssue: colorIssueOf(best.top, best.bottom),
     requiredWarmth: required,
     decisionKey,
+    tabooReasons: input.situation ? comboTaboo(input.situation, best.top, best.bottom, best.outer).reasons : [],
     ...(input.style ? { styleScore: styleOf(best), styleMatched: hasOwn && styleOf(best) >= STYLE_MATCH_MIN } : {}),
   }
 }
@@ -412,6 +420,7 @@ interface WhyContext {
   diurnal: number
   insufficient: boolean
   isNew: (i: WardrobeItem | null) => boolean
+  situation?: Situation
 }
 
 /** 받침이 있으면 a, 없으면 b (예: 을/를). 한글이 아니면 b */
@@ -452,6 +461,7 @@ function whyOf(c: Candidate, x: WhyContext): ComboWhy {
     const b = nameOf(c.bottom)
     notes.push(`${b}${josa(b, '은', '는')} 다리가 쌀쌀할 수 있어요`)
   }
+  if (x.situation) notes.push(...comboTaboo(x.situation, c.top, c.bottom, c.outer).reasons)
   const issue = colorIssueOf(c.top, c.bottom)
   if (issue) notes.push(colorIssueTip[issue])
   else if (colorOf(c) >= 2) notes.push('색 조합이 차분하게 잘 어울려요')

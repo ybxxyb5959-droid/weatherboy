@@ -95,6 +95,27 @@ describe('AI 경로', () => {
     const ev = (await a.post('/api/events').send({ title: '북한산', startDate: tomorrow, kind: '등산' })).body as { id: string }
     const start = await a.get(`/api/ai/event-stylist/${ev.id}/start`)
     expect(start.body.options.map((o: { style: string }) => o.style)).toEqual(['COMFORT', 'CASUAL'])
+    // 별 조건이 없는 야외 일정은 날씨 엔진이 이미 반영하므로 도우미를 보여주지 않는다
+    expect(start.body.applicable).toBe(false)
+  })
+
+  it('코디 상담: 도우미를 보여줄 일정은 기타 일정과, 제목에 격식 있는 자리가 든 야외 일정', async () => {
+    const tomorrow = new Date(Date.now() + 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+    const mk = async (title: string, kind: string) => ((await a.post('/api/events').send({ title, startDate: tomorrow, kind })).body as { id: string }).id
+    const applicable = async (id: string) => (await a.get(`/api/ai/event-stylist/${id}/start`)).body.applicable
+    expect(await applicable(await mk('그냥 약속', '기타'))).toBe(true)
+    expect(await applicable(await mk('제주 여행', '여행'))).toBe(false)
+    expect(await applicable(await mk('제주 결혼식 하객', '여행'))).toBe(true)
+  })
+
+  it('일정 코디: 옷장에 격식 있는 옷이 부족하면 무엇이 있으면 좋은지 알려준다', async () => {
+    const ev = (await prisma.event.findFirstOrThrow({ where: { title: '면접' }, orderBy: { createdAt: 'desc' } }))
+    const r = await a.post('/api/ai/event-stylist').send({ eventId: ev.id, style: 'FORMAL' })
+    expect(r.status).toBe(200)
+    expect(Array.isArray(r.body.outfit.tabooReasons)).toBe(true)
+    if (!r.body.outfit.styleMatched) expect(r.body.reply).toContain('가장 가까운 옷')
+    const o = await a.get(`/api/events/${ev.id}/outfit`)
+    expect(Array.isArray(o.body.situationNotes)).toBe(true)
   })
 
   it('코디 상담: 남의 일정/잘못된 입력은 거절', async () => {

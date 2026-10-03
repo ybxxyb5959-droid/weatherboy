@@ -1,7 +1,7 @@
 import type { Clothing, Event, Prisma, Recommendation, User } from '@prisma/client'
 import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
-import type { OutfitStyle } from '../rules/outfitStyle.js'
+import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
 import { aiEnabled, explain } from './ai/explain.js'
@@ -139,7 +139,9 @@ export interface Computed {
 export async function compute(user: User, event: Event | null, start: Date, end: Date, now = new Date(), regionOverride?: Region, style?: OutfitStyle): Promise<Computed | null> {
   const region = regionOverride ?? regionOf(user, event)
   if (!region) throw new AppError(409, 'LOCATION_UNRESOLVED', '위치를 확인하지 못했어요. 설정에서 위치를 다시 선택해주세요.')
-  const outfitStyle = style ?? event?.outfitStyle ?? undefined // 일정에 고른 분위기가 있으면 그걸 따른다
+  const situation = (event && situationOf(event.title)) || undefined // 제목으로 알아낸 자리(면접·결혼식 등)
+  // 일정에 고른 분위기가 있으면 그걸 따르고, 없으면 그 자리에 기본으로 어울리는 분위기(면접->단정 등)
+  const outfitStyle = style ?? event?.outfitStyle ?? (situation ? impliedStyle[situation] : null) ?? undefined
   const window = await forecastForWindow(region, start, end, now)
   if (window.points.length === 0) return null
   const [clothes, air] = await Promise.all([prisma.clothing.findMany({ where: { userId: user.id, active: true }, orderBy: { id: 'asc' } }), getAirQuality(region, now)])
@@ -159,6 +161,7 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     now,
     varietySeed: outfitStyle ? undefined : `${user.id}:${event?.id ?? kstDate(start)}`,
     style: outfitStyle,
+    situation, // 그 자리에 어색한 옷은 피한다
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')
   return { result, window, region, wardrobe, airGrade: grade }
@@ -194,7 +197,8 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
       feedbackOffset: user.feedbackOffset,
       feedbackBands: bandsOf(user),
       eventKind: event.kind,
-      style: event.outfitStyle ?? undefined,
+      style: event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined,
+      situation: situationOf(event.title) ?? undefined,
       clothes: c.wardrobe,
       airGrade: c.airGrade,
       feelsMethod: c.window.feelsMethod,
