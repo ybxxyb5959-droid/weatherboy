@@ -110,7 +110,7 @@ export default function EventsPage() {
                   <div>{formatRange(e)}</div>
                   <div className="tiny">{statusLabel[e.status]}</div>
                 </div>
-                <StickPerson mood={eventMood(e.kind, e.status === 'waiting')} size={isSceneMood(eventMood(e.kind, false)) ? 84 : 64} />
+                <StickPerson mood={eventMood(e.kind, e.status === 'waiting', e.title, e.place)} size={isSceneMood(eventMood(e.kind, false, e.title, e.place)) ? 84 : 64} />
               </div>
             </Link>
             <EventMenu event={e} onDeleted={reload} />

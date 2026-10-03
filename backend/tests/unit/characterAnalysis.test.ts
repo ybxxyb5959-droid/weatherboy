@@ -38,7 +38,7 @@ describe('옷장 분석: 칭호', () => {
   })
 
   it('파스텔 요정: 분홍·하늘·베이지 40% 이상', () => {
-    expect(titleOf(many(10, (i) => c('LONG_SLEEVE', i < 4 ? 'PINK' : 'GREEN')))).toBe('PASTEL_FAIRY')
+    expect(titleOf(many(10, (i) => c('LONG_SLEEVE', i < 4 ? 'PINK' : mix(i))))).toBe('PASTEL_FAIRY')
     expect(titleOf([c('SKIRT', 'BEIGE'), c('KNIT', 'SKYBLUE'), c('SHIRT', 'PINK'), c('PANTS', 'BLUE'), c('JACKET', 'GREEN')])).toBe('PASTEL_FAIRY')
   })
 
@@ -113,5 +113,33 @@ describe('꾸미기 카탈로그', () => {
       expect(s.items.length).toBeGreaterThan(0)
       expect(new Set(s.items.map((i) => i.id)).size).toBe(s.items.length)
     }
+  })
+})
+
+describe('옷장 분석: 새 칭호와 힌트', () => {
+  it('하나에만 꽂힌다: 검정이 아닌 한 색이 절반 이상이면 받고, 한 줄 소개에 그 색이 들어간다', () => {
+    const a = analyze(many(6, (i) => c(i % 2 ? 'LONG_SLEEVE' : 'PANTS', i < 4 ? 'GREEN' : 'PURPLE')))
+    expect(a.title?.key).toBe('COLOR_LOVER')
+    expect(a.title?.name).toBe('하나에만 꽂힌다')
+    expect(a.title?.tagline).toBe('초록 아니면 안 돼')
+  })
+
+  it('사계절 준비 완료: 반팔·긴팔·얇은 겉옷·두꺼운 겉옷을 다 갖춤', () => {
+    const items = [c('SHORT_SLEEVE', 'GREEN'), c('LONG_SLEEVE', 'PURPLE'), c('CARDIGAN', 'RED'), c('PADDING', 'GREEN'), c('PANTS', 'PURPLE'), c('PANTS', 'RED'), c('SHIRT', 'GREEN'), c('SHORTS', 'PURPLE')]
+    expect(titleOf(items)).toBe('ALL_SEASON')
+  })
+
+  it('두 칭호를 같이 만족하면 두 번째는 부칭호', () => {
+    // 검정 후드티만 6벌: 어둠의 아이(2.0)와 후드티 중독자(4.0)
+    const a = analyze(many(6, () => c('HOODIE', 'BLACK')))
+    expect(a.title?.key).toBe('HOODIE_ADDICT')
+    expect(a.subTitle?.key).toBe('DARK_CHILD')
+  })
+
+  it('몇 벌만 더 담으면 받을 칭호를 알려준다', () => {
+    // 후드티 2벌 + 섞인 색 바지 4벌: 후드티 1벌 더 담으면 3벌·3/7=43% -> 후드티 중독자
+    const a = analyze([c('HOODIE', 'GREEN'), c('HOODIE', 'PURPLE'), ...many(4, (i) => c('PANTS', mix(i + 2)))])
+    expect(a.next?.title.key).toBe('HOODIE_ADDICT')
+    expect(a.next?.more).toBe(1)
   })
 })

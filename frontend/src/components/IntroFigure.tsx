@@ -50,7 +50,7 @@ interface Sleeve {
 }
 const SHORT_SLEEVE: Sleeve = { pivot: [32, 16], cuff: [14.5, 37], ext: 28, forearm: true, area: [[34, 10], [-10, 10], [-10, 46], [19, 46], [29, 39]] }
 const LONG_SLEEVE: Sleeve = { pivot: [32, 16], cuff: [14.5, 69], ext: 0, forearm: false, area: [[34, 10], [-10, 10], [-10, 80], [18, 80], [31, 46]] }
-const sleeveOf = (type: string) => (type === '반팔' ? SHORT_SLEEVE : LONG_SLEEVE)
+const sleeveOf = (type: string) => (type === '반팔' || type === '반팔셔츠' ? SHORT_SLEEVE : LONG_SLEEVE)
 
 // 소매 축 방향이 이미 바깥으로 얼마나 벌어져 있는지(도) -> 목표 각도까지 더 돌릴 양
 function sleeveTurn(sl: Sleeve, angle: number) {

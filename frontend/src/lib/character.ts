@@ -18,7 +18,7 @@ export interface CharacterData {
   /** 옷장을 채웠는가(직접 담은 옷 minClothes벌 이상). 잠겨 있으면 칭호도 꾸미기도 없다 */
   unlocked: boolean
   minClothes: number
-  analysis: { count: number; ready: boolean; need: number; title: TitleInfo | null; strength: number; colors: Share[]; types: Share[]; patterns: Share[] }
+  analysis: { count: number; ready: boolean; need: number; title: TitleInfo | null; strength: number; subTitle?: TitleInfo | null; next?: { title: TitleInfo; more: number; what: string } | null; colors: Share[]; types: Share[]; patterns: Share[] }
   config: Accessories
   catalog: { slot: keyof Accessories; label: string; items: { id: string; label: string }[] }[]
   titles: TitleInfo[]
@@ -42,6 +42,8 @@ export const PERSONA_WEAR: Record<string, Wear> = {
   BLUE_SEA: { top: { type: '맨투맨', color: '파랑' }, bottom: { type: '바지', color: '네이비' } },
   VITAMIN: { top: { type: '반팔', color: '노랑' }, bottom: { type: '반바지', color: '주황' } },
   RAINBOW: { top: { type: '후드티', color: '빨강' }, bottom: { type: '바지', color: '파랑' } },
+  COLOR_LOVER: { top: { type: '후드티', color: '초록' }, bottom: { type: '바지', color: '초록' } },
+  ALL_SEASON: { top: { type: '반팔셔츠', color: '흰색' }, bottom: { type: '바지', color: '베이지' }, outer: { type: '가디건', color: '네이비' } },
   BALANCED: { top: { type: '맨투맨', color: '회색' }, bottom: { type: '바지', color: '파랑' } },
 }
 export const BASIC_WEAR: Wear = { top: { type: '반팔', color: '흰색' }, bottom: { type: '바지', color: '파랑' } }

@@ -298,3 +298,26 @@ describe('계절과 낮 기온도 함께 본다 (패딩·코트)', () => {
     for (const seed of [undefined, ...days.slice(0, 3)]) expect(typesOn('2026-04-10', [22, 10, 8], seed)).not.toContain('코트')
   })
 })
+
+describe('며칠짜리 일정: 앞선 날 입은 옷을 피해서 고른다', () => {
+  const runAvoid = (avoidIds: string[], seed: string) =>
+    recommend({ points: pts(20), sensitivity: 'NORMAL', feedbackOffset: 0, eventKind: 'TRAVEL', clothes: wardrobe, airGrade: 2, varietySeed: seed, avoidIds } as EngineInput)
+
+  it('사흘 동안 상의가 겹치지 않는다(상의가 충분하면)', () => {
+    const used: string[] = []
+    const topsWorn: string[] = []
+    for (const d of ['2026-10-10', '2026-10-11', '2026-10-12']) {
+      const r = runAvoid(used, `u1:e1:${d}`)
+      topsWorn.push(r.items[0]!.clothingId!)
+      for (const it of r.items) if (it.clothingId) used.push(it.clothingId)
+      expect(r.insufficientWardrobe).toBe(false)
+    }
+    expect(new Set(topsWorn).size).toBe(3)
+  })
+
+  it('조합마다 이유(comboWhy)가 items + alternatives 개수만큼 있다', () => {
+    const r = run(wardrobe, 20, 'u1:2026-10-05')
+    expect(r.comboWhy).toHaveLength(1 + r.alternatives.length)
+    for (const w of r.comboWhy) expect(w.notes.length).toBeGreaterThan(0)
+  })
+})

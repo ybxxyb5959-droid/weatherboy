@@ -31,6 +31,8 @@ export interface ApiWeather {
   hourly?: ApiHourly[]
   location: string
   temp: number
+  /** 지금 기온이 기상청 실제 관측값이면 관측 시각(정시), 예보값이면 null */
+  observedAt?: string | null
   feels: number
   rainChance: number
   humidity?: number | null
@@ -64,6 +66,8 @@ export interface ApiRecommendation {
   sub: string
   reasons: string[]
   alternatives: ApiOutfitItem[][]
+  /** 조합마다의 요약과 이유([0]=기본 추천, [1..]=다른 조합). 예전 추천에는 없을 수 있다 */
+  comboWhy?: { sub: string; notes: string[] }[] | null
   insufficientWardrobe: boolean
   aiExplanation: string | null
   /** AI 설명을 만드는 중: 잠시 뒤 다시 불러오면 들어 있다 */
@@ -88,9 +92,22 @@ export interface EventDayWeather {
   slots: { morning: EventDaySlot | null; afternoon: EventDaySlot | null; evening: EventDaySlot | null } | null
 }
 
+/** 며칠짜리 일정의 하루치 코디 (날마다 다른 옷으로 고른다) */
+export interface EventDayOutfit {
+  date: string
+  items: ApiOutfitItem[]
+  headline: string
+  sub: string
+  needUmbrella: boolean
+  needMask: boolean
+  notes: string[]
+}
+
 export interface EventOutfit {
   status: 'waiting' | 'ready'
   weather?: EventDayWeather[]
+  /** 1박 2일 이상일 때만 채워진다 */
+  days?: EventDayOutfit[]
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'
   recommendation: ApiRecommendation | null
   message: string | null

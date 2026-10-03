@@ -86,6 +86,8 @@ export interface RecommendationView {
   sub: string
   reasons: string[]
   alternatives: EngineResult['alternatives']
+  /** 조합마다의 요약과 이유([0]=items, [1..]=alternatives). 예전에 저장된 추천에는 없다 */
+  comboWhy: EngineResult['comboWhy'] | null
   insufficientWardrobe: boolean
   aiExplanation: string | null
   /** AI 설명을 만드는 중이다. 잠시 뒤 다시 불러오면 들어 있다 */
@@ -113,6 +115,7 @@ export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: 
     sub: r.sub,
     reasons: r.reasons,
     alternatives: r.alternatives,
+    comboWhy: r.comboWhy ?? null,
     insufficientWardrobe: r.insufficientWardrobe,
     aiExplanation: o.aiExplanation,
     aiPending: o.id !== null && o.aiExplanation == null && aiEnabled(),
@@ -125,6 +128,9 @@ export interface Computed {
   result: EngineResult
   window: WindowForecast
   region: Region
+  /** 날짜별 코디(dailyOutfits)를 다시 계산할 때 쓰는 엔진 입력 */
+  wardrobe: WardrobeItem[]
+  airGrade: number | null
 }
 
 /** 순수 계산: 예보 + 옷장 -> 엔진 결과 (저장하지 않음) */
@@ -136,12 +142,13 @@ export async function compute(user: User, event: Event | null, start: Date, end:
   const [clothes, air] = await Promise.all([prisma.clothing.findMany({ where: { userId: user.id, active: true }, orderBy: { id: 'asc' } }), getAirQuality(region, now)])
   const grade = air ? Math.max(air.pm10Grade ?? 0, air.pm25Grade ?? 0) || null : null
   const points: OutingPoint[] = window.points
+  const wardrobe = clothes.map(toWardrobe)
   const result = recommend({
     points,
     sensitivity: user.sensitivity,
     feedbackOffset: user.feedbackOffset,
     eventKind: event?.kind ?? null,
-    clothes: clothes.map(toWardrobe),
+    clothes: wardrobe,
     airGrade: grade,
     feelsMethod: window.feelsMethod,
     // 오늘 추천은 날짜마다, 일정 추천은 일정마다 같은 조합이 계속 나오지 않게 돌려 고른다(같은 날/일정 안에서는 고정)
@@ -149,7 +156,48 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     varietySeed: `${user.id}:${event?.id ?? kstDate(start)}`,
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')
-  return { result, window, region }
+  return { result, window, region, wardrobe, airGrade: grade }
+}
+
+/** 며칠짜리 일정의 하루치 코디 */
+export interface DayOutfit {
+  date: string
+  items: EngineResult['items']
+  headline: string
+  sub: string
+  needUmbrella: boolean
+  needMask: boolean
+  notes: string[]
+}
+
+/**
+ * 1박 2일 이상 일정: 같은 옷을 며칠 내내 입지 않으니 날마다 그날 날씨로 따로 고르고, 앞선 날 입은 옷과 덜 겹치게 한다.
+ * 저장하지 않는 계산이라 같은 입력이면 항상 같은 결과다. 하루짜리 일정은 빈 배열.
+ */
+export function dailyOutfits(user: User, event: Event, c: Computed, now = new Date()): DayOutfit[] {
+  const byDay = new Map<string, OutingPoint[]>()
+  for (const p of c.window.points) {
+    const d = kstDate(p.at)
+    byDay.set(d, [...(byDay.get(d) ?? []), p])
+  }
+  if (byDay.size < 2) return []
+  const used: string[] = []
+  return [...byDay.entries()].map(([date, points]) => {
+    const r = recommend({
+      points,
+      sensitivity: user.sensitivity,
+      feedbackOffset: user.feedbackOffset,
+      eventKind: event.kind,
+      clothes: c.wardrobe,
+      airGrade: c.airGrade,
+      feelsMethod: c.window.feelsMethod,
+      now,
+      varietySeed: `${user.id}:${event.id}:${date}`,
+      avoidIds: used,
+    })
+    for (const it of r.items) if (it.clothingId) used.push(it.clothingId)
+    return { date, items: r.items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes: r.comboWhy[0]?.notes ?? [] }
+  })
 }
 
 /**

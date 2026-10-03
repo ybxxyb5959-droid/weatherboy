@@ -5,7 +5,7 @@ import { feelsLike } from '../../rules/feelsLike.js'
 import { regionOf, todayRecommendation } from '../../services/recommendationService.js'
 import { resolveTarget } from '../../services/placeTarget.js'
 import { deriveCondition } from '../../services/weather/conditions.js'
-import { ensureMidTerm, ensureShortTerm, getAirQuality } from '../../services/weather/weatherService.js'
+import { ensureMidTerm, ensureShortTerm, getAirQuality, getNowcast } from '../../services/weather/weatherService.js'
 import { AppError } from '../../utils/errors.js'
 import { kstDate, toKstParts } from '../../utils/time.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
@@ -35,11 +35,21 @@ weatherRouter.get(
     const region = target?.region ?? regionOf(user)
     if (!region) throw new AppError(409, 'LOCATION_UNRESOLVED', '위치를 확인하지 못했어요. 설정에서 위치를 다시 선택해주세요.')
     const now = new Date()
-    const short = await ensureShortTerm(region.nx, region.ny, now)
+    const [short, nowcast] = await Promise.all([ensureShortTerm(region.nx, region.ny, now), getNowcast(region.nx, region.ny, now)])
     // 현재 시각 이전(포함)의 가장 가까운 시간별 예보, 없으면 첫 예보
     const past = short.hourly.filter((h) => h.targetAt.getTime() <= now.getTime())
-    const current = past[past.length - 1] ?? short.hourly[0]
-    if (!current) throw new AppError(502, 'WEATHER_UNAVAILABLE', '지금은 날씨 정보를 가져올 수 없어요.')
+    const forecastNow = past[past.length - 1] ?? short.hourly[0]
+    if (!forecastNow) throw new AppError(502, 'WEATHER_UNAVAILABLE', '지금은 날씨 정보를 가져올 수 없어요.')
+    // 지금 기온·습도·바람·비는 실제 관측(초단기실황)이 있으면 그 값을 쓴다. 단기예보는 3시간마다 낸 예측이라 지금과 몇 도씩 다를 수 있다.
+    const current = nowcast
+      ? {
+          ...forecastNow,
+          temp: nowcast.temp ?? forecastNow.temp,
+          humidity: nowcast.humidity ?? forecastNow.humidity,
+          wind: nowcast.wind ?? forecastNow.wind,
+          precip: nowcast.precip !== 'none' ? nowcast.precip : forecastNow.precip === 'none' || (nowcast.rain1h ?? 0) > 0 ? forecastNow.precip : 'none',
+        }
+      : forecastNow
     const f = feelsLike({ tempC: current.temp, windMs: current.wind, humidity: current.humidity, month: toKstParts(now).month })
     const air = await getAirQuality(region, now)
     const dustGrade = air ? Math.max(air.pm10Grade ?? 0, air.pm25Grade ?? 0) || null : null
@@ -99,6 +109,8 @@ weatherRouter.get(
       hourly,
       location: target?.name ?? user.locationName,
       temp: Math.round(current.temp),
+      // 지금 기온이 실제 관측값이면 관측 시각(정시), 예보값이면 null
+      observedAt: nowcast ? nowcast.observedAt.toISOString() : null,
       feels: Math.round(f.feels),
       rainChance: current.pop,
       humidity: current.humidity,

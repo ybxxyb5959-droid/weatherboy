@@ -146,6 +146,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
         busy={thinking}
         busyLabel="읽는 중…"
         submitLabel="채워줘"
+        submitOnVoice
         note={aiNote}
       />
       )}

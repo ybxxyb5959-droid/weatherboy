@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import DoodleButton from './DoodleButton'
 import { useSpeech } from '../lib/speech'
 
@@ -13,7 +13,7 @@ interface Props {
   busy: boolean
   busyLabel: string
   submitLabel: string
-  /** 말하기가 끝나면 바로 실행(결과가 즉시·무료로 나오는 화면용) */
+  /** 말하기가 끝나면 '채워줘'를 따로 누르지 않아도 바로 실행 */
   submitOnVoice?: boolean
   note?: string
 }
@@ -32,12 +32,33 @@ function MicIcon() {
 /** "말로 적기" 입력: 글자로 쓰거나 마이크로 말해서 넣는다. 말하는 동안 인식된 글이 입력창에 그대로 채워진다. */
 export default function SayBox({ id, label, placeholder, value, onChange, onSubmit, busy, busyLabel, submitLabel, submitOnVoice, note }: Props) {
   const base = useRef('')
+  // 이번 말하기에서 들은 글과, 그걸로 이미 실행했는지. 한 번 말한 걸로 두 번 실행되지 않게 한다.
+  const heard = useRef('')
+  const sent = useRef(false)
 
   const speech = useSpeech((text, final) => {
     const next = base.current + text
     onChange(next)
-    if (final && submitOnVoice && text) onSubmit(next)
+    if (text) heard.current = next
+    if (final && submitOnVoice && text && !sent.current) {
+      sent.current = true
+      onSubmit(next)
+    }
   })
+
+  // 브라우저에 따라 '문장 끝(final)' 없이 듣기가 끝나기도 한다. 그때도 들은 글이 있으면 바로 실행한다.
+  const wasListening = useRef(false)
+  const submitRef = useRef(onSubmit)
+  useEffect(() => {
+    submitRef.current = onSubmit
+  })
+  useEffect(() => {
+    if (wasListening.current && !speech.listening && submitOnVoice && !sent.current && heard.current.trim().length >= 2) {
+      sent.current = true
+      submitRef.current(heard.current)
+    }
+    wasListening.current = speech.listening
+  }, [speech.listening, submitOnVoice])
 
   const toggleMic = () => {
     if (speech.listening) {
@@ -45,6 +66,8 @@ export default function SayBox({ id, label, placeholder, value, onChange, onSubm
       return
     }
     base.current = value.trim() ? `${value.trim()} ` : ''
+    heard.current = ''
+    sent.current = false
     speech.start()
   }
 
@@ -71,7 +94,7 @@ export default function SayBox({ id, label, placeholder, value, onChange, onSubm
         </DoodleButton>
       </div>
       <p className="tiny say-status" role="status" aria-live="polite">
-        {speech.error || (speech.listening ? '듣는 중이에요. 다 말했으면 마이크를 한 번 더 눌러주세요.' : '')}
+        {speech.error || (speech.listening ? (submitOnVoice ? '듣는 중이에요. 말을 마치면 바로 채워드려요.' : '듣는 중이에요. 다 말했으면 마이크를 한 번 더 눌러주세요.') : '')}
       </p>
       {note && <p className="tiny ai-note">{note}</p>}
       <hr className="scribble" />

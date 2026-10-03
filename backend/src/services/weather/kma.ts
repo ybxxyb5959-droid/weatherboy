@@ -12,12 +12,16 @@
 //   getMidTa: taMin3..taMax10 (발표일 기준 +3~+10일)
 //   getMidLandFcst: rnSt3Am,rnSt3Pm..rnSt7Am,rnSt7Pm, rnSt8..rnSt10 (강수확률), wf3Am..wf7Pm, wf8..wf10 (날씨)
 //
+// [초단기실황] VilageFcstInfoService_2.0/getUltraSrtNcst
+//   요청: base_date, base_time(HH00, 매시 정시 관측 / 약 40분 뒤부터 조회 가능), nx, ny
+//   응답: item[] { category, obsrValue } - T1H 기온℃, RN1 1시간강수량mm, REH 습도%, PTY(0없음 1비 2비/눈 3눈 5빗방울 6빗방울눈날림 7눈날림), WSD 풍속m/s
+//
 // !! 이 파일은 공식 활용가이드 기준으로 작성했으나 실제 서비스키로 호출 검증하지 않았다 (KMA_SERVICE_KEY 필요).
 import { env } from '../../config/env.js'
 import type { PrecipType } from '../../rules/outfitEngine.js'
 import { AppError } from '../../utils/errors.js'
 import { fromKst, kstDate, kstYmd, toKstParts } from '../../utils/time.js'
-import type { DailyForecast, HourlyForecast, MidTermResult, ShortTermResult, WeatherProvider } from './types.js'
+import type { DailyForecast, HourlyForecast, MidTermResult, Nowcast, ShortTermResult, WeatherProvider } from './types.js'
 
 const BASE = 'https://apis.data.go.kr/1360000'
 const SHORT_BASE_HOURS = [2, 5, 8, 11, 14, 17, 20, 23]
@@ -50,6 +54,35 @@ export function midRegIds(sido: string, district: string | null): { land: string
   if (sido === '강원') return { land: '11D10000', temp: '11D10301' }
   if (sido === '제주' && district?.startsWith('서귀포')) return { land: '11G00000', temp: '11G00401' }
   return { land, temp }
+}
+
+/** 현재 시각 기준 조회 가능한 가장 최근 초단기실황 관측시각 (정시 관측, 40분 이후 조회) */
+export function latestNowcastBase(now: Date): { baseDate: string; baseTime: string; observedAt: Date } {
+  const shifted = new Date(now.getTime() - 40 * 60_000)
+  const k = toKstParts(shifted)
+  const date = kstDate(shifted)
+  const hh = String(k.hour).padStart(2, '0')
+  return { baseDate: date.replace(/-/g, ''), baseTime: `${hh}00`, observedAt: fromKst(date, `${hh}:00`) }
+}
+
+const ncstPrecip = (v: string | undefined): PrecipType => {
+  if (v === '1' || v === '5') return 'rain'
+  if (v === '2' || v === '6') return 'sleet'
+  if (v === '3' || v === '7') return 'snow'
+  if (v === '4') return 'shower'
+  return 'none'
+}
+
+export function parseNowcast(items: { category: string; obsrValue: string }[], observedAt: Date): Nowcast | null {
+  const m = new Map(items.map((i) => [i.category, i.obsrValue]))
+  const num = (k: string) => {
+    const v = Number(m.get(k))
+    // 관측 결측은 -998.9 같은 값으로 온다
+    return m.has(k) && Number.isFinite(v) && v > -900 ? v : null
+  }
+  const temp = num('T1H')
+  if (temp === null) return null
+  return { observedAt, temp, humidity: num('REH'), wind: num('WSD'), precip: ncstPrecip(m.get('PTY')), rain1h: num('RN1') }
 }
 
 /** 현재 시각 기준 조회 가능한 가장 최근 단기예보 발표시각 (발표 +10분 이후) */
@@ -205,6 +238,16 @@ export class KmaWeatherProvider implements WeatherProvider {
     )
     if (items.length === 0) throw new AppError(502, 'WEATHER_UPSTREAM_ERROR', '기상청 단기예보 데이터가 비어 있어요.')
     return { issuedAt, ...parseShortItems(items) }
+  }
+
+  async fetchNowcast(nx: number, ny: number, now: Date): Promise<Nowcast | null> {
+    const { baseDate, baseTime, observedAt } = latestNowcastBase(now)
+    const items = await callKma<{ category: string; obsrValue: string }>(
+      'VilageFcstInfoService_2.0/getUltraSrtNcst',
+      { numOfRows: '20', base_date: baseDate, base_time: baseTime, nx: String(nx), ny: String(ny) },
+      this.fetchImpl,
+    )
+    return parseNowcast(items, observedAt)
   }
 
   async fetchMidTerm(regionSido: string, regionDistrict: string | null, now: Date): Promise<MidTermResult> {

@@ -43,6 +43,8 @@ export interface EngineInput {
   /** 기준 시각 (최근에 담은 옷 판단용, 기본은 지금) */
   now?: Date
   feelsMethod?: string // 체감온도 산출 방식(Reason Code용)
+  /** 며칠짜리 일정에서 앞선 날에 이미 고른 옷. 알맞은 조합 중 이 옷과 덜 겹치는 조합을 먼저 고른다(상의 > 하의 > 겉옷 순으로 비중) */
+  avoidIds?: string[]
 }
 
 export interface OutfitItem {
@@ -65,6 +67,8 @@ export interface EngineResult {
   reasonCodes: string[]
   reasons: string[]
   alternatives: OutfitItem[][]
+  /** 조합마다의 한 줄 요약(sub)과 그 조합을 고른 이유. [0]은 items, [1..]은 alternatives 순서와 같다 */
+  comboWhy: ComboWhy[]
   insufficientWardrobe: boolean
   judgedTemp: number
   requiredWarmth: number
@@ -115,6 +119,11 @@ function itemOf(c: WardrobeItem): OutfitItem {
   const pattern = c.owned && c.pattern ? patternMap.toUi(c.pattern) : '무지'
   const label = c.owned && color !== '기타' ? `${color}${pattern !== '무지' ? ` ${pattern}` : ''} ${type}` : type
   return { clothingId: c.owned ? c.id : null, type, color, pattern, label, owned: c.owned }
+}
+
+export interface ComboWhy {
+  sub: string
+  notes: string[]
 }
 
 interface Candidate {
@@ -229,6 +238,13 @@ export function recommend(input: EngineInput): EngineResult {
     // 최근에 담은 옷이 든 조합이 있으면 그 안에서 고른다
     const fresh = group.filter((c) => isNew(c.top) || isNew(c.bottom) || isNew(c.outer))
     if (fresh.length > 0) group = fresh
+    // 앞선 날에 입은 옷과 가장 덜 겹치는 조합만 남긴다
+    const avoid = new Set(input.avoidIds ?? [])
+    if (avoid.size > 0 && group.length > 0) {
+      const overlap = (c: Candidate) => (avoid.has(c.top.id) ? 4 : 0) + (avoid.has(c.bottom.id) ? 2 : 0) + (c.outer && avoid.has(c.outer.id) ? 1 : 0)
+      const least = Math.min(...group.map(overlap))
+      group = group.filter((c) => overlap(c) === least)
+    }
     if (group.length > 0) best = group[hashOf(input.varietySeed) % group.length]!
   }
   const toCombo = (c: Candidate): OutfitItem[] => [itemOf(c.top), itemOf(c.bottom), ...(c.outer ? [itemOf(c.outer)] : [])]
@@ -236,6 +252,7 @@ export function recommend(input: EngineInput): EngineResult {
   // 대안: 최선과 다른 조합 (insufficient가 아니면 요구 보온을 만족하는 조합 중에서)
   const altSource = (insufficient ? valid : cands.filter((c) => c.total >= required)).slice().sort(cmp)
   const alternatives: OutfitItem[][] = []
+  const altCands: Candidate[] = []
   const seen = new Set<string>([keyOf(best)])
   if (!input.varietySeed) {
     for (const c of altSource) {
@@ -243,6 +260,7 @@ export function recommend(input: EngineInput): EngineResult {
       if (seen.has(k)) continue
       seen.add(k)
       alternatives.push(toCombo(c))
+      altCands.push(c)
       if (alternatives.length >= ruleConfig.alternativesCount) break
     }
   } else {
@@ -270,6 +288,7 @@ export function recommend(input: EngineInput): EngineResult {
       used.add(pick.bottom.id)
       if (pick.outer) used.add(pick.outer.id)
       alternatives.push(toCombo(pick))
+      altCands.push(pick)
     }
   }
 
@@ -302,6 +321,8 @@ export function recommend(input: EngineInput): EngineResult {
   if (!hasOwn) reasonCodes.push('EMPTY_WARDROBE_GENERIC')
 
   const [headline, sub] = headlineFor(judged, needOuter)
+  const ctx: WhyContext = { judged, required, windy, needUmbrella, diurnal, insufficient, isNew }
+  const comboWhy = [best, ...altCands].map((c) => whyOf(c, ctx))
   const decisionKey = [best.top.type, best.bottom.type, best.outer?.type ?? 'NONE', `UMB${needUmbrella ? 1 : 0}`, `MASK${needMask ? 1 : 0}`].join('_')
 
   return {
@@ -315,11 +336,68 @@ export function recommend(input: EngineInput): EngineResult {
     reasonCodes,
     reasons,
     alternatives,
+    comboWhy,
     insufficientWardrobe: insufficient,
     judgedTemp: judged,
     requiredWarmth: required,
     decisionKey,
   }
+}
+
+interface WhyContext {
+  judged: number
+  required: number
+  windy: boolean
+  needUmbrella: boolean
+  diurnal: number
+  insufficient: boolean
+  isNew: (i: WardrobeItem | null) => boolean
+}
+
+/** 받침이 있으면 a, 없으면 b (예: 을/를). 한글이 아니면 b */
+function josa(word: string, a: string, b: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  if (code < 0 || code > 11171) return b
+  return code % 28 === 0 ? b : a
+}
+const nameOf = (c: WardrobeItem) => itemOf(c).label
+
+/** 이 조합을 고른 이유: 보온이 얼마나 맞는지, 겉옷이 무슨 역할인지, 옷 두께, 새로 담은 옷. 날씨 이유(reasons)와 겹치지 않게 옷 얘기만 한다. */
+function whyOf(c: Candidate, x: WhyContext): ComboWhy {
+  const notes: string[] = []
+  const gap = c.total - x.required
+  if (gap < 0) notes.push('이 조합은 오늘 날씨에 살짝 얇아요. 한 겹 더 챙기면 좋아요')
+  else if (gap <= 1) notes.push('오늘 날씨에 딱 맞는 두께의 조합이에요')
+  else if (gap <= ruleConfig.varietyWarmthSlack) notes.push('조금 넉넉하게 따뜻한 조합이라 추위를 타는 날에도 괜찮아요')
+  else notes.push('꽤 따뜻한 조합이에요. 더우면 한 겹 벗을 수 있게 입어요')
+
+  const o = c.outer
+  if (o) {
+    const n = nameOf(o)
+    if (x.windy && o.windproof) notes.push(`${n}${josa(n, '이', '가')} 센 바람을 막아줘요`)
+    else if (x.windy) notes.push(`${n}${josa(n, '은', '는')} 바람이 숭숭 들어올 수 있어요. 바람막이가 있다면 그쪽이 더 좋아요`)
+    if (x.needUmbrella && o.waterproof) notes.push(`${n}${josa(n, '은', '는')} 비에도 강해서 비 오는 날 좋아요`)
+    if (x.diurnal >= ruleConfig.largeDiurnalRange) notes.push(`낮에 더워지면 ${n}${josa(n, '을', '를')} 벗어 들면 돼요`)
+    else if (!x.windy) notes.push(`${n}${josa(n, '으로', '로')} 체온을 맞추기 좋아요`)
+  } else if (x.judged < 17) {
+    notes.push('겉옷 없이 상의만으로 보온을 채운 조합이에요')
+  } else {
+    notes.push('겉옷 없이 가볍게 나가도 되는 조합이에요')
+  }
+
+  const top = nameOf(c.top)
+  if (c.top.thickness === 'THICK' && x.judged < 17) notes.push(`${top}${josa(top, '이', '가')} 두툼해서 든든해요`)
+  if (c.top.thickness === 'THIN' && x.judged >= 23) notes.push(`${top}${josa(top, '이', '가')} 얇아서 시원해요`)
+  if ((c.bottom.type === 'SHORTS' || c.bottom.type === 'SKIRT') && x.judged < 20) {
+    const b = nameOf(c.bottom)
+    notes.push(`${b}${josa(b, '은', '는')} 다리가 쌀쌀할 수 있어요`)
+  }
+  const fresh = [c.top, c.bottom, c.outer].filter((i): i is WardrobeItem => !!i && i.owned && x.isNew(i))
+  if (fresh.length > 0) {
+    const f = nameOf(fresh[0]!)
+    notes.push(`최근에 옷장에 담은 ${f}${josa(f, '을', '를')} 입어볼 수 있게 골랐어요`)
+  }
+  return { sub: headlineFor(x.judged, !!o)[1], notes }
 }
 
 /** '지금'의 체감온도와 헷갈리지 않도록, 추천 판단이 어느 시간대 평균인지 문구로 알려준다. */

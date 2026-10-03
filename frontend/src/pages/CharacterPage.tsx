@@ -223,6 +223,7 @@ export default function CharacterPage() {
           <>
             <h2 className="char-title">{title.name}</h2>
             <p className="char-tag">{title.tagline}</p>
+            {a.subTitle && <p className="tiny char-sub">부칭호 · {a.subTitle.name}</p>}
           </>
         ) : (
           <>

@@ -33,11 +33,24 @@ export interface MidTermResult {
   daily: DailyForecast[]
 }
 
+/** 지금 관측값(초단기실황). 매시 정시 관측이라 단기예보(3시간마다 발표한 예측)보다 "지금"에 가깝다 */
+export interface Nowcast {
+  observedAt: Date
+  temp: number | null
+  humidity: number | null
+  wind: number | null
+  precip: PrecipType
+  /** 최근 1시간 강수량(mm) */
+  rain1h: number | null
+}
+
 /** 외부 기상 API 를 내부 DTO 로 변환하는 경계. Controller 는 외부 응답을 직접 다루지 않는다. */
 export interface WeatherProvider {
   readonly configured: boolean
   fetchShortTerm(nx: number, ny: number, now: Date): Promise<ShortTermResult>
   fetchMidTerm(regionSido: string, regionDistrict: string | null, now: Date): Promise<MidTermResult>
+  /** 초단기실황. 없으면(테스트용 가짜 등) 단기예보 값만 쓴다 */
+  fetchNowcast?(nx: number, ny: number, now: Date): Promise<Nowcast | null>
 }
 
 export interface AirQualityReading {

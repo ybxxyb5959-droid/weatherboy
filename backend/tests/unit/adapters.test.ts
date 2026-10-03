@@ -159,3 +159,23 @@ describe('AirKorea 1시간 등급 우선', () => {
     expect(r.pm10Grade).toBe(2)
   })
 })
+
+describe('초단기실황(지금 관측값)', () => {
+  it('정시 관측을 40분 뒤부터 쓴다', async () => {
+    const { latestNowcastBase } = await import('../../src/services/weather/kma.js')
+    // 14:39 KST -> 13시 관측, 14:40 KST -> 14시 관측
+    expect(latestNowcastBase(new Date('2026-10-03T05:39:00Z')).baseTime).toBe('1300')
+    expect(latestNowcastBase(new Date('2026-10-03T05:40:00Z')).baseTime).toBe('1400')
+    // 00:10 KST -> 전날 23시
+    const b = latestNowcastBase(new Date('2026-10-02T15:10:00Z'))
+    expect(b).toMatchObject({ baseDate: '20261002', baseTime: '2300' })
+  })
+
+  it('관측값을 읽고, 결측(-998.9)과 강수형태 코드를 처리한다', async () => {
+    const { parseNowcast } = await import('../../src/services/weather/kma.js')
+    const at = new Date('2026-10-03T05:00:00Z')
+    const r = parseNowcast([{ category: 'T1H', obsrValue: '18.4' }, { category: 'REH', obsrValue: '-998.9' }, { category: 'PTY', obsrValue: '5' }, { category: 'WSD', obsrValue: '3.1' }, { category: 'RN1', obsrValue: '0.2' }], at)
+    expect(r).toMatchObject({ temp: 18.4, humidity: null, precip: 'rain', wind: 3.1, rain1h: 0.2 })
+    expect(parseNowcast([{ category: 'T1H', obsrValue: '-998.9' }], at)).toBeNull()
+  })
+})

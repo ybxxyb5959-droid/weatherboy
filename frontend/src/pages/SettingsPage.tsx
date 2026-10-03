@@ -13,7 +13,7 @@ import { getReviewStatus } from '../lib/reviews'
 import { api, errorMessage } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
-import { faqs, OPERATOR, privacySections, termsSections } from './legalText'
+import { faqGroups, OPERATOR, privacySections, termsSections } from './legalText'
 import type { LegalSection } from './legalText'
 import { defaultQuiet, defaultRoutine } from '../store'
 import type { Quiet, Routine, Sensitivity, Settings } from '../store'
@@ -333,13 +333,18 @@ export default function SettingsPage() {
 
         {section === 'faq' && (
           <div className="faq">
-            {faqs.map((f, i) => (
-              <details key={f.q} className={`box w${i % 4}`}>
-                <summary>
-                  <HandText>{f.q}</HandText>
-                </summary>
-                <p>{f.a}</p>
-              </details>
+            {faqGroups.map((g, gi) => (
+              <section key={g.title} className="faq-group">
+                <h2>{g.title}</h2>
+                {g.items.map((f, i) => (
+                  <details key={f.q} className={`box w${(gi + i) % 4}`}>
+                    <summary>
+                      <HandText>{f.q}</HandText>
+                    </summary>
+                    <p>{f.a}</p>
+                  </details>
+                ))}
+              </section>
             ))}
           </div>
         )}
@@ -395,7 +400,6 @@ export default function SettingsPage() {
         <Row label="자주 묻는 질문" onClick={go('faq')} />
         <Row label="후기 남기기" value={review.data?.reviewed ? '남겨주셨어요 ✓' : undefined} onClick={() => nav('/review')} />
         <Row label="의견·불편 보내기" onClick={() => nav('/support')} />
-        <Row label="개발자 응원하기" onClick={() => nav('/cheer')} />
       </Group>
 
       <Group seed={0}>

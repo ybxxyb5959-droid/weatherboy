@@ -162,7 +162,7 @@ describe('enum 매핑', () => {
     for (const k of feedbackMap.uiValues) expect(feedbackMap.toUi(feedbackMap.toDb(k))).toBe(k)
   })
   it('개수', () => {
-    expect(clothingTypeMap.uiValues).toHaveLength(14)
+    expect(clothingTypeMap.uiValues).toHaveLength(15)
     expect(colorMap.uiValues).toHaveLength(16)
   })
 })

@@ -13,6 +13,7 @@ const LONG = 'M32 16 L8 66 L21 72 L31 46 L31 86 L69 86 L69 46 L79 72 L92 66 L68 
 
 const SHAPES: Record<string, string> = {
   반팔: SHORT,
+  반팔셔츠: SHORT,
   셔츠: LONG,
   바지: 'M30 12 L70 12 L75 92 L56 92 L50 38 L44 92 L25 92Z',
   반바지: 'M30 12 L70 12 L77 58 L56 58 L50 34 L44 58 L23 58Z',
@@ -74,7 +75,7 @@ export function ClothingArt({ type, color, pattern = '무지' }: { type: string;
       {type === '후드티' && <path d="M34 17 Q50 -4 66 17 Q50 32 34 17Z" fill={fill} stroke="#222" />}
       <path d={shape} fill={fill} stroke="#222" />
       {tiled && <path d={shape} fill={`url(#${patId(pattern, dark)})`} stroke="none" />}
-      {type === '셔츠' && (
+      {(type === '셔츠' || type === '반팔셔츠') && (
         // 깃(칼라): 목 양쪽에 접힌 삼각형. 몸판 위에 같은 색으로 덮어 그린다
         <>
           <path d="M38 15 L50 31 L43 40 L32 23Z" fill={fill} stroke="#222" />
@@ -93,6 +94,7 @@ export function ClothingArt({ type, color, pattern = '무지' }: { type: string;
       )}
       <g fill="none" stroke={line} strokeWidth="1.8">
         {type === '셔츠' && <path d="M50 31 V86 M50 46 h.1 M50 58 h.1 M50 70 h.1 M50 82 h.1 M10 63 L22 69 M90 63 L78 69" strokeWidth="2.4" />}
+        {type === '반팔셔츠' && <path d="M50 31 V86 M50 46 h.1 M50 58 h.1 M50 70 h.1 M50 82 h.1 M14 36 L22 41 M86 36 L78 41" strokeWidth="2.4" />}
         {type === '가디건' && <path d="M40 17 L50 44 L60 17 M50 44 V86 M45 56 h.1 M45 68 h.1 M45 80 h.1 M31 80 L69 80" strokeWidth="2.4" />}
         {type === '맨투맨' && <path d="M38 18 Q50 30 62 18 M31 80 L69 80 M10 63 L22 69 M90 63 L78 69" />}
         {type === '니트' && (

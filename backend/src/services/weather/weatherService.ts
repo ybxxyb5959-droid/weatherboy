@@ -5,7 +5,7 @@ import { feelsLike } from '../../rules/feelsLike.js'
 import type { OutingPoint, PrecipType } from '../../rules/outfitEngine.js'
 import { AirKoreaProvider } from '../airQuality/airkorea.js'
 import { KmaWeatherProvider } from './kma.js'
-import type { AirQualityProvider, AirQualityReading, DailyForecast, HourlyForecast, WeatherProvider } from './types.js'
+import type { AirQualityProvider, AirQualityReading, DailyForecast, HourlyForecast, Nowcast, WeatherProvider } from './types.js'
 import { fromKst, kstDate, toKstParts } from '../../utils/time.js'
 import { logger } from '../../utils/logger.js'
 import { AppError } from '../../utils/errors.js'
@@ -106,6 +106,38 @@ export async function ensureShortTerm(nx: number, ny: number, now = new Date()):
     if (cached) return { ...cached.data, stale: true }
     throw e
   }
+}
+
+// ───── 초단기실황(지금 관측값) ─────
+// 관측은 매시 한 번이라 10분만 기억해도 충분하다. 격자마다 프로세스 메모리에 둔다(지금 화면에만 쓰고 저장하지 않는다).
+const NOWCAST_TTL_MS = 10 * 60_000
+const nowcastCache = new Map<string, { at: number; value: Nowcast | null }>()
+const nowcastInFlight = new Map<string, Promise<Nowcast | null>>()
+
+/** 지금 관측값. 실패하거나 지원하지 않으면 null (화면은 단기예보 값으로 보여준다) */
+export async function getNowcast(nx: number, ny: number, now = new Date()): Promise<Nowcast | null> {
+  const fetchNowcast = providers.weather.fetchNowcast?.bind(providers.weather)
+  if (!fetchNowcast || !providers.weather.configured) return null
+  const key = `${nx},${ny}`
+  const hit = nowcastCache.get(key)
+  if (hit && now.getTime() - hit.at < NOWCAST_TTL_MS) return hit.value
+  const pending = nowcastInFlight.get(key)
+  if (pending) return pending
+  const p = (async () => {
+    try {
+      const value = await fetchNowcast(nx, ny, now)
+      nowcastCache.set(key, { at: now.getTime(), value })
+      return value
+    } catch (e) {
+      logger.warn({ err: e instanceof Error ? e.message : String(e), grid: key }, 'nowcast failed')
+      // 실패해도 직전 값이 1시간 안이면 그걸 쓴다
+      return hit && now.getTime() - hit.at < 3600_000 ? hit.value : null
+    } finally {
+      nowcastInFlight.delete(key)
+    }
+  })()
+  nowcastInFlight.set(key, p)
+  return p
 }
 
 // ───── 중기예보(일별) ─────

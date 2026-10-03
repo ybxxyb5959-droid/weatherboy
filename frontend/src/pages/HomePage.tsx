@@ -311,7 +311,10 @@ export default function HomePage() {
       <>
       <section className="section weather">
         <div>
-          <div className="tiny">{w.location}</div>
+          <div className="tiny">
+            {w.location}
+            {w.observedAt && <span className="obs-at"> · {new Date(w.observedAt).getHours()}시 관측</span>}
+          </div>
           <div className="big">{w.temp}°C</div>
           <div>지금 체감 {w.feels}°C</div>
           <ul>
@@ -420,19 +423,27 @@ export default function HomePage() {
             다른 조합 보기
           </DoodleButton>
         </div>
-        {showWhy && (
+        {showWhy && (() => {
+          // 지금 보고 있는 조합(기본/다른 조합)의 이유를 보여준다. AI 설명은 기본 추천을 두고 쓴 글이라 기본 추천일 때만.
+          const why = rec.comboWhy?.[altIdx + 1]
+          return (
           <div className="box w2 why">
+            {altIdx >= 0 && <p className="tiny why-tag">다른 조합 {altIdx + 1}의 추천 이유</p>}
             <ul>
               <li>
-                <b>{rec.headline}</b> {rec.sub}
+                <b>{rec.headline}</b> {why?.sub ?? rec.sub}
               </li>
+              {why?.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
               {rec.reasons.map((r) => (
                 <li key={r}>{r}</li>
               ))}
-              {rec.aiExplanation ? <li>{rec.aiExplanation}</li> : rec.aiPending ? <li className="tiny">AI 설명을 쓰는 중이에요…</li> : null}
+              {altIdx < 0 && (rec.aiExplanation ? <li>{rec.aiExplanation}</li> : rec.aiPending ? <li className="tiny">AI 설명을 쓰는 중이에요…</li> : null)}
             </ul>
           </div>
-        )}
+          )
+        })()}
       </section>
 
     ),

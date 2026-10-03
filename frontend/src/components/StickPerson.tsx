@@ -1,7 +1,10 @@
 import { ClothingArt } from './ClothingDoodle'
 import { BackDecor, FrontDecor, type Accessories } from './CharacterDecor'
 
-export type Mood = 'wave' | 'cold' | 'rain' | 'trip' | 'empty' | 'wait' | 'stand' | 'travel' | 'camp' | 'hike' | 'outdoor'
+export type Mood =
+  | 'wave' | 'cold' | 'rain' | 'trip' | 'empty' | 'wait' | 'stand' | 'travel' | 'camp' | 'hike' | 'outdoor'
+  // 기타 일정의 제목에 맞춘 장면
+  | 'birthday' | 'date' | 'meal' | 'drink' | 'gift' | 'show' | 'sport' | 'work'
 
 export interface WornItem {
   type: string
@@ -47,7 +50,7 @@ export function Hands({ top, outer }: { top?: string; outer?: string }) {
     )
   }
   if (!top) return null
-  if (top === '반팔') {
+  if (top === '반팔' || top === '반팔셔츠') {
     const w = at(0.65, 27.5, 39.6)
     const [lsx, lsy] = w(14.5, 38) // 반팔 소매 끝
     const [lex, ley] = w(9, 66) // 손목
@@ -290,6 +293,122 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M60 58 L40 90" />
             <path d="M60 58 L80 90" />
             <path d="M96 40 l1 0 M104 40 l1 0 M112 40 l1 0" strokeWidth="4" />
+          </g>
+        )}
+
+        {/* ───── 기타 일정: 제목에 맞춘 장면 (lib/eventMood.ts 의 키워드로 고른다) ───── */}
+        {mood === 'birthday' && (
+          <g>
+            {/* 생일 고깔모자 + 방울 */}
+            <path d="M47 17 L61 -10 L75 16 Q61 21 47 17Z" fill="#f4c6c6" />
+            <path d="M51 9 L71 11 M55 0 L67 2" strokeWidth="1.6" />
+            <circle cx="61" cy="-12" r="3.4" fill="#f2cf4a" strokeWidth="1.8" />
+            {/* 한 팔은 만세, 한 팔은 케이크 쪽으로 */}
+            <path d="M60 58 L38 38 M38 38 l-4 -6 M38 38 l-7 -1" />
+            <path d="M60 58 L84 90" />
+            {/* 케이크: 접시, 크림, 초 세 개 */}
+            <path d="M82 104 L118 104 L118 128 L82 128Z" fill="#fcfcfa" />
+            <path d="M82 104 Q88 112 94 104 Q100 112 106 104 Q112 112 118 104" fill="#f4c6c6" strokeWidth="2" />
+            <path d="M77 129 L123 129" strokeWidth="3" />
+            <path d="M91 103 V93 M100 103 V93 M109 103 V93" stroke="#4a8bd4" strokeWidth="2.6" />
+            <path d="M91 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M100 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M109 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z" fill="#e8a24a" strokeWidth="1.2" />
+            <path d="M86 80 l-3 -3 M114 80 l3 -3 M100 76 v-4" stroke="#e8a24a" strokeWidth="1.6" />
+          </g>
+        )}
+
+        {mood === 'date' && (
+          <g>
+            {/* 발그레한 볼, 꽃 한 송이, 떠오르는 하트 */}
+            <g stroke="none" fill="#f4c6c6">
+              <circle cx="49.5" cy="36" r="3" />
+              <circle cx="70.5" cy="35.5" r="3" />
+            </g>
+            <path d="M60 58 L40 84" />
+            <path d="M60 58 L82 72" />
+            <path d="M82 72 L92 50" strokeWidth="2.2" stroke="#4f8a4f" />
+            <path d="M87 62 Q80 58 82 52 Q89 55 87 62Z" fill="#9fd1a0" strokeWidth="1.6" />
+            <path d="M92 50 m-7 0 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0" fill="#f08a8a" strokeWidth="2" />
+            <circle cx="92" cy="50" r="2.4" fill="#f2cf4a" strokeWidth="1.4" />
+            <path d="M104 24 C100 17 91 20 95 28 L104 37 L113 28 C117 20 108 17 104 24Z" fill="#f08a8a" strokeWidth="2" />
+          </g>
+        )}
+
+        {mood === 'meal' && (
+          <g>
+            {/* 식탁 위 밥그릇과 김, 젓가락을 든 손 */}
+            <path d="M60 58 L44 86" />
+            <path d="M60 58 L84 80" />
+            <path d="M83 79 L100 93 M86 77 L103 90" strokeWidth="1.8" />
+            <path d="M84 96 Q100 116 116 96Z" fill="#fcfcfa" />
+            <path d="M86 96 Q100 86 114 96" fill="#fcfcfa" strokeWidth="2" />
+            <path d="M95 82 q-3 -4 0 -8 q3 -4 0 -8 M106 82 q-3 -4 0 -8 q3 -4 0 -8" strokeWidth="1.6" opacity="0.6" />
+            <path d="M74 108 L128 108" strokeWidth="3.2" />
+            <path d="M80 108 L80 138 M122 108 L122 138" strokeWidth="2.6" />
+          </g>
+        )}
+
+        {mood === 'drink' && (
+          <g>
+            {/* 건배: 높이 든 맥주잔 */}
+            <path d="M60 58 L40 84" />
+            <path d="M60 58 L82 46" />
+            <path d="M80 30 L96 30 L95 50 L81 50Z" fill="#f2cf4a" />
+            <path d="M78 31 Q78 23 84 25 Q87 20 92 24 Q98 22 98 30 Q90 33 78 31Z" fill="#fcfcfa" strokeWidth="2" />
+            <path d="M95 34 Q103 34 102 41 Q102 47 95 46" strokeWidth="2.2" />
+            <path d="M85 36 V45 M90 36 V45" strokeWidth="1.4" />
+            <path d="M104 18 l5 -4 M107 26 l6 0 M98 14 l1 -6" strokeWidth="1.8" />
+          </g>
+        )}
+
+        {mood === 'gift' && (
+          <g>
+            {/* 두 손으로 든 리본 달린 선물 상자 */}
+            <path d="M60 58 L72 88" />
+            <path d="M60 58 L96 86" />
+            <path d="M68 84 L100 84 L100 110 L68 110Z" fill="#f4c6c6" />
+            <path d="M84 84 V110 M68 95 H100" stroke="#e05a5a" strokeWidth="2.4" />
+            <path d="M84 84 C76 72 70 80 84 84 C98 80 92 72 84 84Z" fill="#f08a8a" strokeWidth="1.8" />
+            <path d="M104 72 l4 -3 M106 80 l5 0" strokeWidth="1.6" />
+          </g>
+        )}
+
+        {mood === 'show' && (
+          <g>
+            {/* 응원봉을 흔들고, 음표가 날아다닌다 */}
+            <path d="M60 58 L38 82" />
+            <path d="M60 58 L84 38" />
+            <path d="M84 38 L90 22" strokeWidth="3" />
+            <circle cx="91.5" cy="17" r="5.5" fill="#f2cf4a" strokeWidth="2" />
+            <path d="M98 10 l4 -3 M100 18 l6 0 M86 8 l-1 -5" stroke="#e8a24a" strokeWidth="1.6" />
+            <path d="M106 58 V42 L118 39 V54" strokeWidth="2" />
+            <ellipse cx="103.5" cy="58" rx="3.6" ry="2.8" fill={ink} stroke="none" />
+            <ellipse cx="115.5" cy="54.5" rx="3.6" ry="2.8" fill={ink} stroke="none" />
+            <path d="M24 46 V34 L32 38" strokeWidth="2" />
+            <ellipse cx="21.8" cy="46.5" rx="3" ry="2.3" fill={ink} stroke="none" />
+          </g>
+        )}
+
+        {mood === 'sport' && (
+          <g>
+            {/* 머리띠, 힘차게 흔드는 팔, 굴러가는 공 */}
+            <path d="M44 22 Q60 16 77 22" stroke="#e05a5a" strokeWidth="4" />
+            <path d="M44 22 L36 28 M44 22 L37 19" stroke="#e05a5a" strokeWidth="2.2" />
+            <path d="M60 58 L40 70 L34 56" />
+            <path d="M60 58 L80 74 L92 66" />
+            <circle cx="100" cy="128" r="9" fill="#fcfcfa" />
+            <path d="M96 124 L100 121 L104 124 L103 129 L97 129Z" fill={ink} strokeWidth="1" />
+            <path d="M84 122 h-8 M86 130 h-10 M86 138 h-7" strokeWidth="1.8" />
+          </g>
+        )}
+
+        {mood === 'work' && (
+          <g>
+            {/* 넥타이와 서류 가방 */}
+            <path d="M58 49 L62 49 L63.5 64 L60 69 L56.5 64Z" fill="#4a8bd4" strokeWidth="1.8" />
+            <path d="M60 58 L40 84" />
+            <path d="M60 58 L84 90" />
+            <path d="M74 94 L102 94 L102 116 L74 116Z" fill="#c9965a" />
+            <path d="M82 94 V89 H94 V94 M74 103 H102" strokeWidth="2" />
           </g>
         )}
 

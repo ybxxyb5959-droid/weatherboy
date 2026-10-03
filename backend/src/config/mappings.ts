@@ -18,10 +18,11 @@ export const sensitivityMap = bimap<'추위 많이 탐' | '보통' | '더위 많
 ])
 
 export const clothingTypeMap = bimap<
-  '반팔' | '긴팔' | '셔츠' | '맨투맨' | '니트' | '후드티' | '바지' | '반바지' | '치마' | '바람막이' | '자켓' | '가디건' | '코트' | '패딩',
+  '반팔' | '반팔셔츠' | '긴팔' | '셔츠' | '맨투맨' | '니트' | '후드티' | '바지' | '반바지' | '치마' | '바람막이' | '자켓' | '가디건' | '코트' | '패딩',
   ClothingType
 >([
   ['반팔', 'SHORT_SLEEVE'],
+  ['반팔셔츠', 'SHORT_SLEEVE_SHIRT'],
   ['긴팔', 'LONG_SLEEVE'],
   ['셔츠', 'SHIRT'],
   ['맨투맨', 'SWEATSHIRT'],
@@ -97,6 +98,7 @@ export const categoryOfType: Record<ClothingType, ClothingCategory> = {
   SHORT_SLEEVE: 'TOP',
   LONG_SLEEVE: 'TOP',
   SHIRT: 'TOP',
+  SHORT_SLEEVE_SHIRT: 'TOP',
   SWEATSHIRT: 'TOP',
   KNIT: 'TOP',
   HOODIE: 'TOP',

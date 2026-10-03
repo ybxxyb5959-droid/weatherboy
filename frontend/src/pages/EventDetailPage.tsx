@@ -10,7 +10,7 @@ import type { PlanEvent } from '../mocks/events'
 import { api, ApiError } from '../api'
 import { useAsync } from '../hooks'
 import { genericColor } from '../lib/genericColor'
-import type { EventDayWeather, EventOutfit } from '../types'
+import type { EventDayOutfit, EventDayWeather, EventOutfit } from '../types'
 
 const steps = [
   { d: 'D-10', t: '예보 시작' },
@@ -72,9 +72,48 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
   )
 }
 
-function Umbrella() {
+/** 며칠짜리 일정: 날마다 그날 날씨에 맞춰 다른 옷으로 고른 코디 */
+function DayOutfits({ days }: { days: EventDayOutfit[] }) {
   return (
-    <svg className="doodle" width="86" height="86" viewBox="0 0 100 100" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" aria-label="우산" role="img">
+    <section className="section">
+      <h2>날짜별 코디</h2>
+      <p className="tiny">같은 옷을 며칠 내내 입지 않도록 날마다 다르게 골랐어요. 옷장에 옷이 적으면 겹칠 수 있어요.</p>
+      <div className="day-outfits">
+        {days.map((d, i) => (
+          <div key={d.date} className={`box w${(i % 3) + 1} day-outfit`}>
+            <div className="ev-day-head">
+              <b>{i + 1}일차 · {dayLabel(d.date)}</b>
+              <span className="tiny">{d.headline}</span>
+            </div>
+            <div className="day-pieces">
+              {d.items.map((it) => (
+                <div key={`${it.type}-${it.clothingId ?? it.label}`} className="piece">
+                  <ClothingDoodle type={it.type} color={it.owned ? it.color : genericColor(it.type, d.date)} pattern={it.pattern} size={58} />
+                  <div className="tiny">{it.label}</div>
+                </div>
+              ))}
+              {d.needUmbrella && (
+                <div className="piece">
+                  <Umbrella size={58} />
+                  <div className="tiny">우산</div>
+                </div>
+              )}
+            </div>
+            <p className="tiny">
+              {d.sub}
+              {d.needMask ? ' · 마스크도 챙겨요' : ''}
+              {d.notes[0] ? ` · ${d.notes[0]}` : ''}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function Umbrella({ size = 86 }: { size?: number }) {
+  return (
+    <svg className="doodle" width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" aria-label="우산" role="img">
       <path d="M10 52 Q50 -10 90 52 Q80 45 70 52 Q60 45 50 52 Q40 45 30 52 Q20 45 10 52Z" fill="#cfe6e2" />
       <path d="M50 52 V84 Q50 92 42 90" />
     </svg>
@@ -113,6 +152,7 @@ function EventDetail({ id }: { id: string }) {
   const waiting = !rec
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
+  const days = outfit.data?.days ?? []
 
   return (
     <main>
@@ -155,7 +195,7 @@ function EventDetail({ id }: { id: string }) {
               </>
             )}
           </div>
-          <StickPerson mood={eventMood(e.kind, waiting)} size={96} />
+          <StickPerson mood={eventMood(e.kind, waiting, e.title, e.place)} size={96} />
         </div>
       </div>
 
@@ -181,6 +221,9 @@ function EventDetail({ id }: { id: string }) {
 
       {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
+      {!waiting && days.length >= 2 && <DayOutfits days={days} />}
+
+      {(waiting || days.length < 2) && (
       <section className="section">
         <h2>{waiting ? '예보가 열리면 이렇게 보여드려요' : '이렇게 입어요'}</h2>
         <div className="box w3 outfit">
@@ -219,6 +262,7 @@ function EventDetail({ id }: { id: string }) {
           <StickPerson mood="trip" size={70} />
         </div>
       </section>
+      )}
     </main>
   )
 }

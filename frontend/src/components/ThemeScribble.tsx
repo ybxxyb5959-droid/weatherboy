@@ -14,6 +14,8 @@ const THEME: Record<string, string | string[]> = {
   BLUE_SEA: '#80bdf0',
   VITAMIN: '#ffd54f',
   RAINBOW: ['#f28b82', '#fbbc66', '#f6e27a', '#9ed89f', '#8ec3f0', '#b9a2e6'],
+  COLOR_LOVER: '#9ed89f',
+  ALL_SEASON: ['#f6e27a', '#9ed89f', '#dcae82', '#8ec3f0'],
   BALANCED: '#a7dccb',
 }
 const NEUTRAL = '#e6e6df'

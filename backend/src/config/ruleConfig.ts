@@ -14,6 +14,7 @@ export const ruleConfig = {
     SHORT_SLEEVE: 1,
     LONG_SLEEVE: 2,
     SHIRT: 1.5, // 얇은 면 셔츠: 반팔(1)과 긴팔(2) 사이
+    SHORT_SLEEVE_SHIRT: 1.2, // 반팔 셔츠: 깃이 있어 반팔티보다 살짝 더
     SWEATSHIRT: 2,
     HOODIE: 2,
     KNIT: 3,

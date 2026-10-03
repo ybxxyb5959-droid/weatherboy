@@ -4,7 +4,7 @@ import { eventKindMap } from '../../config/mappings.js'
 import { prisma } from '../../db.js'
 import { placeHintSchema, resolveLocation } from '../../services/location.js'
 import { syncStaleInBackground } from '../../services/calendar/sync.js'
-import { compute, saveEventRecommendation, viewOf } from '../../services/recommendationService.js'
+import { compute, dailyOutfits, saveEventRecommendation, viewOf } from '../../services/recommendationService.js'
 import { serializeEvent } from '../../services/serializers.js'
 import { badRequest, notFound } from '../../utils/errors.js'
 import { fromKst, kstDate, kstTime, toKstParts } from '../../utils/time.js'
@@ -174,11 +174,11 @@ eventsRouter.get(
     const e = await own(parse(idParam, req.params.id), userId)
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
     const waiting = (message: string) =>
-      res.json({ status: 'waiting', forecastStage: 'WAITING', recommendation: null, message, weather: [] })
+      res.json({ status: 'waiting', forecastStage: 'WAITING', recommendation: null, message, weather: [], days: [] })
     const c = await compute(user, e, e.startAt, e.endAt)
     if (!c) return waiting('아직 정확한 예보가 없어요.')
     const saved = await saveEventRecommendation(e, c)
     const stage = c.window.stage
-    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points) })
+    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c) })
   }),
 )

@@ -4,6 +4,7 @@ import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Clothespin, ClosetScene } from '../components/Clothesline'
+import LineScroller from '../components/LineScroller'
 import { categories } from '../mocks/clothes'
 import type { Clothing } from '../mocks/clothes'
 import { api, errorMessage } from '../api'
@@ -32,15 +33,14 @@ export default function WardrobePage() {
   const clothes = (data ?? []).filter((c) => !gone.includes(c.id))
   const samples = clothes.filter((c) => c.isSample)
   const [confirming, setConfirming] = useState(false)
-  // 걸리는 옷이 줄 오른쪽 끝 화면 밖에 있으면 보이는 곳으로 스크롤한다
-  const hasData = data !== null
-  useEffect(() => {
-    if (!hasData || arriving.length === 0) return
-    document.querySelector(`[data-hung-id="${arriving[0]}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest' })
-  }, [hasData, arriving])
+  // 새 옷이 걸린 줄: 줄을 끝까지 넘긴 뒤에야 걸리는 애니메이션을 시작한다(화면 밖에서 끝나 버리지 않게).
+  // 넘기기가 끝난 줄 이름을 모아 둔다.
+  const [shown, setShown] = useState<string[]>([])
   const groups = categories
     .map((cat) => ({ name: cat.name, items: clothes.filter((c) => cat.types.includes(c.type)) }))
     .filter((g) => g.items.length > 0)
+  const lastArriving = (items: Clothing[]) => [...items].reverse().find((c) => arriving.includes(c.id))?.id ?? null
+  const firstLine = groups.find((g) => lastArriving(g.items))?.name
 
   // 확인을 누르면 집게가 풀리고 옷이 떨어지는 동안 서버에서도 지운다. 실패하면 옷을 다시 줄에 건다.
   const removeCloth = async (c: Clothing) => {
@@ -91,7 +91,7 @@ export default function WardrobePage() {
       </div>
 
       {groups.length > 0 && <ClosetScene />}
-      {deleteMode && groups.length > 0 && <p className="tiny">지울 옷의 ⛔를 눌러주세요.</p>}
+      {deleteMode && groups.length > 0 && <p className="tiny">지울 옷의 ✕ 표시를 눌러주세요.</p>}
       {notice && <p role="alert">{notice}</p>}
       {samples.length > 0 && (
         <div className="sample-note">
@@ -121,12 +121,22 @@ export default function WardrobePage() {
         </div>
       ) : (
         <div className="lines">
-          {groups.map((g, gi) => (
+          {groups.map((g, gi) => {
+            const target = lastArriving(g.items)
+            const play = shown.includes(g.name)
+            // 이 줄에서 몇 번째로 걸리는 옷인지(차례로 하나씩 걸린다)
+            const order = g.items.filter((c) => arriving.includes(c.id)).map((c) => c.id)
+            return (
             <section key={g.name} className="cat">
-              <div className="cline-scroll" tabIndex={0} aria-label={`${g.name} 빨랫줄`}>
-                <div className={`cline-track l${gi % 3}`}>
+              <LineScroller
+                label={`${g.name} 빨랫줄`}
+                className={`cline-track l${gi % 3}`}
+                arriving={target}
+                focus={g.name === firstLine}
+                onReady={() => setShown((s) => (s.includes(g.name) ? s : [...s, g.name]))}
+              >
                   {g.items.map((c, i) => (
-                    <div key={c.id} data-hung-id={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}${arriving.includes(c.id) ? ' arriving' : ''}`} style={arriving.includes(c.id) ? ({ '--arrive-delay': `${arriving.indexOf(c.id) * 0.3}s` } as React.CSSProperties) : undefined}>
+                    <div key={c.id} data-hung-id={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}${arriving.includes(c.id) ? (play ? ' arriving' : ' waiting') : ''}`} style={arriving.includes(c.id) ? ({ '--arrive-delay': `${order.indexOf(c.id) * 0.35}s` } as React.CSSProperties) : undefined}>
                       <div className="hang">
                         <Clothespin style={{ left: 20, top: -12 }} />
                         <Clothespin style={{ left: 50, top: -12 }} />
@@ -139,17 +149,21 @@ export default function WardrobePage() {
                         )}
                         {deleteMode && !leaving.includes(c.id) && (
                           <button type="button" className="del-badge" aria-label={`${nameOf(c)} 삭제`} onClick={() => setTarget(c)}>
-                            ⛔
+                            <svg viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
+                              {/* 손으로 그린 동그라미 안에 쓱쓱 그은 X */}
+                              <path className="del-ring" d="M15 3.2 C22 2.6 27 8 26.6 15.2 C26.2 22 21 26.9 14.6 26.6 C8 26.3 3.2 21.4 3.4 14.6 C3.6 8.2 8.4 3.5 15.6 3.4" />
+                              <path className="del-x" d="M10 9.6 Q15.4 15 20.4 20.6 M20.2 9.4 Q14.6 15.2 9.6 20.2" />
+                            </svg>
                           </button>
                         )}
                       </div>
                       <div className="label">{nameOf(c)}{c.isSample && <span className="sample-tag"> · 예시</span>}</div>
                     </div>
                   ))}
-                </div>
-              </div>
+              </LineScroller>
             </section>
-          ))}
+            )
+          })}
         </div>
       )}
 

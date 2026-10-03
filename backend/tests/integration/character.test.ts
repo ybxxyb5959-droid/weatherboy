@@ -45,7 +45,7 @@ describe('내 캐릭터 API', () => {
     expect(r.unlocked).toBe(true) // 옷장을 채우면 캐릭터가 열린다
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 5, share: 1 })
-    expect(r.titles).toHaveLength(15)
+    expect(r.titles).toHaveLength(17)
   })
 
   it('꾸미기를 저장하고 다시 읽을 수 있다. 값을 null 로 보내면 벗는다', async () => {

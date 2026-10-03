@@ -7,7 +7,6 @@ import TourPage from './pages/TourPage'
 import AdminPage from './pages/AdminPage'
 import ReviewPage from './pages/ReviewPage'
 import SupportPage from './pages/SupportPage'
-import CheerPage from './pages/CheerPage'
 import { isStandalone } from './lib/install'
 import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
@@ -53,6 +52,12 @@ function Front() {
   return isStandalone() ? <Root /> : <LandingPage />
 }
 
+// 둘러보기(/tour)는 설치 전 웹에서 보는 미리보기다. 아이폰 등은 '홈 화면에 추가'할 때 보고 있던 주소로 앱을 열기 때문에,
+// 미리보기 화면에서 설치하면 앱 첫 화면이 미리보기가 된다. 설치한 앱에서는 미리보기 대신 로그인/홈으로 보낸다.
+function Tour() {
+  return isStandalone() ? <Navigate to="/start" replace /> : <TourPage />
+}
+
 function Protected({ children }: { children: ReactElement }) {
   const { me, loading, connectError } = useAuth()
   if (loading) return null
@@ -81,11 +86,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Front />} />
         <Route path="/start" element={<Root />} />
-        <Route path="/tour" element={<TourPage />} />
+        <Route path="/tour" element={<Tour />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/review" element={<Protected><ReviewPage /></Protected>} />
         <Route path="/support" element={<Protected><SupportPage /></Protected>} />
-        <Route path="/cheer" element={<Protected><CheerPage /></Protected>} />
         <Route path="/weather" element={<WeatherPreviewPage />} />
         <Route path="/home" element={<Protected><LocationGate><NotifyGate><HomePage /></NotifyGate></LocationGate></Protected>} />
         <Route path="/wardrobe" element={<Protected><WardrobePage /></Protected>} />

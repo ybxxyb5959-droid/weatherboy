@@ -1036,6 +1036,8 @@ a.card {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x proximity;
+  /* 옆 여백(16px)까지 스냅 기준에 넣는다: 안 넣으면 처음부터 16px 넘어간 상태로 맞춰져 왼쪽 화살표가 뜬다 */
+  scroll-padding-inline: 16px;
   scrollbar-width: none;
   margin: 0 -16px;
   padding: 0 16px;
@@ -1855,6 +1857,11 @@ a.card {
   align-items: center;
   gap: 4px;
 }
+.wdate {
+  margin-bottom: -4px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
 .wname {
   width: 34px;
   height: 34px;
@@ -2179,124 +2186,58 @@ a.card {
   gap: 8px;
   background: var(--paper);
 }
-.tp-readout {
+/* 휠: 오전/오후 · 시 · 분 세 칸. 가운데 띠(.tp-band)에 걸린 값이 선택된다. 한 칸 높이 44px(TimePicker.tsx 의 ROW) */
+.tp-wheels {
+  position: relative;
   display: flex;
-  justify-content: center;
-  gap: 10px;
+  gap: 6px;
+  height: 132px;
 }
-.tp-part {
-  font-family: var(--font);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--ink);
-  background: none;
-  border: 2px solid transparent;
-  border-radius: 40% 55% 45% 60% / 55% 40% 60% 45%;
-  padding: 0 14px;
-  min-height: 40px;
-  cursor: pointer;
-}
-.tp-part.on {
+.tp-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44px;
+  height: 44px;
   background: var(--pick);
-  border-color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 12px 8px 14px 9px / 9px 13px 8px 12px;
+  pointer-events: none;
 }
-/* 낙서 시계 */
-.tp-clock {
-  width: min(100%, 280px);
-  align-self: center;
-  touch-action: none;
-  cursor: pointer;
-  user-select: none;
-}
-.tp-face {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 2.6;
-  stroke-linejoin: round;
-}
-.tp-face2 {
-  fill: none;
-  stroke-width: 1.4;
-  opacity: 0.55;
-}
-.tp-blob {
-  fill: var(--pick);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-.tp-hand {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 3.2;
-  stroke-linecap: round;
-}
-.tp-dot {
-  fill: var(--ink);
-}
-.tp-hand-hour {
-  stroke-width: 5;
-}
-.tp-hand-min {
-  stroke-width: 2.8;
-}
-.tp-mintip {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-.tp-tick {
-  fill: var(--ink);
-  opacity: 0.5;
-}
-.tp-num {
-  font-family: var(--font);
-  font-size: 21px;
-  font-weight: 700;
-  fill: var(--ink);
-  cursor: pointer;
+.tp-wheel {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  padding: 44px 0;
+  list-style: none;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* 위아래 칸은 흐리게 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent);
   outline: none;
 }
-.tp-num:focus-visible {
-  text-decoration: underline;
+.tp-wheel::-webkit-scrollbar {
+  display: none;
 }
-.tp-hint {
-  text-align: center;
-  margin: 0;
+.tp-wheel:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: -2px;
 }
-/* 시계 숫자: 눌러서 '시' 고르기 (터치 영역은 보이지 않는 원) */
-.tp-hit {
-  fill: transparent;
-}
-.tp-hour {
-  cursor: pointer;
-}
-.tp-hour:hover .tp-num {
-  text-decoration: underline;
-}
-/* 분 칩 */
-.tp-mins {
+.tp-wheel li {
+  height: 44px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-}
-.tp-min {
+  place-items: center;
+  scroll-snap-align: center;
   font-family: var(--font);
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
-  min-height: 44px;
   color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 9px 14px 8px 12px / 12px 8px 14px 9px;
   cursor: pointer;
-}
-.tp-min.on {
-  background: var(--pick);
-}
-@media (max-width: 380px) {
-  .tp-min {
-    font-size: 17px;
-  }
+  user-select: none;
 }
 .tp-done {
   align-self: flex-end;
@@ -2610,6 +2551,21 @@ a.card {
   cursor: pointer;
   /* 아이콘 하나만 보이게 (겉 원 없음). 종이 위에서 또렷하도록 흰 그림자만 살짝 */
   filter: drop-shadow(0 0 2px #fcfcfa);
+}
+.del-badge svg {
+  overflow: visible;
+}
+.del-ring {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.del-x {
+  fill: none;
+  stroke: #d1452f;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 .del-badge:active {
   transform: scale(0.9);
@@ -3607,4 +3563,107 @@ a.card {
   .dcheck-mark {
     animation: none;
   }
+}
+
+/* ---------- 빨랫줄 ‹ › : 화면 밖에 옷이 더 걸려 있다는 표시 ---------- */
+.cline-wrap {
+  position: relative;
+}
+.cline-arrow {
+  /* 빨랫줄(위에서 25px)보다 살짝 위, 양 끝에 펜으로 쓱 그은 꺾쇠만 둔다. 상자 없음 */
+  position: absolute;
+  top: -10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.cline-arrow.left {
+  left: -16px;
+}
+.cline-arrow.right {
+  right: -16px;
+  animation: wb-arrow-nudge 1.6s ease-in-out 0.4s 2;
+}
+.cline-arrow svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cline-arrow:active svg {
+  transform: scale(0.88);
+}
+.cline-arrow:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+@keyframes wb-arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+/* 줄을 다 넘기기 전에는 새 옷을 숨겨 둔다(넘긴 뒤에 걸리는 모습이 보이도록) */
+.hung.waiting .hang svg[role='img'],
+.hung.waiting .hang .pin,
+.hung.waiting .label {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cline-arrow.right {
+    animation: none;
+  }
+}
+
+/* ---------- 며칠짜리 일정: 날짜별 코디 ---------- */
+.day-outfits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.day-outfit p {
+  margin: 6px 0 0;
+}
+.day-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 6px;
+}
+.day-pieces .piece {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 76px;
+  word-break: keep-all;
+}
+.why-tag {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.char-sub {
+  margin: 4px 0 0;
+}
+.obs-at {
+  opacity: 0.7;
+}
+.faq-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.faq-group h2 {
+  margin: 8px 0 0;
+  font-size: 21px;
+}
+.cline-arrow svg {
+  filter: drop-shadow(0 0 2px var(--paper)) drop-shadow(0 0 2px var(--paper));
 }
