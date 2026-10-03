@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
-import { buildPose, type Pose } from './greetingPose'
+import { buildPose } from './greetingPose'
+import FigureArt, { type Reg } from './FigureArt'
 import { figureSvgProps } from './figureProps'
 
 // 졸라맨(흰 반팔, 네이비 바지)을 펜으로 한 획씩 그리고, 다 그리면 한 손을 흔들며 인사한다.
@@ -52,40 +53,6 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 const easeSine = (u: number) => 0.5 - 0.5 * Math.cos(Math.PI * u) // 선을 그을 때 처음과 끝이 살짝 느리다
 const easeOut = (u: number) => 1 - (1 - u) * (1 - u)
 const lerp = (a: number, b: number, u: number) => a + (b - a) * u
-
-type Reg = (key: string) => (el: SVGGeometryElement | null) => void
-
-/** 한 자세의 그림. reg 가 있으면 그리는 중(획마다 요소를 등록), 없으면 완성된 그림 */
-function FigureArt({ pose, id, reg }: { pose: Pose; id: string; reg?: Reg }) {
-  const r = (k: string) => reg?.(k)
-  return (
-    <g transform="translate(10 0)">
-      <clipPath id={`${id}-pants`}>
-        <path d={pose.pants} />
-      </clipPath>
-      <path ref={r('head')} d={pose.head} />
-      <circle ref={r('eyeL')} cx={pose.eyes[0]![0]} cy={pose.eyes[0]![1]} r="1.9" fill="#222" stroke="none" />
-      <circle ref={r('eyeR')} cx={pose.eyes[1]![0]} cy={pose.eyes[1]![1]} r="1.9" fill="#222" stroke="none" />
-      <path ref={r('smile')} d={pose.smile} strokeWidth="2" />
-      <path ref={r('body')} d={pose.body} />
-      <path ref={r('armL')} d={pose.armL} />
-      <circle ref={r('handL')} cx={pose.handL[0]} cy={pose.handL[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
-      <path ref={r('armR')} d={pose.armR} />
-      <circle ref={r('handR')} cx={pose.handR[0]} cy={pose.handR[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
-      <path ref={r('legL')} d={pose.legL} />
-      <path ref={r('legR')} d={pose.legR} />
-      <path ref={r('pants')} d={pose.pants} fill={pose.pantsFill} strokeWidth="3.6" />
-      {reg && (
-        <g clipPath={`url(#${id}-pants)`}>
-          <path ref={r('hatch')} d={pose.hatch} stroke={pose.pantsFill} strokeWidth="5.5" />
-        </g>
-      )}
-      <path ref={r('waist')} d={pose.pantsWaist} stroke="#d6d6d6" strokeWidth="1.8" />
-      <path ref={r('tee')} d={pose.tee} fill={pose.teeFill} strokeWidth="3.4" />
-      <path ref={r('neck')} d={pose.teeNeck} strokeWidth="1.8" />
-    </g>
-  )
-}
 
 /** 펜: 끝이 (0,0), 오른손잡이처럼 오른쪽으로 기울어 있다 */
 function Pen() {

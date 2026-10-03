@@ -49,7 +49,7 @@ export default function LandingPage() {
             </p>
           )}
           <button type="button" className="guest-link" onClick={() => nav('/tour')}>
-            <HandText>설치 없이 웹에서 먼저 볼래요</HandText>
+            <HandText>설치 없이 웹에서 미리볼래요</HandText>
           </button>
         </div>
       </section>
@@ -73,8 +73,8 @@ export default function LandingPage() {
           </li>
           <li className="box feat w3">
             <WeatherDoodle kind="clear" size={52} />
-            <h3>일정별 코디</h3>
-            <p className="tiny">약속 날짜와 장소를 넣으면 그날 날씨로 알려줘요.</p>
+            <h3>일정등록과 코디</h3>
+            <p className="tiny">약속 날짜와 장소를 넣으면 저장하고 브리핑 해줘요.</p>
           </li>
           <li className="box feat feat-gear w1">
             <GearDoodles items={['umbrella', 'mask', 'sunscreen']} />

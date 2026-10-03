@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
-import IntroFigure from '../components/IntroFigure'
+import ReactFigure from '../components/ReactFigure'
 import { useInstallAction } from '../lib/useInstallAction'
 
 // 앱 화면(캡처) 위에 손그림 말풍선과 점선 화살표를 얹어 "여기서는 이걸 볼 수 있어요"를 보여 주는 둘러보기.
 // 좌표는 캡처 이미지(390x844) 기준 픽셀이다.
+const BYE_URL = 'https://www.google.com'
+// 개발 중 확인용: 주소 끝에 ?hold 를 붙이면 구글로 넘어가지 않는다
+const HOLD = import.meta.env.DEV && new URLSearchParams(window.location.search).has('hold')
 const W = 390
 const H = 844
 
@@ -59,7 +62,7 @@ const STEPS: Step[] = [
     alt: '뭐입을옷? 일정 화면: 일정 목록과 달력',
     callouts: [
       { text: '일정은 여기서 추가해요', x: 196, y: 62, w: 178, h: 34, to: [322, 50], bend: 0.3 },
-      { text: '일정이 있는 날엔 달력에 점이 찍혀요 ^_^', x: 36, y: 706, w: 318, h: 40, to: [246, 592], bend: 0.35 },
+      { text: '일정을 달력에서 확인할 수 있어요!', x: 36, y: 706, w: 318, h: 40, to: [246, 592], bend: 0.35 },
     ],
   },
   {
@@ -112,14 +115,39 @@ export default function TourPage() {
   const nav = useNavigate()
   const { install, installed, hint } = useInstallAction()
   const [i, setI] = useState(0)
+  const [reaction, setReaction] = useState<'idle' | 'flat' | 'cry'>('idle') // 안 쓸래요를 누르면: 무표정 -> 울음
+  const [msg, setMsg] = useState('')
+  const timers = useRef<number[]>([])
+  const busy = reaction !== 'idle'
   const last = i === STEPS.length // 마지막은 "어때요?" 화면
   const step = STEPS[i]
   const touchX = useRef<number | null>(null)
 
-  const go = (n: number) => setI(Math.min(STEPS.length, Math.max(0, n)))
+  const go = (n: number) => {
+    if (!busy) setI(Math.min(STEPS.length, Math.max(0, n)))
+  }
+
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), [])
+
+  // 이스터에그: 졸라맨이 시무룩해졌다가(-_- -> ㅠㅠ) 잠시 뒤 구글로 가 버린다
+  const decline = () => {
+    if (busy) return
+    setReaction('flat')
+    const at = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms))
+    at(850, () => {
+      setReaction('cry')
+      setMsg('ㅠㅠ')
+    })
+    ;['.', '..', '...', '....'].forEach((d, k) => at(1250 + k * 120, () => setMsg('ㅠㅠ ' + d)))
+    at(2100, () => setMsg('ㅠㅠ .... 네...'))
+    at(4100, () => {
+      if (!HOLD) window.location.assign(BYE_URL)
+    })
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (timers.current.length > 0) return // 안 쓸래요 반응 중에는 넘기지 않는다
       if (e.key === 'ArrowRight') setI((v) => Math.min(STEPS.length, v + 1))
       if (e.key === 'ArrowLeft') setI((v) => Math.max(0, v - 1))
     }
@@ -185,33 +213,41 @@ export default function TourPage() {
         </section>
       ) : (
         <section className="tour-step tour-end">
-          <IntroFigure size={150} />
-          <p className="lead">
-            <span className="lead-line">
-              <HandText>어때요? 한번 써봐주세요 ^_^</HandText>
-            </span>
-            <span className="lead-line">
-              <HandText>설치하면 앱처럼 바로 열 수 있어요</HandText>
-            </span>
-          </p>
+          <ReactFigure mood={reaction === 'idle' ? 'smile' : reaction} size={150} />
+          <div className="tour-lead-box" aria-live="polite">
+            {reaction === 'cry' ? (
+              <p className="lead tour-sad">
+                <HandText>{msg}</HandText>
+              </p>
+            ) : (
+              <p className={`lead${reaction === 'flat' ? ' tour-fadeout' : ''}`}>
+                <span className="lead-line">
+                  <HandText>어때요? 한번 써봐주세요 ^_^</HandText>
+                </span>
+                <span className="lead-line">
+                  <HandText>설치하면 앱처럼 바로 열 수 있어요</HandText>
+                </span>
+              </p>
+            )}
+          </div>
           <div className="landing-actions">
-            <button type="button" className="dbtn block w1" onClick={() => void install()}>
+            <button type="button" className="dbtn block w1" onClick={() => void install()} disabled={busy}>
               {installed ? '설치됐어요! 홈 화면에서 열어주세요' : '앱으로 설치하고 테스트해주기'}
             </button>
-            {hint && (
+            {hint && !busy && (
               <p className="tiny install-hint" role="status">
                 {hint}
               </p>
             )}
-            <button type="button" className="dbtn block w2" onClick={() => nav('/start')}>
-              설치 없이 웹으로 바로 써보기
+            <button type="button" className="skip-link" onClick={decline} disabled={busy}>
+              안 쓸래요
             </button>
           </div>
         </section>
       )}
 
       <nav className="tour-nav" aria-label="둘러보기 이동">
-        <button type="button" className="dbtn small" onClick={() => go(i - 1)} disabled={i === 0}>
+        <button type="button" className="dbtn small" onClick={() => go(i - 1)} disabled={i === 0 || busy}>
           이전
         </button>
         <span className="tour-dots" aria-hidden="true">
@@ -219,7 +255,7 @@ export default function TourPage() {
             <span key={k} className={k === i ? 'on' : ''} />
           ))}
         </span>
-        <button type="button" className="dbtn small" onClick={() => go(i + 1)} disabled={last}>
+        <button type="button" className="dbtn small" onClick={() => go(i + 1)} disabled={last || busy}>
           다음
         </button>
       </nav>

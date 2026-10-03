@@ -424,6 +424,92 @@ input:focus-visible {
   font-size: 28px;
   flex: 1;
 }
+/* 안 쓸래요: 회색 밑줄 글씨 */
+.skip-link {
+  align-self: center;
+  margin-top: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 17px;
+  color: #8a8a8a;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.skip-link:disabled {
+  cursor: default;
+}
+.tour-end .dbtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tour-lead-box {
+  min-height: 3.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tour-fadeout {
+  animation: tour-out 0.5s ease-in forwards;
+}
+@keyframes tour-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.tour-sad {
+  font-size: 26px;
+  animation: sad-in 0.35s ease-out;
+}
+@keyframes sad-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* 훌쩍훌쩍: 울 때 몸이 살짝 들썩이고 눈물이 흘러내린다 */
+.react-figure {
+  transform-origin: 50% 90%;
+}
+.react-figure.sob {
+  animation: sob 0.45s ease-in-out infinite;
+}
+@keyframes sob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(1.5px) rotate(0.6deg);
+  }
+}
+.react-figure .tear {
+  stroke-dasharray: 4 5;
+  animation: tear-flow 0.55s linear infinite;
+}
+.react-figure .tear.t2 {
+  animation-delay: -0.2s;
+}
+.react-figure .tear.t3 {
+  animation-delay: -0.35s;
+}
+.react-figure .tear.t4 {
+  animation-delay: -0.1s;
+}
+@keyframes tear-flow {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-figure.sob,
+  .react-figure .tear {
+    animation: none;
+  }
+}
 .tour-count {
   white-space: nowrap;
   min-width: 44px;
