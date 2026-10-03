@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
@@ -9,6 +9,7 @@ import { eventKinds } from '../mocks/events'
 import type { EventKind, PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
 import type { EventSuggestion } from '../lib/ai'
+import { parseEventText, type EventDraft } from '../lib/eventParse'
 
 // 여행·캠핑은 며칠씩 가니까 시간 대신 날짜(몇 박 며칠)를 고른다
 const MULTI_DAY: EventKind[] = ['여행', '캠핑']
@@ -30,6 +31,11 @@ function initialSpan(ev?: PlanEvent): { nights: number | null; customEnd: string
   const n = dayNumber(ev.endDate) - dayNumber(ev.startDate)
   return NIGHT_CHOICES.includes(n) ? { nights: n, customEnd: '' } : { nights: null, customEnd: ev.endDate }
 }
+
+/** 말로 적기가 채우는 칸 */
+type Field = 'kind' | 'title' | 'date' | 'span' | 'place' | 'start' | 'end'
+/** 칸에 넣을 값. kind 가 null 이면 종류는 건드리지 않는다 */
+type Filled = Omit<EventDraft, 'kind' | 'kindFound'> & { kind: EventKind | null }
 
 export default function NewEventPage() {
   return <EventForm />
@@ -61,31 +67,63 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const endDate = !multi || !date ? '' : nights === null ? customEnd : addDays(date, nights)
   const span = multi && date && endDate ? dayNumber(endDate) - dayNumber(date) : null
 
-  // 한 문장을 일정 칸으로 바꿔서 채운다. 제안일 뿐이라 사용자가 확인하고 저장한다.
+  // 사용자가 직접 고친 칸. 말로 적기가 다시 채울 때 이 칸은 덮어쓰지 않는다.
+  const [touched, setTouched] = useState<Set<Field>>(() => new Set())
+  const touch = (f: Field) => setTouched((t) => (t.has(f) ? t : new Set(t).add(f)))
+
+  // 해석한 결과를 칸에 넣는다(직접 고친 칸은 그대로). 제안일 뿐이라 사용자가 확인하고 저장한다.
+  const apply = (d: Filled) => {
+    const k = d.kind ?? kind
+    if (d.kind && !touched.has('kind')) setKind(d.kind)
+    if (d.title && !touched.has('title')) setTitle(d.title)
+    if (d.startDate && !touched.has('date')) setDate(d.startDate)
+    if (d.place && !touched.has('place')) setPlace(d.place)
+    if (MULTI_DAY.includes(k) && d.startDate && !touched.has('span')) {
+      const n = d.endDate ? dayNumber(d.endDate) - dayNumber(d.startDate) : (d.nights ?? null)
+      if (n !== null && NIGHT_CHOICES.includes(n)) setNights(n)
+      else if (n !== null && d.endDate) {
+        setNights(null)
+        setCustomEnd(d.endDate)
+      }
+    }
+    if (!MULTI_DAY.includes(k)) {
+      if (d.startTime && !touched.has('start')) setStartTime(d.startTime)
+      if (d.endTime && !touched.has('end')) setEndTime(d.endTime)
+    }
+  }
+
+  // 적거나 말하는 동안 바로 해석해서 채운다(앱 안의 규칙이라 빠르고 공짜). 잠깐 멈추면 반영한다.
+  const today = new Date().toLocaleDateString('sv-SE')
+  useEffect(() => {
+    const text = say.trim()
+    if (event || text.length < 2) return
+    const t = window.setTimeout(() => {
+      const d = parseEventText(text, today)
+      apply({ ...d, kind: d.kindFound || d.startDate ? d.kind : null })
+      setAiNote(d.startDate ? '말한 대로 채웠어요. 맞는지 확인하고 저장해주세요.' : '언제인지도 말해주면 날짜까지 채워요 (예: 다음주 금요일)')
+    }, 250)
+    return () => window.clearTimeout(t)
+    // apply 는 touched 를 읽는다. 말이 바뀔 때만 다시 해석한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [say])
+
+  // '채워줘'(또는 말하기가 끝남): 규칙으로 날짜까지 알아들었으면 그걸로 끝. 날짜를 못 찾았을 때만 AI(제미나이)에게 묻는다.
   const fillFromText = async (spoken?: string) => {
     const text = (spoken ?? say).trim()
     if (thinking || text.length < 2) return
-    setThinking(true)
     setError('')
+    const d = parseEventText(text, today)
+    if (d.startDate) {
+      apply(d)
+      setAiNote('말한 대로 채웠어요. 맞는지 확인하고 저장해주세요.')
+      return
+    }
+    setThinking(true)
     setAiNote('')
     try {
       const s = await api<EventSuggestion>('POST', '/api/ai/parse-event', { text })
       const k = (eventKinds as string[]).includes(s.kind) ? (s.kind as EventKind) : '기타'
-      setKind(k)
-      setTitle(s.title)
-      setDate(s.startDate)
-      setPlace(s.place)
-      if (MULTI_DAY.includes(k)) {
-        const n = s.endDate ? dayNumber(s.endDate) - dayNumber(s.startDate) : 0
-        if (NIGHT_CHOICES.includes(n)) setNights(n)
-        else {
-          setNights(null)
-          setCustomEnd(s.endDate ?? '')
-        }
-      } else {
-        if (s.startTime) setStartTime(s.startTime)
-        if (s.endTime) setEndTime(s.endTime)
-      }
+      apply({ kind: k, title: s.title, startDate: s.startDate, endDate: s.endDate ?? null, nights: null, place: s.place, startTime: s.startTime ?? null, endTime: s.endTime ?? null })
       setAiNote('AI가 채웠어요. 맞는지 확인하고 저장해주세요.')
     } catch (e) {
       setError(errorMessage(e))
@@ -139,7 +177,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       <SayBox
         id="say"
         label="말로 적기"
-        placeholder="예: 다음주 금요일부터 2박 3일 제주 여행"
+        placeholder="예: 토요일 저녁 7시 강남역에서 엄마 생일"
         value={say}
         onChange={setSay}
         onSubmit={(t) => void fillFromText(t)}
@@ -152,15 +190,15 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       )}
       <div className="field" style={event ? { marginTop: 0 } : undefined}>
         <div className="name">일정 유형</div>
-        <ChoiceRow options={eventKinds} value={kind} onChange={setKind} />
+        <ChoiceRow options={eventKinds} value={kind} onChange={(k) => { touch('kind'); setKind(k) }} />
       </div>
       <div className="field">
         <label className="name" htmlFor="title">제목</label>
-        <input id="title" type="text" value={title} placeholder={kind === '캠핑' ? '예: 가평 캠핑' : kind === '등산' ? '예: 북한산 등산' : '예: 제주 여행'} onChange={(e) => setTitle(e.target.value)} />
+        <input id="title" type="text" value={title} placeholder={kind === '캠핑' ? '예: 가평 캠핑' : kind === '등산' ? '예: 북한산 등산' : '예: 제주 여행'} onChange={(e) => { touch('title'); setTitle(e.target.value) }} />
       </div>
       <div className="field">
         <label className="name" htmlFor="date">{multi ? '출발 날짜' : '날짜'}</label>
-        <DatePicker id="date" label={multi ? '출발 날짜' : '날짜'} value={date} onChange={setDate} />
+        <DatePicker id="date" label={multi ? '출발 날짜' : '날짜'} value={date} onChange={(v) => { touch('date'); setDate(v) }} />
       </div>
 
       {multi && (
@@ -168,18 +206,18 @@ export function EventForm({ event }: { event?: PlanEvent }) {
           <div className="name">일정</div>
           <div className="row wrap">
             {NIGHT_CHOICES.map((n, i) => (
-              <DoodleButton key={n} seed={i} className="small" selected={nights === n} onClick={() => setNights(n)}>
+              <DoodleButton key={n} seed={i} className="small" selected={nights === n} onClick={() => { touch('span'); setNights(n) }}>
                 {nightsLabel(n)}
               </DoodleButton>
             ))}
-            <DoodleButton seed={3} className="small" selected={nights === null} onClick={() => setNights(null)}>
+            <DoodleButton seed={3} className="small" selected={nights === null} onClick={() => { touch('span'); setNights(null) }}>
               직접
             </DoodleButton>
           </div>
           {nights === null && (
             <div style={{ marginTop: 8 }}>
               <label className="name" htmlFor="end">돌아오는 날짜</label>
-              <DatePicker id="end" label="돌아오는 날짜" value={customEnd} min={date || undefined} onChange={setCustomEnd} />
+              <DatePicker id="end" label="돌아오는 날짜" value={customEnd} min={date || undefined} onChange={(v) => { touch('span'); setCustomEnd(v) }} />
             </div>
           )}
           {span !== null && span >= 0 && (
@@ -192,18 +230,18 @@ export function EventForm({ event }: { event?: PlanEvent }) {
 
       <div className="field">
         <label className="name" htmlFor="place">장소</label>
-        <input id="place" type="text" value={place} placeholder={kind === '등산' ? '예: 북한산' : '예: 제주도'} onChange={(e) => setPlace(e.target.value)} />
+        <input id="place" type="text" value={place} placeholder={kind === '등산' ? '예: 북한산' : '예: 제주도'} onChange={(e) => { touch('place'); setPlace(e.target.value) }} />
       </div>
 
       {!multi && (
         <div className="field">
           <div className="routine-row">
             <span className="routine-label">시작 시간</span>
-            <TimePicker value={startTime} onChange={setStartTime} label="시작" />
+            <TimePicker value={startTime} onChange={(v) => { touch('start'); setStartTime(v) }} label="시작" />
           </div>
           <div className="routine-row" style={{ marginTop: 10 }}>
             <span className="routine-label">종료 시간</span>
-            <TimePicker value={endTime} onChange={setEndTime} label="종료" />
+            <TimePicker value={endTime} onChange={(v) => { touch('end'); setEndTime(v) }} label="종료" />
           </div>
         </div>
       )}

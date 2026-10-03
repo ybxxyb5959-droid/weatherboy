@@ -9,6 +9,7 @@ import KakaoLoginButton from '../components/KakaoLoginButton'
 import RoutineEditor from '../components/RoutineEditor'
 import TimePicker from '../components/TimePicker'
 import PushToggle from '../components/PushToggle'
+import { PUSH_ENABLED } from '../config/features'
 import { getReviewStatus } from '../lib/reviews'
 import { api, errorMessage } from '../api'
 import { useAuth } from '../auth'
@@ -239,7 +240,10 @@ export default function SettingsPage() {
           </>
         )}
 
-        {section === 'notify' && (
+        {section === 'notify' && !PUSH_ENABLED && (
+          <p className="tiny">알림은 지금 준비 중이에요. 베타 테스트가 끝나면 아침 옷차림, 일정 날씨를 알림으로 보내드릴게요.</p>
+        )}
+        {section === 'notify' && PUSH_ENABLED && (
           <>
             <div className="col">
               <div>
@@ -388,7 +392,8 @@ export default function SettingsPage() {
       <Group seed={1}>
         <Row label="내 위치 설정" value={s.location} onClick={go('location')} />
         <Row label="개인맞춤 설정" value={`${s.sensitivity} · ${routineLabel(s.routine)}`} onClick={go('personal')} />
-        <Row label="알림 설정" value={notifyLabel} onClick={go('notify')} />
+        {/* 베타 동안 알림은 준비 중: 눌러도 들어가지 않는다 */}
+        {PUSH_ENABLED ? <Row label="알림 설정" value={notifyLabel} onClick={go('notify')} /> : <Row label="알림 설정" value="준비 중" />}
       </Group>
 
       <Group seed={2}>

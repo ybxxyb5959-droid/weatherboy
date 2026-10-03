@@ -5,6 +5,7 @@ import { enablePush, getPushState } from '../lib/push'
 import DoodleButton from './DoodleButton'
 import HandText from './HandText'
 import { BellScene } from './GateScenes'
+import { PUSH_ENABLED } from '../config/features'
 
 const key = (id: string) => `notifyAsked:${id}`
 
@@ -37,6 +38,12 @@ const needsInstallOnIos = () => {
  * 이미 허용/차단했거나 알림을 쓸 수 없는 기기면 묻지 않고 넘어간다(아이폰 사파리는 홈 화면에 추가하라고 안내).
  */
 export default function NotifyGate({ children }: { children: ReactNode }) {
+  // 베타 동안 알림을 꺼 두면 묻지 않고 바로 홈으로 간다
+  if (!PUSH_ENABLED) return <>{children}</>
+  return <NotifyAsk>{children}</NotifyAsk>
+}
+
+function NotifyAsk({ children }: { children: ReactNode }) {
   const { me } = useAuth()
   const [step, setStep] = useState<'checking' | 'ask' | 'ios' | 'done'>(() => (!me || asked(me.id) ? 'done' : 'checking'))
   const [busy, setBusy] = useState(false)
