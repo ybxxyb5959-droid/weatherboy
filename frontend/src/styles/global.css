@@ -370,6 +370,7 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center; /* 옆 카드가 더 커도 내용은 세로 가운데 */
   text-align: center;
   gap: 4px;
 }
