@@ -1,0 +1,257 @@
+/* ---------- 개발자 응원하기 ---------- */
+.cheer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cheer-scene {
+  display: block;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.cheer-scene text {
+  font-family: var(--font);
+}
+.cheer-text {
+  text-align: center;
+  font-size: 21px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.cheer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cheer-note,
+.cheer-soon,
+.cheer-foot {
+  text-align: center;
+}
+
+/* 졸려서 꾸벅꾸벅 + 가끔 번쩍 깨는 고개 */
+.cheer-head {
+  transform-origin: 116px 94px;
+  animation: cheer-nod 5s ease-in-out infinite;
+}
+@keyframes cheer-nod {
+  0%,
+  92%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(2deg);
+  }
+  55% {
+    transform: rotate(0);
+  }
+  72% {
+    transform: rotate(9deg);
+  }
+  82% {
+    transform: rotate(11deg);
+  }
+  86% {
+    transform: rotate(-4deg);
+  }
+}
+
+/* 눈 깜빡 */
+.cheer-eye {
+  transform-origin: 127px 75px;
+  animation: cheer-blink 4s infinite;
+}
+@keyframes cheer-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* 이마 땀방울 */
+.cheer-sweat {
+  animation: cheer-sweat 5s ease-in infinite;
+  opacity: 0;
+}
+@keyframes cheer-sweat {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  62% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* 졸다가 떠오르는 z */
+.cheer-zz text {
+  opacity: 0;
+  animation: cheer-z 5s ease-out infinite;
+}
+.cheer-zz .z2 {
+  animation-delay: 0.5s;
+}
+@keyframes cheer-z {
+  0%,
+  58% {
+    opacity: 0;
+    transform: translate(0, 6px);
+  }
+  68% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, -22px);
+  }
+}
+
+/* 두 팔이 번갈아 타이핑 */
+.cheer-arm.a {
+  transform-origin: 141px 128px;
+  animation: cheer-tap 0.34s ease-in-out infinite alternate;
+}
+.cheer-arm.b {
+  transform-origin: 138px 126px;
+  animation: cheer-tap 0.34s ease-in-out infinite alternate-reverse;
+}
+@keyframes cheer-tap {
+  from {
+    transform: rotate(-2deg);
+  }
+  to {
+    transform: rotate(3.5deg);
+  }
+}
+.cheer-tak text {
+  opacity: 0;
+  animation: cheer-tak 0.68s ease-out infinite;
+}
+.cheer-tak .t2 {
+  animation-delay: 0.34s;
+}
+@keyframes cheer-tak {
+  0% {
+    opacity: 0;
+    transform: translate(0, 3px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-5px, -9px);
+  }
+}
+
+/* 화면에 코드가 한 줄씩 써졌다가 지워진다 */
+.cheer-code path {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+  animation: cheer-line 6s linear infinite;
+}
+@keyframes cheer-line {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  22% {
+    stroke-dashoffset: 0;
+  }
+  88% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+.cheer-cursor {
+  animation: cheer-cursor 1s steps(2, start) infinite;
+}
+@keyframes cheer-cursor {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* 커피 김 */
+.cheer-steam path {
+  opacity: 0;
+  animation: cheer-steam 2.6s ease-in-out infinite;
+}
+.cheer-steam .s2 {
+  animation-delay: 0.8s;
+}
+.cheer-steam .s3 {
+  animation-delay: 1.5s;
+}
+@keyframes cheer-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* 창문 밖 별 */
+.cheer-star {
+  animation: cheer-twinkle 2.4s ease-in-out infinite;
+}
+.cheer-star.s2 {
+  animation-delay: 0.8s;
+}
+.cheer-star.s3 {
+  animation-delay: 1.6s;
+}
+@keyframes cheer-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer-head,
+  .cheer-eye,
+  .cheer-sweat,
+  .cheer-zz text,
+  .cheer-arm,
+  .cheer-tak text,
+  .cheer-code path,
+  .cheer-cursor,
+  .cheer-steam path,
+  .cheer-star {
+    animation: none;
+  }
+  .cheer-code path {
+    stroke-dashoffset: 0;
+  }
+  .cheer-steam path {
+    opacity: 0.8;
+  }
+}

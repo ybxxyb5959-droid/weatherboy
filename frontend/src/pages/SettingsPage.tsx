@@ -395,6 +395,7 @@ export default function SettingsPage() {
         <Row label="자주 묻는 질문" onClick={go('faq')} />
         <Row label="후기 남기기" value={review.data?.reviewed ? '남겨주셨어요 ✓' : undefined} onClick={() => nav('/review')} />
         <Row label="의견·불편 보내기" onClick={() => nav('/support')} />
+        <Row label="개발자 응원하기" onClick={() => nav('/cheer')} />
       </Group>
 
       <Group seed={0}>
