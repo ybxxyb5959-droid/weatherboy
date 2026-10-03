@@ -220,7 +220,7 @@ const PANELS: PanelDef[] = [
   },
   {
     scene: <Scene4 />,
-    caption: '저녁엔 "딱 좋아요" 한 번이면 끝! 취향을 배워가요.',
+    caption: '귀가 후 평가를 남기면 취향을 배워가요.',
     bubbles: [{ text: '딱 좋아요!', x: 4, y: 82, tone: 'w2' }],
   },
 ]
