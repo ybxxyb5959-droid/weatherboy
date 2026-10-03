@@ -3394,7 +3394,7 @@ a.card {
 }
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 .admin-stat {
@@ -3409,7 +3409,7 @@ a.card {
   line-height: 1.1;
 }
 .admin-bar {
-  grid-template-columns: 76px 1fr 36px;
+  grid-template-columns: 112px 1fr 36px;
 }
 .admin-reviews {
   list-style: none;
@@ -3435,4 +3435,32 @@ a.card {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.support-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.support-kind {
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 10px 4px;
+}
+.support-kind b {
+  font-size: 18px;
+}
+.support-kind span {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+.admin-kind {
+  display: inline-block;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  border-radius: 8px 12px 7px 11px / 11px 7px 12px 8px;
 }

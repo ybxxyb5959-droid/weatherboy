@@ -9,6 +9,7 @@ interface Dashboard {
   daily: { d: string; c: number }[]
   funnel: { step: string; count: number }[]
   reviews: { total: number; average: number | null; unread: number }
+  support: { total: number; unread: number }
 }
 interface ReviewRow {
   id: string
@@ -20,6 +21,17 @@ interface ReviewRow {
   provider: 'KAKAO' | 'GUEST' | null
   activeDays: number
 }
+
+interface SupportRow {
+  id: string
+  kind: 'BUG' | 'IDEA' | 'OTHER'
+  message: string
+  createdAt: string
+  read: boolean
+  code: string
+  provider: 'KAKAO' | 'GUEST' | null
+}
+const KIND_LABEL = { BUG: '불편·오류', IDEA: '제안', OTHER: '기타' } as const
 
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n)
 const fmtDate = (iso: string) => {
@@ -89,15 +101,17 @@ export default function AdminPage() {
   const [state, setState] = useState<'checking' | 'login' | 'ready'>('checking')
   const [dash, setDash] = useState<Dashboard | null>(null)
   const [reviews, setReviews] = useState<ReviewRow[]>([])
+  const [support, setSupport] = useState<SupportRow[]>([])
   const [error, setError] = useState('')
   const [onlyUnread, setOnlyUnread] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const [d, r] = await Promise.all([api<Dashboard>('GET', '/api/admin/dashboard'), api<ReviewRow[]>('GET', '/api/admin/reviews')])
+      const [d, r, sp] = await Promise.all([api<Dashboard>('GET', '/api/admin/dashboard'), api<ReviewRow[]>('GET', '/api/admin/reviews'), api<SupportRow[]>('GET', '/api/admin/support')])
       setError('')
       setDash(d)
       setReviews(r)
+      setSupport(sp)
       setState('ready')
     } catch (e) {
       // 로그인 전/만료: 로그인 화면으로
@@ -118,10 +132,16 @@ export default function AdminPage() {
     setDash((d) => (d ? { ...d, reviews: { ...d.reviews, unread: Math.max(0, d.reviews.unread - 1) } } : d))
     await api('POST', `/api/admin/reviews/${id}/read`).catch(() => undefined)
   }
+  const markSupportRead = async (id: string) => {
+    setSupport((rs) => rs.map((r) => (r.id === id ? { ...r, read: true } : r)))
+    setDash((d) => (d ? { ...d, support: { ...d.support, unread: Math.max(0, d.support.unread - 1) } } : d))
+    await api('POST', `/api/admin/support/${id}/read`).catch(() => undefined)
+  }
   const logout = async () => {
     await api('POST', '/api/admin/logout').catch(() => undefined)
     setDash(null)
     setReviews([])
+    setSupport([])
     setState('login')
   }
 
@@ -155,6 +175,7 @@ export default function AdminPage() {
             <Stat label="전체 가입자" value={dash.users.total} sub={`카카오 ${dash.users.kakao} · 게스트 ${dash.users.guest}`} />
             <Stat label="최근 24시간 접속" value={dash.users.active24h} sub={`7일 ${dash.users.active7d}명`} />
             <Stat label="후기" value={dash.reviews.total} sub={dash.reviews.average ? `평균 ★${dash.reviews.average} · 안 읽음 ${dash.reviews.unread}` : '아직 없어요'} />
+            <Stat label="의견·제보" value={dash.support.total} sub={dash.support.total ? `안 읽음 ${dash.support.unread}` : '아직 없어요'} />
           </div>
 
           <hr className="scribble" />
@@ -200,6 +221,35 @@ export default function AdminPage() {
                 </span>
                 {!r.read && (
                   <button type="button" className="dbtn small" onClick={() => void markRead(r.id)}>
+                    읽음
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <hr className="scribble" />
+      <section>
+        <h2>
+          <HandText>의견·제보</HandText>
+        </h2>
+        {support.length === 0 && <p className="tiny">아직 의견이 없어요.</p>}
+        <ul className="admin-reviews">
+          {support.map((r) => (
+            <li key={r.id} className={`box w${(r.message.length % 3) + 1}${r.read ? ' read' : ''}`}>
+              <div className="row between">
+                <span className="admin-kind">{KIND_LABEL[r.kind]}</span>
+                <span className="tiny">{fmtDate(r.createdAt)}</span>
+              </div>
+              <p className="admin-msg">{r.message}</p>
+              <div className="row between">
+                <span className="tiny">
+                  사용자 {r.code} · {r.provider === 'KAKAO' ? '카카오' : '게스트'}
+                </span>
+                {!r.read && (
+                  <button type="button" className="dbtn small" onClick={() => void markSupportRead(r.id)}>
                     읽음
                   </button>
                 )}

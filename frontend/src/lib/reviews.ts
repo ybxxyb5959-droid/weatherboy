@@ -10,3 +10,7 @@ export const getReviewStatus = () => api<ReviewStatus>('GET', '/api/reviews/stat
 export const submitReview = (rating: number, message: string) => api('POST', '/api/reviews', { rating, message })
 export const snoozeReview = () => api('POST', '/api/reviews/snooze')
 export const dismissReview = () => api('POST', '/api/reviews/dismiss')
+
+// 의견·불편 제보: 사용하다 떠오를 때마다 여러 번 보낼 수 있다(하루 5번까지).
+export type SupportKind = 'BUG' | 'IDEA' | 'OTHER'
+export const sendSupport = (kind: SupportKind, message: string) => api('POST', '/api/support', { kind, message })

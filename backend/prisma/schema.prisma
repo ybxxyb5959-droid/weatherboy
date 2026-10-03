@@ -182,6 +182,7 @@ model User {
   notifyLogs          NotifyLog[]
   favorites           FavoritePlace[]
   appReview           AppReview?
+  supportMessages     SupportMessage[]
 }
 
 // 앱 후기(사용자당 한 번). 추천에 대한 피드백(Feedback)과는 다른 것이다.
@@ -196,6 +197,27 @@ model AppReview {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+enum SupportKind {
+  BUG // 불편하거나 이상해요
+  IDEA // 있으면 좋겠어요
+  OTHER
+}
+
+// 사용 중 떠오른 불편·제안(여러 번 보낼 수 있다). 한 번만 받는 앱 후기(AppReview)와 다르다.
+model SupportMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  kind      SupportKind @default(OTHER)
+  message   String
+  readAt    DateTime? // 관리자가 읽음 표시한 시각
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 // 사용자가 담아둔 지역(즐겨찾기). 좌표/격자를 미리 저장해서 누르면 바로 날씨를 볼 수 있다.

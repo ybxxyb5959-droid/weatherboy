@@ -73,7 +73,7 @@ adminRouter.get(
   wrap(async (_req, res) => {
     const now = Date.now()
     const day = 24 * 3600_000
-    const [total, byProvider, active24h, active7d, daily, funnel, eventUsers, locationUsers, reviewAgg, unread] = await Promise.all([
+    const [total, byProvider, active24h, active7d, daily, funnel, eventUsers, locationUsers, reviewAgg, unread, supportTotal, supportUnread] = await Promise.all([
       prisma.user.count(),
       prisma.authIdentity.groupBy({ by: ['provider'], _count: { userId: true } }),
       prisma.user.count({ where: { lastSeenAt: { gte: new Date(now - day) } } }),
@@ -90,6 +90,8 @@ adminRouter.get(
       prisma.user.count({ where: { regionSido: { not: null } } }),
       prisma.appReview.aggregate({ _count: true, _avg: { rating: true } }),
       prisma.appReview.count({ where: { readAt: null } }),
+      prisma.supportMessage.count(),
+      prisma.supportMessage.count({ where: { readAt: null } }),
     ])
     const prov = Object.fromEntries(byProvider.map((p) => [p.provider, p._count.userId]))
     const f = funnel[0] ?? { c1: 0, c5: 0 }
@@ -105,6 +107,7 @@ adminRouter.get(
         { step: '일정 등록', count: eventUsers[0]?.c ?? 0 },
       ],
       reviews: { total: reviewAgg._count, average: reviewAgg._avg.rating ? Math.round(reviewAgg._avg.rating * 10) / 10 : null, unread },
+      support: { total: supportTotal, unread: supportUnread },
     })
   }),
 )
@@ -138,6 +141,38 @@ adminRouter.post(
   wrap(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id)
     await prisma.appReview.updateMany({ where: { id, readAt: null }, data: { readAt: new Date() } })
+    res.json({ ok: true })
+  }),
+)
+
+// 의견·제보 목록(최신순). 후기와 같이 닉네임/이메일 없이 짧은 사용자 코드만.
+adminRouter.get(
+  '/support',
+  wrap(async (_req, res) => {
+    const rows = await prisma.supportMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { user: { select: { identities: { select: { provider: true }, take: 1 } } } },
+    })
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        message: r.message,
+        createdAt: r.createdAt,
+        read: !!r.readAt,
+        code: r.userId.slice(0, 8).toUpperCase(),
+        provider: r.user.identities[0]?.provider ?? null,
+      })),
+    )
+  }),
+)
+
+adminRouter.post(
+  '/support/:id/read',
+  wrap(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id)
+    await prisma.supportMessage.updateMany({ where: { id, readAt: null }, data: { readAt: new Date() } })
     res.json({ ok: true })
   }),
 )
