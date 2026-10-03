@@ -1,5 +1,6 @@
 import { colorHex } from '../mocks/clothes'
 import { ClothingArt } from './ClothingDoodle'
+import { figureSvgProps } from './figureProps'
 
 interface Piece {
   type: string
@@ -52,10 +53,10 @@ const LONG_SLEEVE: Sleeve = { pivot: [32, 16], cuff: [14.5, 69], ext: 0, forearm
 const sleeveOf = (type: string) => (type === '반팔' ? SHORT_SLEEVE : LONG_SLEEVE)
 
 // 소매 축 방향이 이미 바깥으로 얼마나 벌어져 있는지(도) -> 목표 각도까지 더 돌릴 양
-function sleeveTurn(sl: Sleeve) {
+function sleeveTurn(sl: Sleeve, angle: number) {
   const [px, py] = sl.pivot
   const [cx, cy] = sl.cuff
-  return ARM_ANGLE - (Math.atan2(px - cx, cy - py) * 180) / Math.PI
+  return angle - (Math.atan2(px - cx, cy - py) * 180) / Math.PI
 }
 
 // 다리: 가랑이(pivot)를 축으로 다리 쪽만 돌린다. hem 은 밑단 가운데
@@ -65,17 +66,18 @@ interface Legs {
 }
 const legsOf = (type: string): Legs => (type === '반바지' ? { pivot: [50, 34], hem: [33.5, 58] } : { pivot: [50, 38], hem: [34.5, 92] })
 
-function Garment({ id, type, color, place, strokeWidth, torsoOnly }: { id: string; type: string; color: string; place: Place; strokeWidth: number; torsoOnly: boolean }) {
+function Garment({ id, type, color, place, strokeWidth, torsoOnly, angL, angR }: { id: string; type: string; color: string; place: Place; strokeWidth: number; torsoOnly: boolean; angL: number; angR: number }) {
   const sl = sleeveOf(type)
-  const turn = sleeveTurn(sl)
+  const turnL = sleeveTurn(sl, angL)
+  const turnR = sleeveTurn(sl, angR)
   const left = sl.area
   const right = sl.area.map(mirror)
   const [px, py] = sl.pivot
   // 소매를 돌리면 겨드랑이 쪽이 벌어지므로, 그 틈을 같은 색으로 메우고 겨드랑이 솔기선을 긋는다
   const fill = colorHex[color] ?? color
   const armpit = left[left.length - 1]!
-  const armpitL = rot(armpit, sl.pivot, turn)
-  const armpitR = rot(mirror(armpit), mirror(sl.pivot), -turn)
+  const armpitL = rot(armpit, sl.pivot, turnL)
+  const armpitR = rot(mirror(armpit), mirror(sl.pivot), -turnR)
   const gap = (a: Pt, b: Pt, p: Pt) => (
     <>
       <polygon points={poly([p, a, b])} fill={fill} stroke="none" />
@@ -100,12 +102,12 @@ function Garment({ id, type, color, place, strokeWidth, torsoOnly }: { id: strin
         <>
           {gap(armpit, armpitL, sl.pivot)}
           {gap(mirror(armpit), armpitR, mirror(sl.pivot))}
-          <g transform={`rotate(${turn} ${px} ${py})`}>
+          <g transform={`rotate(${turnL} ${px} ${py})`}>
             <g clipPath={`url(#${id}-l)`}>
               <ClothingArt type={type} color={color} />
             </g>
           </g>
-          <g transform={`rotate(${-turn} ${100 - px} ${py})`}>
+          <g transform={`rotate(${-turnR} ${100 - px} ${py})`}>
             <g clipPath={`url(#${id}-r)`}>
               <ClothingArt type={type} color={color} />
             </g>
@@ -151,11 +153,12 @@ function Pants({ id, type, color }: { id: string; type: string; color: string })
 const hand = (p: Pt, key: string) => <circle key={key} cx={p[0]} cy={p[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
 
 /** 옷 한 벌: 다리(바지 밑으로 보이는 부분) -> 하의 -> 상의/겉옷 -> 소매 밖으로 나온 팔뚝과 손 */
-function Wear({ o }: { o: Outfit }) {
+function Wear({ o, angL, angR }: { o: Outfit; angL: number; angR: number }) {
   const upper = o.outer ?? o.top
   const upperPlace = o.outer ? OUTER : TOP
   const sl = sleeveOf(upper.type)
-  const turn = sleeveTurn(sl)
+  const turnL = sleeveTurn(sl, angL)
+  const turnR = sleeveTurn(sl, angR)
 
   // 다리: 가랑이에서 밑단 방향으로 뻗는 막대 (옷에 가려지는 부분은 옷 아래에 그려진다)
   const lg = legsOf(o.bottom.type)
@@ -174,7 +177,7 @@ function Wear({ o }: { o: Outfit }) {
   const handArt: Pt = [wristArt[0] + unit[0] * 3.5, wristArt[1] + unit[1] * 3.5]
   const side = (flip: boolean) => {
     const piv: Pt = flip ? mirror(sl.pivot) : sl.pivot
-    const f = (p: Pt) => at(upperPlace, rot(flip ? mirror(p) : p, piv, flip ? -turn : turn))
+    const f = (p: Pt) => at(upperPlace, rot(flip ? mirror(p) : p, piv, flip ? -turnR : turnL))
     return { cuff: f(sl.cuff), wrist: f(wristArt), hand: f(handArt) }
   }
   const armL = side(false)
@@ -184,8 +187,8 @@ function Wear({ o }: { o: Outfit }) {
     <>
       <path d={`M${hipFig[0]} ${hipFig[1]} L${footL[0]} ${footL[1]} M${hipFig[0]} ${hipFig[1]} L${footR[0]} ${footR[1]}`} />
       <Pants id={`${o.key}-b`} type={o.bottom.type} color={o.bottom.color} />
-      <Garment id={`${o.key}-t`} type={o.top.type} color={o.top.color} place={TOP} strokeWidth={3.4} torsoOnly={!!o.outer} />
-      {o.outer && <Garment id={`${o.key}-o`} type={o.outer.type} color={o.outer.color} place={OUTER} strokeWidth={3.2} torsoOnly={false} />}
+      <Garment id={`${o.key}-t`} type={o.top.type} color={o.top.color} place={TOP} strokeWidth={3.4} torsoOnly={!!o.outer} angL={angL} angR={angR} />
+      {o.outer && <Garment id={`${o.key}-o`} type={o.outer.type} color={o.outer.color} place={OUTER} strokeWidth={3.2} torsoOnly={false} angL={angL} angR={angR} />}
       {sl.forearm && (
         <path d={`M${armL.cuff[0]} ${armL.cuff[1]} L${armL.wrist[0]} ${armL.wrist[1]} M${armR.cuff[0]} ${armR.cuff[1]} L${armR.wrist[0]} ${armR.wrist[1]}`} strokeWidth="2.6" />
       )}
@@ -195,34 +198,32 @@ function Wear({ o }: { o: Outfit }) {
   )
 }
 
+/**
+ * 졸라맨 몸(머리, 얼굴, 몸통, 티셔츠와 바지, 팔다리). viewBox 0 0 140 160 안의 <g> 로 그려진다.
+ * armL/armR 은 팔이 몸에서 벌어진 각도(세로 아래 기준, 클수록 위로 올라감). idKey 는 같은 화면에 여러 개 그릴 때 clipPath id 가 겹치지 않게 하는 값.
+ */
+export function FigureBody({ armL = ARM_ANGLE, armR = ARM_ANGLE, idKey = 'final' }: { armL?: number; armR?: number; idKey?: string }) {
+  return (
+    <g transform="translate(10 0)">
+      {/* 몸통과 머리 */}
+      <path d="M60 47 L61 100" />
+      <path d="M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z" />
+      <g stroke="none">
+        <circle cx="53.5" cy="30" r="1.9" fill="#222" />
+        <circle cx="66.5" cy="29.5" r="1.9" fill="#222" />
+      </g>
+      <path d="M56.5 36.5 Q60.5 40 64.5 36" strokeWidth="2" />
+
+      <Wear o={{ ...FINAL, key: idKey }} angL={armL} angR={armR} />
+    </g>
+  )
+}
+
 /** 로그인 첫 화면의 졸라맨: 팔다리를 벌린 '大' 자로, 무난한 티셔츠와 바지를 입고 서 있다. */
 export default function IntroFigure({ size = 200 }: { size?: number }) {
   return (
-    <svg
-      className="doodle intro-figure"
-      width={size}
-      height={size * 1.15}
-      viewBox="0 0 140 160"
-      fill="none"
-      stroke="#222"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      overflow="visible"
-      aria-hidden="true"
-    >
-      <g transform="translate(10 0)">
-        {/* 몸통과 머리 */}
-        <path d="M60 47 L61 100" />
-        <path d="M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z" />
-        <g stroke="none">
-          <circle cx="53.5" cy="30" r="1.9" fill="#222" />
-          <circle cx="66.5" cy="29.5" r="1.9" fill="#222" />
-        </g>
-        <path d="M56.5 36.5 Q60.5 40 64.5 36" strokeWidth="2" />
-
-        <Wear o={FINAL} />
-      </g>
+    <svg className="doodle intro-figure" width={size} height={size * 1.15} {...figureSvgProps}>
+      <FigureBody />
     </svg>
   )
 }

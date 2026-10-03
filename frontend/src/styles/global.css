@@ -286,8 +286,67 @@ input:focus-visible {
   transform: rotate(-3deg);
 }
 .landing .lead {
-  font-size: 21px;
-  max-width: 330px;
+  font-size: 22px;
+  line-height: 1.5;
+}
+.lead-line {
+  display: block;
+}
+.landing .greeting-figure {
+  margin-top: 14px;
+}
+/* 졸라맨: 다 그린 뒤 손 든 각도가 다른 두 장을 번갈아 보여 손을 흔든다 */
+.gf-a {
+  animation: gf-a 0.9s steps(1, end) infinite;
+  animation-delay: var(--gf-t, 0s);
+}
+.gf-b {
+  opacity: 0;
+  animation: gf-b 0.9s steps(1, end) infinite;
+  animation-delay: var(--gf-t, 0s);
+}
+@keyframes gf-a {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes gf-b {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.landing .guest-link {
+  margin-top: 2px;
+}
+.thanks {
+  text-align: center;
+  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.feat .closet-scene svg {
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+}
+/* 준비물: 우산·마스크·선크림을 한 줄로 고르게 */
+.feat-gear .gear-caption {
+  display: none;
+}
+.feat-gear .gear-wrap {
+  width: 100%;
+}
+.feat-gear .gear {
+  justify-content: space-around;
+  gap: 0;
+  width: 100%;
 }
 .landing-actions {
   display: flex;

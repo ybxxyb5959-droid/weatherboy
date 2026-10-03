@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
-import IntroFigure from '../components/IntroFigure'
+import GreetingFigure from '../components/GreetingFigure'
+import GearDoodles from '../components/GearDoodles'
+import { ClosetScene } from '../components/Clothesline'
 import { Bee, Cloud, Flower, Sun, WeatherDoodle } from '../components/DoodleWeather'
-import type { WeatherKind } from '../components/DoodleWeather'
 import { detectPlatform, openInExternalBrowser, useInstall } from '../lib/install'
-
-const features: { kind: WeatherKind; title: string; body: string }[] = [
-  { kind: 'rain', title: '날씨 맞춤 추천', body: '기온, 비, 미세먼지까지 보고 입을 옷을 골라줘요.' },
-  { kind: 'partly', title: '내 옷장', body: '가진 옷을 등록하면 그 옷으로 코디를 짜줘요.' },
-  { kind: 'clear', title: '일정별 코디', body: '약속 날짜와 장소를 넣으면 그날 날씨로 알려줘요.' },
-  { kind: 'snow', title: '준비물 알림', body: '우산, 마스크, 선크림이 필요한 날을 알려줘요.' },
-]
 
 // 설치가 바로 안 될 때 보여 줄 안내
 const helpText: Record<'kakao' | 'ios' | 'android' | 'other', string> = {
@@ -59,26 +53,33 @@ export default function LandingPage() {
       </span>
 
       <section className="landing-hero">
-        <p className="tiny">날씨 · 옷장 · 일정으로 고르는</p>
         <h1 className="landing-title">
           <HandText>뭐입을옷?</HandText>
         </h1>
-        <IntroFigure size={190} />
+        <GreetingFigure size={210} />
         <p className="lead">
-          <HandText>오늘 뭐 입지? 고민은 이제 그만! 날씨랑 내 옷장을 보고 입을 옷을 골라줘요.</HandText>
+          <span className="lead-line">
+            <HandText>안녕하세요.</HandText>
+          </span>
+          <span className="lead-line">
+            <HandText>제가 앱을 하나 생각을 해봤는데요.</HandText>
+          </span>
+          <span className="lead-line">
+            <HandText>한번 사용해봐주세요 ^_^</HandText>
+          </span>
         </p>
         <div className="landing-actions">
           <button type="button" className="dbtn block w1" onClick={() => void install()}>
-            {installed ? '설치됐어요! 홈 화면에서 열어주세요' : '앱으로 설치하고 시작하기'}
-          </button>
-          <button type="button" className="dbtn block w2" onClick={() => nav('/start')}>
-            웹에서 둘러보기
+            {installed ? '설치됐어요! 홈 화면에서 열어주세요' : '앱으로 설치하고 테스트해주기'}
           </button>
           {hint && (
             <p className="tiny install-hint" role="status">
               {hint}
             </p>
           )}
+          <button type="button" className="guest-link" onClick={() => nav('/start')}>
+            <HandText>설치 없이 웹에서 먼저 볼래요</HandText>
+          </button>
         </div>
       </section>
 
@@ -89,13 +90,26 @@ export default function LandingPage() {
           <HandText>이런 앱이에요</HandText>
         </h2>
         <ul className="feat-grid">
-          {features.map((f, i) => (
-            <li key={f.title} className={`box feat w${(i % 3) + 1}`}>
-              <WeatherDoodle kind={f.kind} size={52} />
-              <h3>{f.title}</h3>
-              <p className="tiny">{f.body}</p>
-            </li>
-          ))}
+          <li className="box feat w1">
+            <WeatherDoodle kind="rain" size={52} />
+            <h3>날씨 맞춤 추천</h3>
+            <p className="tiny">기온, 비, 미세먼지까지 보고 입을 옷을 골라줘요.</p>
+          </li>
+          <li className="box feat w2">
+            <ClosetScene />
+            <h3>내 옷장</h3>
+            <p className="tiny">가진 옷을 등록하면 그 옷으로 코디를 짜줘요.</p>
+          </li>
+          <li className="box feat w3">
+            <WeatherDoodle kind="clear" size={52} />
+            <h3>일정별 코디</h3>
+            <p className="tiny">약속 날짜와 장소를 넣으면 그날 날씨로 알려줘요.</p>
+          </li>
+          <li className="box feat feat-gear w1">
+            <GearDoodles items={['umbrella', 'mask', 'sunscreen']} />
+            <h3>준비물 알림</h3>
+            <p className="tiny">우산, 마스크, 선크림이 필요한 날을 알려줘요.</p>
+          </li>
         </ul>
       </section>
 
@@ -106,7 +120,7 @@ export default function LandingPage() {
           <HandText>앱처럼 설치해요</HandText>
         </h2>
         <ol className="steps">
-          <li>위의 "앱으로 설치하고 시작하기"를 눌러요.</li>
+          <li>위의 "앱으로 설치하고 테스트해주기"를 눌러요.</li>
           <li>나오는 창에서 "설치"(또는 "추가")를 눌러요.</li>
           <li>홈 화면에 생긴 뭐입을옷? 아이콘으로 열어요.</li>
         </ol>
@@ -123,6 +137,17 @@ export default function LandingPage() {
             <dd>{helpText.kakao}</dd>
           </dl>
         </details>
+      </section>
+
+      <hr className="scribble" />
+
+      <section className="thanks">
+        <p>
+          <HandText>사용 후에 후기를 남겨주시면 안될까용?</HandText>
+        </p>
+        <p>
+          <HandText>추후에 더 나은 서비스로 찾아뵙겠습니다 ^_^</HandText>
+        </p>
       </section>
 
       <footer className="landing-foot tiny">
