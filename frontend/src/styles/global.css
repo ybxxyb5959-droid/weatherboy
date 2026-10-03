@@ -3716,3 +3716,77 @@ a.card {
   margin: 2px 0 0 22px;
   opacity: 0.7;
 }
+
+/* 타이핑 중 마지막으로 쓰인 글자 뒤에서 깜빡이는 커서 (자리는 차지하지 않는다) */
+.hc-cursor {
+  position: relative;
+}
+.hc-cursor::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 12%;
+  height: 76%;
+  width: 2px;
+  background: currentColor;
+  animation: hc-blink 0.7s steps(1, end) infinite;
+}
+@keyframes hc-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hc-cursor::after {
+    animation: none;
+  }
+}
+
+/* ---------- 이렇게 사용해보세요: 4컷 만화 ---------- */
+.howto .comic {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.comic-panel {
+  position: relative;
+}
+.comic-frame {
+  position: relative;
+  padding: 14px 10px 8px;
+}
+.comic-no {
+  position: absolute;
+  top: -14px;
+  left: 10px;
+  padding: 0 10px;
+  background: var(--paper, #fcfcfa);
+  font-size: 24px;
+  font-weight: 700;
+}
+.comic-scene {
+  position: relative;
+}
+.comic-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.comic-cap {
+  margin: 10px 4px 0;
+  text-align: center;
+  font-size: 19px;
+  line-height: 1.5;
+}
+/* 컷 안의 말풍선 */
+.comic-bubble {
+  position: absolute;
+  padding: 3px 9px;
+  font-size: 15px;
+  line-height: 1.3;
+  background: var(--paper, #fcfcfa);
+  white-space: nowrap;
+}

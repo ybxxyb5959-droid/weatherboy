@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { buildPose } from './greetingPose'
 import FigureArt, { type Reg } from './FigureArt'
 import { figureSvgProps } from './figureProps'
@@ -76,13 +76,22 @@ interface PlanStep {
   b: [number, number] // 펜 끝 위치
 }
 
-export default function GreetingFigure({ size = 220 }: { size?: number }) {
+/** onProgress: 그리는 진행률(0~1). 펜이 들어와 마지막 획을 마칠 때까지 오르고, 건너뛰거나 다 그리면 1 (글을 그리는 속도에 맞춰 타이핑할 때 쓴다) */
+export default function GreetingFigure({ size = 220, onProgress }: { size?: number; onProgress?: (p: number) => void }) {
   const uid = useId().replace(/:/g, '')
   const [reduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [done, setDone] = useState(reduced)
   const els = useRef<Record<string, SVGGeometryElement | null>>({})
   const penRef = useRef<SVGGElement>(null)
   const skip = useRef<() => void>(() => undefined)
+  const progressRef = useRef(onProgress)
+  useEffect(() => {
+    progressRef.current = onProgress
+  })
+  // 다 그렸거나(건너뛰기 포함) 처음부터 완성 상태(움직임 줄이기)면 100%
+  useEffect(() => {
+    if (done) progressRef.current?.(1)
+  }, [done])
   const reg: Reg = (key) => (el) => {
     els.current[key] = el
   }
@@ -122,6 +131,7 @@ export default function GreetingFigure({ size = 220 }: { size?: number }) {
       prev = b
     }
     const drawEnd = t + HOLD
+    const drawn = t // 마지막 획을 마치는 시각
     const total = drawEnd + LEAVE
 
     // 2) 처음에는 모두 숨긴다
@@ -196,6 +206,7 @@ export default function GreetingFigure({ size = 220 }: { size?: number }) {
         return
       }
       apply(time)
+      progressRef.current?.(clamp01((time - START) / (drawn - START)))
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)

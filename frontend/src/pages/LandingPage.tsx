@@ -1,14 +1,56 @@
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import GreetingFigure from '../components/GreetingFigure'
 import GearDoodles from '../components/GearDoodles'
+import HowToComic from '../components/comic/HowToComic'
 import { ClosetScene } from '../components/Clothesline'
 import { Bee, Cloud, Flower, Sun, WeatherDoodle } from '../components/DoodleWeather'
 import { helpText, useInstallAction } from '../lib/useInstallAction'
 
+const LEAD_LINES = ['안녕하세요.', '제가 앱을 하나 생각을 해봤는데요.', '한번 사용해봐주세요 ^_^']
+const glyphs = (s: string) => s.replace(/ /g, '').length
+const LEAD_TOTAL = LEAD_LINES.reduce((n, l) => n + glyphs(l), 0)
+
+/** 졸라맨이 그려지는 속도에 맞춰 한 글자씩 써지고, 다 쓰이면 그대로 고정된다 */
+function TypedLead({ bind }: { bind: (set: (p: number) => void) => void }) {
+  const [count, setCount] = useState(0)
+  useLayoutEffect(() => {
+    bind((p) => {
+      const c = Math.round(p * LEAD_TOTAL)
+      setCount((prev) => (prev === c ? prev : c))
+    })
+  }, [bind])
+  let offset = 0
+  return (
+    <p className="lead">
+      {LEAD_LINES.map((line) => {
+        const shown = count - offset
+        offset += glyphs(line)
+        return (
+          <span key={line} className="lead-line">
+            <HandText reveal={Math.max(0, shown)}>{line}</HandText>
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
 export default function LandingPage() {
   const nav = useNavigate()
   const { install, installed, hint, helpOpen, setHelpOpen } = useInstallAction()
+  // 그림이 그려지는 진행률을 글 쪽으로 넘긴다 (프레임마다 화면 전체를 다시 그리지 않도록 ref 로 잇는다)
+  const sink = useRef<((p: number) => void) | null>(null)
+  const last = useRef(0)
+  const onProgress = useCallback((p: number) => {
+    last.current = p
+    sink.current?.(p)
+  }, [])
+  const bind = useCallback((set: (p: number) => void) => {
+    sink.current = set
+    set(last.current)
+  }, [])
 
   // 카카오 로그인 실패 등으로 /?login=... 로 돌아온 경우엔 로그인 화면으로 보낸다
   const search = window.location.search
@@ -27,18 +69,8 @@ export default function LandingPage() {
         <h1 className="landing-title">
           <HandText>뭐입을옷?</HandText>
         </h1>
-        <GreetingFigure size={210} />
-        <p className="lead">
-          <span className="lead-line">
-            <HandText>안녕하세요.</HandText>
-          </span>
-          <span className="lead-line">
-            <HandText>제가 앱을 하나 생각을 해봤는데요.</HandText>
-          </span>
-          <span className="lead-line">
-            <HandText>한번 사용해봐주세요 ^_^</HandText>
-          </span>
-        </p>
+        <GreetingFigure size={210} onProgress={onProgress} />
+        <TypedLead bind={bind} />
         <div className="landing-actions">
           <button type="button" className="dbtn block w1" onClick={() => void install()}>
             {installed ? '설치됐어요! 홈 화면에서 열어주세요' : '앱으로 설치하고 테스트해주기'}
@@ -83,6 +115,10 @@ export default function LandingPage() {
           </li>
         </ul>
       </section>
+
+      <hr className="scribble" />
+
+      <HowToComic />
 
       <hr className="scribble" />
 

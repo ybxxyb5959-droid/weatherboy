@@ -10,10 +10,12 @@ function jitter(code: number, i: number) {
   return { rot, dy, sc }
 }
 
-export default function HandText({ children }: { children: ReactNode }) {
+/** reveal: 앞에서부터 이 개수의 글자(띄어쓰기 제외)만 보인다. 자리는 그대로 두고 숨기므로 줄바꿈과 배치가 흔들리지 않는다(타이핑 효과용). */
+export default function HandText({ children, reveal }: { children: ReactNode; reveal?: number }) {
   if (typeof children !== 'string') return <>{children}</>
   // 단어(띄어쓰기 단위)는 한 덩어리로 묶어서, 줄바꿈이 단어 중간에서 일어나지 않게 한다
   const words = children.split(' ')
+  const total = words.reduce((n, w) => n + Array.from(w).length, 0)
   let idx = 0
   return (
     <span className="hand">
@@ -27,8 +29,10 @@ export default function HandText({ children }: { children: ReactNode }) {
               {Array.from(word).map((c) => {
                 const i = idx++
                 const { rot, dy, sc } = jitter(c.charCodeAt(0), i)
+                const hidden = reveal !== undefined && i >= reveal
+                const cursor = reveal !== undefined && reveal < total && i === reveal - 1
                 return (
-                  <span key={i} className="hc" style={{ transform: `translateY(${dy}px) rotate(${rot}deg) scale(${sc})` }}>
+                  <span key={i} className={`hc${cursor ? ' hc-cursor' : ''}`} style={{ transform: `translateY(${dy}px) rotate(${rot}deg) scale(${sc})`, ...(hidden ? { visibility: 'hidden' } : null) }}>
                     {c}
                   </span>
                 )
