@@ -8,6 +8,9 @@ export const ruleConfig = {
   // 피드백 보정(추웠어요 -0.5 / 더웠어요 +0.5), 누적 한계
   feedbackStep: { COLD: -0.5, OK: 0, HOT: 0.5 } as Record<'COLD' | 'OK' | 'HOT', number>,
   feedbackOffsetLimit: 3,
+
+  // 색 궁합: 보온 조건이 같은 후보 중 색 점수가 (최고점 - 이 값) 이상인 조합만 남긴다. 클수록 색을 덜 따지고 다양하게 고른다.
+  colorTolerance: 1,
   // 보정은 기온대마다 따로 쌓는다: 추위는 타도 더위는 안 타는 사람이 있어서. 기준은 보정 전 판단 기온(체감 + 감도 + 일정 보정).
   feedbackBandLowBelow: 10, // 이 미만이면 '낮음'
   feedbackBandHighFrom: 20, // 이 이상이면 '높음', 그 사이는 '보통'

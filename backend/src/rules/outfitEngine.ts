@@ -4,6 +4,7 @@ import { clothingTypeMap, colorMap, patternMap } from '../config/mappings.js'
 import { ruleConfig } from '../config/ruleConfig.js'
 import { kstDate, toKstParts } from '../utils/time.js'
 import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
+import { colorIssueOf, colorIssueTip, comboColorScore, type ColorIssue } from './colorHarmony.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -83,6 +84,9 @@ export interface EngineResult {
   /** 이 추천에 쓴 피드백 보정의 기온대와 값(후기를 같은 기온대에 쌓는 데 쓴다). 예전에 저장된 추천에는 없다 */
   feedbackBand?: FeedbackBand
   feedbackApplied?: number
+  /** 고른 조합의 색 궁합 점수(높을수록 잘 어울림)와, 눈에 띄게 어색하면 그 유형. 날씨 조건 때문에 피할 수 없었던 경우에도 알려준다 */
+  colorScore?: number
+  colorIssue?: ColorIssue | null
   requiredWarmth: number
   decisionKey: string
 }
@@ -172,6 +176,7 @@ function hashOf(s: string): number {
   return h
 }
 
+const colorOf = (c: Candidate) => comboColorScore(c.top, c.bottom, c.outer)
 const keyOf = (c: Candidate) => `${c.top.id}|${c.bottom.id}|${c.outer?.id ?? ''}`
 
 export function recommend(input: EngineInput): EngineResult {
@@ -255,6 +260,11 @@ export function recommend(input: EngineInput): EngineResult {
     const [wp, rp] = rank(first)
     const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
     let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
+    // 색이 어울리는 조합을 먼저 남긴다(보온 조건이 같은 후보끼리만 비교하므로 날씨 판단은 그대로)
+    if (group.length > 1) {
+      const bestColor = Math.max(...group.map(colorOf))
+      group = group.filter((c) => colorOf(c) >= bestColor - ruleConfig.colorTolerance)
+    }
     // 최근에 담은 옷이 든 조합이 있으면 그 안에서 고른다
     const fresh = group.filter((c) => isNew(c.top) || isNew(c.bottom) || isNew(c.outer))
     if (fresh.length > 0) group = fresh
@@ -291,11 +301,12 @@ export function recommend(input: EngineInput): EngineResult {
     const used = new Set<string>([best.top.id, best.bottom.id, ...(best.outer ? [best.outer.id] : [])])
     while (alternatives.length < ruleConfig.alternativesCount) {
       let pick: Candidate | null = null
-      let pickScore = -1
+      let pickScore = -Infinity
       for (const c of altSource) {
         if (seen.has(keyOf(c)) || shown.has(labelKey(c))) continue
         const score =
-          (used.has(c.top.id) ? 0 : 4) + (used.has(c.bottom.id) ? 0 : 2) + (c.outer && !used.has(c.outer.id) ? 2 : 0) + (isNew(c.top) || isNew(c.bottom) || isNew(c.outer) ? 1 : 0)
+          (used.has(c.top.id) ? 0 : 4) + (used.has(c.bottom.id) ? 0 : 2) + (c.outer && !used.has(c.outer.id) ? 2 : 0) + (isNew(c.top) || isNew(c.bottom) || isNew(c.outer) ? 1 : 0) -
+          (colorIssueOf(c.top, c.bottom) ? 6 : 0) // 색이 어색한 조합은 다른 대안이 있으면 뒤로
         if (score > pickScore) {
           pickScore = score
           pick = c
@@ -361,6 +372,8 @@ export function recommend(input: EngineInput): EngineResult {
     judgedTemp: judged,
     feedbackBand,
     feedbackApplied,
+    colorScore: colorOf(best),
+    colorIssue: colorIssueOf(best.top, best.bottom),
     requiredWarmth: required,
     decisionKey,
   }
@@ -414,6 +427,9 @@ function whyOf(c: Candidate, x: WhyContext): ComboWhy {
     const b = nameOf(c.bottom)
     notes.push(`${b}${josa(b, '은', '는')} 다리가 쌀쌀할 수 있어요`)
   }
+  const issue = colorIssueOf(c.top, c.bottom)
+  if (issue) notes.push(colorIssueTip[issue])
+  else if (colorOf(c) >= 2) notes.push('색 조합이 차분하게 잘 어울려요')
   const fresh = [c.top, c.bottom, c.outer].filter((i): i is WardrobeItem => !!i && i.owned && x.isNew(i))
   if (fresh.length > 0) {
     const f = nameOf(fresh[0]!)

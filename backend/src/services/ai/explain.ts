@@ -3,6 +3,7 @@
 //   헤더 x-goog-api-key, 본문 { contents: [{ parts: [{ text }] }] }, 응답 candidates[0].content.parts[0].text
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
+import { colorIssueTip } from '../../rules/colorHarmony.js'
 import type { EngineResult } from '../../rules/outfitEngine.js'
 import { logger } from '../../utils/logger.js'
 
@@ -22,6 +23,8 @@ export function aiInput(r: EngineResult) {
     headline: r.headline,
     sub: r.sub,
     reasons: r.reasons,
+    // 색이 어색한 조합일 때만(상하의가 같은 색, 쨍한 색 충돌, 무늬 겹침). 날씨 때문에 피할 수 없었던 조합이다.
+    ...(r.colorIssue ? { colorIssue: r.colorIssue, colorTip: colorIssueTip[r.colorIssue] } : {}),
   }
 }
 
@@ -39,7 +42,8 @@ export async function explain(r: EngineResult, fetchImpl: typeof fetch = fetch):
   const started = Date.now()
   const prompt =
     '다음 JSON은 옷차림 추천 결과다. 이 내용만 사용해 친근한 한국어 한두 문장으로 설명해라. ' +
-    '새로운 기온, 확률, 수치, 옷을 만들어내지 말고 JSON에 없는 내용은 말하지 마라.\n' +
+    '새로운 기온, 확률, 수치, 옷을 만들어내지 말고 JSON에 없는 내용은 말하지 마라. ' +
+    'colorIssue 가 있으면 마지막에 한 문장으로, colorTip 의 뜻을 살려 부담 없는 말투로 색을 보완하는 방법을 알려줘라(새 옷을 사라고 하지 말고 겉옷·신발·가방 같은 소품 색 정도로).\n' +
     JSON.stringify(aiInput(r))
   try {
     const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`, {
