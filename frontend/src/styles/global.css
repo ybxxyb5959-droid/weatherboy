@@ -553,6 +553,14 @@ input:focus-visible {
   box-shadow: 3px 4px 0 rgba(34, 34, 34, 0.18);
 }
 /* 화면 여러 장을 세로로 쌓아 두고, 설명이 끝나면 위로 밀어 올려 아래 화면이 스르륵 내려오는 것처럼 보이게 한다 */
+/* 위아래로 밀어 볼 수 있는 단계: 터치로 밀 때 페이지가 같이 스크롤되지 않게 한다 */
+.tour-phone.multi {
+  touch-action: none;
+  cursor: grab;
+}
+.tour-phone.multi:active {
+  cursor: grabbing;
+}
 .tour-track {
   position: absolute;
   top: 0;
@@ -584,6 +592,23 @@ input:focus-visible {
 }
 .tour-frame.on .tour-arrow {
   animation: tour-fade 0.5s ease-out forwards;
+}
+/* 캡처 속 하단 메뉴 위에 올려 둔 투명 버튼: 누르면 그 화면의 둘러보기로 */
+.tour-tab {
+  position: absolute;
+  z-index: 3;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tour-tab:active,
+.tour-tab:focus-visible {
+  background: rgba(34, 34, 34, 0.1);
+  outline: 2px dashed var(--ink);
+  outline-offset: -3px;
 }
 .tour-bubble {
   position: absolute;

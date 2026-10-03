@@ -78,7 +78,7 @@ const STEPS: Step[] = [
   },
   {
     title: '캐릭터',
-    sub: '옷을 5벌 이상 등록하면 열려요',
+    sub: '5벌 이상 등록하면 열려요 · 위아래로 밀어보세요',
     frames: [
       {
         image: '/tour/character.jpg',
@@ -130,6 +130,16 @@ const STEPS: Step[] = [
   },
 ]
 
+/** 캡처 아래쪽 메뉴 줄의 버튼 위치(캡처 픽셀)와 이동할 단계. 설정은 둘러보기에 없어서 뺐다. */
+const TABS = [
+  { label: '홈', x: 44, step: 0 },
+  { label: '옷장', x: 118, step: 1 },
+  { label: '캐릭터', x: 196, step: 2 },
+  { label: '일정', x: 272, step: 3 },
+]
+const TAB_W = 74
+const TAB_TOP = 780
+
 const frameCount = (i: number) => STEPS[i]?.frames.length ?? 0
 /** 다음: 같은 단계에 아래 화면이 남았으면 그리로, 아니면 다음 단계 */
 const advance = ({ i, f }: Pos): Pos => (i >= STEPS.length ? { i, f } : f < frameCount(i) - 1 ? { i, f: f + 1 } : { i: i + 1, f: 0 })
@@ -175,6 +185,11 @@ export default function TourPage() {
   const { install, installed, hint } = useInstallAction()
   const [pos, setPos] = useState<Pos>({ i: 0, f: 0 })
   const { i, f } = pos
+  const [manual, setManual] = useState(-1) // 사용자가 직접 넘기거나 민 단계: 이 단계에서는 자동 슬라이드를 하지 않는다
+  const [dragY, setDragY] = useState<number | null>(null) // 위아래로 미는 중인 거리(px)
+  const phoneRef = useRef<HTMLDivElement>(null)
+  const posRef = useRef(pos)
+  const drag = useRef({ startY: null as number | null, moved: false, lastWheel: 0 })
   const [reaction, setReaction] = useState<'idle' | 'flat' | 'cry'>('idle') // 안 쓸래요를 누르면: 무표정 -> 울음
   const [msg, setMsg] = useState('')
   const timers = useRef<number[]>([])
@@ -184,11 +199,79 @@ export default function TourPage() {
   const touchX = useRef<number | null>(null)
 
   const next = () => {
-    if (!busy) setPos(advance)
+    if (busy) return
+    setManual(i)
+    setPos(advance)
   }
   const prev = () => {
-    if (!busy) setPos(retreat)
+    if (busy) return
+    setManual(i)
+    setPos(retreat)
   }
+
+  // 캡처 속 메뉴 버튼을 누르면 그 화면의 둘러보기로 간다
+  const goStep = (n: number) => {
+    if (busy) return
+    setManual(-1) // 새로 들어간 단계에서는 자동 슬라이드가 다시 동작한다
+    setPos({ i: n, f: 0 })
+  }
+
+  const multi = !!step && step.frames.length > 1 // 화면이 여러 장이면 위아래로 밀어서 볼 수 있다
+
+  useEffect(() => {
+    posRef.current = pos
+  })
+
+  // 위아래로 밀기(터치/마우스 드래그): 미는 동안 화면이 손가락을 따라오고, 놓으면 가까운 화면에 붙는다
+  const onDown = (e: React.PointerEvent) => {
+    if (!multi || busy) return
+    if ((e.target as HTMLElement).closest('.tour-tab')) return // 메뉴 버튼은 밀기가 아니라 누르기
+    drag.current.startY = e.clientY
+    drag.current.moved = false
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onMove = (e: React.PointerEvent) => {
+    const y0 = drag.current.startY
+    if (y0 == null || !step) return
+    let dy = e.clientY - y0
+    if (Math.abs(dy) > 6) drag.current.moved = true
+    // 맨 위/맨 아래에서 더 밀면 살짝만 따라온다
+    if ((f === 0 && dy > 0) || (f === step.frames.length - 1 && dy < 0)) dy *= 0.3
+    setDragY(dy)
+  }
+  const onUp = () => {
+    const y0 = drag.current.startY
+    drag.current.startY = null
+    if (y0 == null || !step) return
+    const dy = dragY ?? 0
+    setDragY(null)
+    if (dy < -50 && f < step.frames.length - 1) {
+      setManual(i)
+      setPos(advance)
+    } else if (dy > 50 && f > 0) {
+      setManual(i)
+      setPos(retreat)
+    }
+  }
+  // 마우스 휠: 이 단계 안에서 위/아래 화면으로 (더 갈 곳이 없으면 페이지가 그대로 스크롤되게 둔다)
+  useEffect(() => {
+    const el = phoneRef.current
+    if (!el || !multi || busy) return
+    const onWheel = (e: WheelEvent) => {
+      const { i: ci, f: cf } = posRef.current
+      const n = frameCount(ci)
+      const down = e.deltaY > 0
+      if (Math.abs(e.deltaY) < 8 || (down && cf >= n - 1) || (!down && cf <= 0)) return
+      e.preventDefault()
+      const now = performance.now()
+      if (now - drag.current.lastWheel < 800) return
+      drag.current.lastWheel = now
+      setManual(ci)
+      setPos(down ? advance : retreat)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [i, multi, busy])
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), [])
 
@@ -210,12 +293,12 @@ export default function TourPage() {
 
   // 한 단계에 화면이 여러 장이면, 말풍선을 다 읽을 시간이 지난 뒤 자동으로 아래 화면으로 슬라이드한다
   useEffect(() => {
-    if (busy || !step || f >= step.frames.length - 1) return
+    if (busy || !step || manual === i || f >= step.frames.length - 1) return
     const n = step.frames[f]!.callouts.length
     const lastBubbleAt = (f > 0 ? SLIDE : 0) + 0.35 + (n - 1) * 0.7
     const t = window.setTimeout(() => setPos(advance), (lastBubbleAt + 0.45 + READ) * 1000)
     return () => window.clearTimeout(t)
-  }, [i, f, busy, step])
+  }, [i, f, busy, step, manual])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -259,8 +342,28 @@ export default function TourPage() {
           </h2>
           <p className="tiny">{step.sub}</p>
 
-          <div className="tour-phone" onClick={next}>
-            <div className="tour-track" style={{ transform: `translateY(-${(f / step.frames.length) * 100}%)` }}>
+          <div
+            ref={phoneRef}
+            className={`tour-phone${multi ? ' multi' : ''}`}
+            onClick={() => {
+              if (drag.current.moved) {
+                drag.current.moved = false // 밀고 난 뒤의 클릭은 넘기기로 치지 않는다
+                return
+              }
+              next()
+            }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+          >
+            <div
+              className="tour-track"
+              style={{
+                transform: `translateY(calc(${-(f / step.frames.length) * 100}% + ${dragY ?? 0}px))`,
+                transition: dragY !== null ? 'none' : undefined,
+              }}
+            >
               {step.frames.map((fr, fi) => {
                 // 슬라이드로 내려온 화면은 내려오는 동안(SLIDE) 기다렸다가 말풍선을 띄운다
                 const base = fi > 0 ? SLIDE : 0
@@ -287,6 +390,24 @@ export default function TourPage() {
                       >
                         <HandText>{c.text}</HandText>
                       </div>
+                    ))}
+                    {TABS.map((t) => (
+                      <button
+                        key={t.label}
+                        type="button"
+                        className="tour-tab"
+                        aria-label={`${t.label} 화면 둘러보기`}
+                        style={{
+                          left: `${((t.x - TAB_W / 2) / W) * 100}%`,
+                          top: `${(TAB_TOP / H) * 100}%`,
+                          width: `${(TAB_W / W) * 100}%`,
+                          height: `${((H - TAB_TOP) / H) * 100}%`,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation() // 화면 누르기(다음으로)로 번지지 않게
+                          goStep(t.step)
+                        }}
+                      />
                     ))}
                   </div>
                 )
