@@ -80,7 +80,9 @@ weatherRouter.get(
     const daily: { date: string; tempMin: number; tempMax: number; pop: number; condition: string }[] = []
     for (const [date, hs] of [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b))) {
       if (hs.length < 8) continue // 하루를 대표하기엔 시간이 너무 적은 날은 중기예보에 맡긴다
-      const wet = hs.find((h) => h.precip !== 'none')
+      // 비 오는 시간이 3시간 이상일 때만 그날을 비로 본다(잠깐 스치는 비로 하루 전체를 비로 표시하지 않는다)
+      const wetHours = hs.filter((h) => h.precip !== 'none')
+      const wet = wetHours.length >= 3 ? wetHours[0] : undefined
       const noon = hs.find((h) => toKstParts(h.targetAt).hour >= 12) ?? hs[0]!
       const temps = hs.map((h) => h.temp)
       daily.push({

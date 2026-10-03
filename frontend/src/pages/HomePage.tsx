@@ -250,6 +250,10 @@ export default function HomePage() {
   // 준비물: 필요한 것만. 선크림은 해가 강한 날(맑음/폭염/자외선)에만.
   const gear: GearKind[] = []
   if (rec?.needUmbrella) gear.push('umbrella')
+  // 비가 아직 멀면(3시간 넘게 뒤) 캐릭터는 우산 없이 서 있고, 우산에는 "N시쯤 비"만 붙인다
+  const rainHour = rec?.rainAt ? new Date(rec.rainAt) : null
+  const rainSoon = !!rec?.needUmbrella && (!rainHour || rainHour.getTime() - Date.now() <= 3 * 3600_000)
+  const gearNotes = rainHour && !rainSoon ? { umbrella: `${rainHour.toLocaleTimeString('ko-KR', { hour: 'numeric', hour12: false, timeZone: 'Asia/Seoul' }).replace(/\D/g, '')}시쯤 비` } : undefined
   if (rec?.needMask) gear.push('mask')
   if (['clear', 'heat', 'uv'].includes(w.condition)) gear.push('sunscreen')
   // 저장되면(이미 저장돼 있어도) true. 실패하면 false 를 돌려줘 후기 카드가 원래대로 돌아가게 한다.
@@ -330,7 +334,7 @@ export default function HomePage() {
       </section>
 
       <div className="weather-foot">
-        <GearDoodles items={gear} />
+        <GearDoodles items={gear} notes={gearNotes} />
         <button type="button" className="detail-toggle" aria-expanded={showDetail} onClick={() => setShowDetail((v) => !v)}>
           {showDetail ? '접기 ▴' : '자세히 ▾'}
         </button>
@@ -395,7 +399,7 @@ export default function HomePage() {
         )}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
         <div className="look">
-          <StickPerson mood="stand" size={150} wear={wear} umbrella={rec.needUmbrella} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+          <StickPerson mood="stand" size={150} wear={wear} umbrella={rainSoon} persona={null} accessories={character?.unlocked ? character.config : undefined} />
           <ul className="look-items" aria-label="오늘 입을 옷">
             {items.map((it, i) => (
               <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>

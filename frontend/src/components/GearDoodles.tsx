@@ -46,7 +46,7 @@ const label: Record<GearKind, string> = { umbrella: '우산', mask: '마스크',
 const tilt = [-4, 3, -2]
 
 /** 준비물을 그림 낙서 + 삐뚤빼뚤 글씨로 보여준다. 필요한 게 없으면 아무것도 그리지 않는다. */
-export default function GearDoodles({ items }: { items: GearKind[] }) {
+export default function GearDoodles({ items, notes }: { items: GearKind[]; notes?: Partial<Record<GearKind, string>> }) {
   if (items.length === 0) return null
   return (
     <div className="gear-wrap">
@@ -58,6 +58,7 @@ export default function GearDoodles({ items }: { items: GearKind[] }) {
           <span className="gear-label">
             <HandText>{label[k]}</HandText>
           </span>
+          {notes?.[k] && <span className="tiny">{notes[k]}</span>}
         </li>
       ))}
     </ul>

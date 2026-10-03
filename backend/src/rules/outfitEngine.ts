@@ -75,6 +75,8 @@ export interface EngineResult {
   items: OutfitItem[]
   needOuter: boolean
   needUmbrella: boolean
+  /** 외출 구간에서 비/눈이 처음 걸리는 시각(ISO). 우산이 필요 없거나 예전 추천이면 없다 */
+  rainAt?: string | null
   needMask: boolean
   maskDataAvailable: boolean
   headline: string
@@ -197,7 +199,9 @@ export function recommend(input: EngineInput): EngineResult {
   const { judged, band: feedbackBand, offset: feedbackApplied } = judgeDetail(input)
   const required = requiredWarmthFor(judged)
   const maxWind = Math.max(...input.points.map((p) => p.wind))
-  const needUmbrella = input.points.some((p) => p.pop >= ruleConfig.umbrellaPopThreshold || p.precip !== 'none')
+  const firstWet = input.points.find((p) => p.pop >= ruleConfig.umbrellaPopThreshold || p.precip !== 'none')
+  const needUmbrella = !!firstWet
+  const rainAt = firstWet ? firstWet.at.toISOString() : null
   const windy = maxWind >= ruleConfig.windStrongMs
   const maskDataAvailable = input.airGrade != null
   const needMask = maskDataAvailable && (input.airGrade as number) >= ruleConfig.maskMinGrade
@@ -375,7 +379,7 @@ export function recommend(input: EngineInput): EngineResult {
   if (input.eventKind === 'OUTDOOR') push('EVENT_OUTDOOR', '야외에 오래 있어서 낮은 기온을 더 신경 썼어요')
   if (diurnal >= ruleConfig.largeDiurnalRange) push('LARGE_DIURNAL_RANGE', `외출 시간 중 기온 차가 ${Math.round(diurnal)}°C라 겉옷으로 조절하세요`)
   if (windy) push('WIND_STRONG', '바람이 강해서 방풍되는 겉옷을 우선했어요')
-  if (needUmbrella) push('RAIN', '비/눈 소식이 있어 우산을 챙기세요')
+  if (firstWet) push('RAIN', `${toKstParts(firstWet.at).hour}시쯤부터 비/눈 소식이 있어 우산을 챙기세요`)
   else push('NO_RAIN', '외출 시간에는 비 소식이 없어요')
   if (needMask) push('DUST_BAD', '미세먼지가 나빠서 마스크를 챙기세요')
   if (!maskDataAvailable) reasonCodes.push('DUST_UNAVAILABLE')
@@ -391,6 +395,7 @@ export function recommend(input: EngineInput): EngineResult {
     items,
     needOuter,
     needUmbrella,
+    rainAt,
     needMask,
     maskDataAvailable,
     headline,

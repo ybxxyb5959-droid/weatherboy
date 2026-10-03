@@ -82,6 +82,7 @@ export interface RecommendationView {
   items: EngineResult['items']
   needOuter: boolean
   needUmbrella: boolean
+  rainAt: string | null
   needMask: boolean
   maskDataAvailable: boolean
   headline: string
@@ -111,6 +112,7 @@ export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: 
     items: r.items,
     needOuter: r.needOuter,
     needUmbrella: r.needUmbrella,
+    rainAt: r.rainAt ?? null,
     needMask: r.needMask,
     maskDataAvailable: r.maskDataAvailable,
     headline: r.headline,

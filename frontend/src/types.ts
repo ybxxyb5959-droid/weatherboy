@@ -60,6 +60,8 @@ export interface ApiRecommendation {
   items: ApiOutfitItem[]
   needOuter: boolean
   needUmbrella: boolean
+  /** 외출 구간에서 비/눈이 처음 걸리는 시각(ISO). 없으면 null/undefined */
+  rainAt?: string | null
   needMask: boolean
   maskDataAvailable: boolean
   headline: string
