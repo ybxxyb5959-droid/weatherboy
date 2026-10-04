@@ -8,7 +8,8 @@ import DoodleButton from './DoodleButton'
 import SayBox from './SayBox'
 import StickPerson from './StickPerson'
 import UmbrellaDoodle from './UmbrellaDoodle'
-import type { ApiOutfitItem, ApiRecommendation } from '../types'
+import WardrobeScene from './WardrobeScene'
+import type { ApiOutfitItem, ApiRecommendation, EventOutfit } from '../types'
 
 export type StyleId = 'FORMAL' | 'SMART' | 'CASUAL' | 'COMFORT'
 interface StyleOption {
@@ -34,6 +35,8 @@ interface StylistResponse extends Talk {
   style?: StyleId
   outfit?: Look | null
 }
+/** 갈아입는 연출 단계: 옷장으로 달려가기 → 뒤적이기 → 옷장 뒤에서 갈아입기 → 돌아오기 */
+export type StagePhase = 'idle' | 'run' | 'dig' | 'change' | 'back'
 
 interface Props {
   eventId: string
@@ -53,11 +56,14 @@ interface Props {
 }
 
 const itemsKey = (its: ApiOutfitItem[]) => its.map((i) => `${i.type}:${i.clothingId ?? i.label}`).join('|')
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /**
  * 일정 상세의 코디 도우미: 캐릭터가 "어떤 느낌으로 입을까요?" 하고 묻고, 칩을 누르거나 직접 말하면
- * 갈아입은 모습과 함께 코디 카드가 졸라맨 아래로 차례로 펼쳐진다. 옷은 Rule Engine 이 고르고 AI 는 말만 거든다.
- * 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산), 다른 조합은 저장하지 않고 구경만 한다.
+ * 옷장으로 달려가 뒤적이고 갈아입은 모습으로 돌아온 뒤 코디 카드가 졸라맨 아래로 차례로 펼쳐진다.
+ * 옷은 Rule Engine 이 고르고 AI 는 말만 거든다. 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산),
+ * 다른 조합은 저장하지 않고 구경만 한다.
  */
 export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, onChanged }: Props) {
   const character = useCharacter().data
@@ -71,6 +77,11 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [text, setText] = useState('')
+  const [phase, setPhase] = useState<StagePhase>('idle')
+  const [frozen, setFrozen] = useState<ApiOutfitItem[] | null>(null) // 갈아입기 전까지 캐릭터가 입고 있던 옷
+  const [runPx, setRunPx] = useState(150) // 옷장까지 달려갈 거리
+  const rowRef = useRef<HTMLDivElement>(null)
+  const shownRef = useRef<ApiOutfitItem[]>([])
 
   const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 다른 느낌도 눌러볼 수 있어요.` : null
 
@@ -103,48 +114,69 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style, styleLabel])
 
-  const ask = useCallback(
-    async (body: { style?: StyleId; text?: string }, lastReply?: string) => {
-      touched.current = true
-      setBusy(true)
-      setError('')
-      try {
-        const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, history: lastReply ? [{ role: 'ai', text: lastReply }] : [], ...body })
-        setTalk({ reply: r.reply, options: r.options })
-        setText('')
-        if (r.style) {
-          setWeatherOnly(false)
-          setAltIdx(0)
-          setChosen(r.outfit ?? null)
-          onChanged() // 느낌이 저장됐다: 일정 데이터를 다시 불러온다
-        }
-      } catch (e) {
-        setError(errorMessage(e))
-      } finally {
-        setBusy(false)
-      }
-    },
-    [eventId, onChanged],
-  )
-
-  // "날씨만 보고": 저장된 느낌이 있으면 풀고, 날씨와 옷장만으로 고른 코디를 보여준다
-  const pickWeatherOnly = async () => {
+  /**
+   * 일을 하는 동안 졸라맨이 옷장으로 달려가 뒤적이고, 끝나면 옷장 뒤에서 갈아입고 돌아온다.
+   * 서버 응답이 빨라도 뒤적이는 모습은 잠깐 보여주고, 느리면 응답이 올 때까지 계속 뒤적인다.
+   * "동작 줄이기"를 켠 사람은 연출 없이 바로 바꾼다.
+   */
+  const stage = useCallback(async (work: () => Promise<void>) => {
     touched.current = true
     setBusy(true)
     setError('')
-    try {
+    const run = async () => {
+      try {
+        await work()
+      } catch (e) {
+        setError(errorMessage(e))
+      }
+    }
+    if (reducedMotion()) {
+      await run()
+      setBusy(false)
+      return
+    }
+    setFrozen(shownRef.current)
+    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 76))
+    setPhase('run')
+    await sleep(450)
+    setPhase('dig')
+    const t0 = Date.now()
+    await run()
+    await sleep(Math.max(0, 900 - (Date.now() - t0)))
+    setPhase('change')
+    await sleep(250)
+    setFrozen(null)
+    setPhase('back')
+    await sleep(450)
+    setPhase('idle')
+    setBusy(false)
+  }, [])
+
+  const ask = (body: { style?: StyleId; text?: string }, lastReply?: string) =>
+    stage(async () => {
+      const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, history: lastReply ? [{ role: 'ai', text: lastReply }] : [], ...body })
+      setTalk({ reply: r.reply, options: r.options })
+      setText('')
+      if (r.style) {
+        setWeatherOnly(false)
+        setAltIdx(0)
+        setChosen(r.outfit ?? null)
+        onChanged() // 느낌이 저장됐다: 일정 데이터를 다시 불러온다
+      }
+    })
+
+  // "날씨만 보고": 저장된 느낌이 있으면 풀고, 날씨와 옷장만으로 고른 코디를 보여준다
+  const pickWeatherOnly = () =>
+    stage(async () => {
       if (style) await api('DELETE', `/api/ai/event-stylist/${eventId}`)
-      setChosen(null)
+      const o = await api<EventOutfit>('GET', `/api/events/${eventId}/outfit`)
+      const r = o.recommendation
+      setChosen(r ? { items: r.items, alternatives: r.alternatives ?? [], headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask } : null)
       setWeatherOnly(true)
       setAltIdx(0)
       setTalk({ reply: '날씨와 내 옷장만 보고 골라봤어요.', options: [] })
       onChanged()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+    })
 
   // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디
   const base: Look | null =
@@ -153,28 +185,38 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const idx = base ? altIdx % combos.length : 0
   const rawItems = base ? combos[idx]! : (rec?.items ?? [])
   const shown = fillItems ? fillItems(rawItems) : rawItems
-  const pick = (types: string[]) => shown.find((it) => types.includes(it.type))
-  const wear = shown.length > 0 ? { top: pick(categories[0]!.types), bottom: pick(categories[1]!.types), outer: pick(categories[2]!.types) } : BASIC_WEAR
+  shownRef.current = shown
+  // 연출 중에는 갈아입기 전 옷을 그대로 입고 있다가, 옷장 뒤에서 새 옷으로 바뀐다
+  const wearItems = frozen ?? shown
+  const pick = (types: string[]) => wearItems.find((it) => types.includes(it.type))
+  const wear = wearItems.length > 0 ? { top: pick(categories[0]!.types), bottom: pick(categories[1]!.types), outer: pick(categories[2]!.types) } : BASIC_WEAR
 
   // 별 조건 없는 여행·등산 같은 일정은 날씨 엔진이 이미 반영하므로 보여주지 않는다(이미 분위기를 골라 둔 일정은 바꿀 수 있게 계속 보여준다)
   if (!visible) return null
 
   const chips = ((talk?.options.length ? talk.options : opening?.options) ?? []).slice(0, 2)
   const comboKey = `${idx}:${itemsKey(shown)}`
+  const staging = phase !== 'idle'
 
   return (
     <>
       <hr className="scribble" />
       <section className="section stylist">
-        <div className="stylist-talk">
+        <div ref={rowRef} className="stylist-talk" data-phase={phase} style={{ ['--run' as string]: `${runPx}px` }}>
           <div className="stylist-figure">
-            <div key={comboKey} className="stylist-swap">
-              <StickPerson mood="stand" size={104} wear={wear} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+            <div className="stage-figure">
+              <div key={staging ? 'stage' : comboKey} className={staging ? 'stage-body' : 'stylist-swap'}>
+                <StickPerson mood="stand" size={104} wear={wear} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+              </div>
             </div>
           </div>
-          <div className="box w2 stylist-bubble" role="status" aria-live="polite">
-            <p>{busy ? '잠깐만요, 옷장을 뒤져볼게요…' : (talk?.reply ?? '…')}</p>
-          </div>
+          {staging ? (
+            <WardrobeScene phase={phase} />
+          ) : (
+            <div className="box w2 stylist-bubble" role="status" aria-live="polite">
+              <p>{busy ? '잠깐만요, 옷장을 뒤져볼게요…' : (talk?.reply ?? '…')}</p>
+            </div>
+          )}
         </div>
 
         <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
@@ -214,7 +256,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           </p>
         )}
 
-        {base && !busy && (
+        {base && !busy && phase === 'idle' && (
           <div className="look-wrap" aria-live="polite">
             <div key={comboKey} className="box w3 look-cards">
               {shown.map((it, i) => (

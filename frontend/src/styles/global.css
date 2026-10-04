@@ -3713,6 +3713,114 @@ a.card {
   -webkit-text-stroke: 0.5px var(--ink);
 }
 
+/* ---------- 갈아입는 연출: 옷장으로 달려가 → 뒤적뒤적 → 옷장 뒤에서 갈아입고 → 돌아온다 ---------- */
+.stylist-talk {
+  position: relative;
+}
+.stylist-figure {
+  position: relative;
+  z-index: 3;
+}
+.stage-figure {
+  transition: transform 0.45s ease-in-out;
+}
+.stylist-talk[data-phase='run'] .stage-figure,
+.stylist-talk[data-phase='dig'] .stage-figure,
+.stylist-talk[data-phase='change'] .stage-figure {
+  transform: translateX(var(--run, 150px));
+}
+.stylist-talk[data-phase='back'] .stage-figure {
+  transform: none;
+}
+.stage-body {
+  transform-origin: 50% 100%;
+  transition: opacity 0.12s;
+}
+.stylist-talk[data-phase='run'] .stage-body,
+.stylist-talk[data-phase='back'] .stage-body {
+  animation: stage-bob 0.2s ease-in-out infinite alternate;
+}
+.stylist-talk[data-phase='dig'] .stage-body {
+  animation: stage-dig 0.32s ease-in-out infinite alternate;
+}
+.stylist-talk[data-phase='change'] .stage-body {
+  opacity: 0;
+}
+@keyframes stage-bob {
+  from { transform: translateY(0) rotate(-3deg); }
+  to { transform: translateY(-9px) rotate(3deg); }
+}
+@keyframes stage-dig {
+  from { transform: rotate(-7deg) translateY(2px) scaleY(0.97); }
+  to { transform: rotate(8deg) translateY(-3px); }
+}
+.stage-scene {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 128px;
+}
+.stage-caption {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  font-family: 'Poor Story', var(--font);
+}
+.stage-wardrobe {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+.stage-wardrobe .door {
+  transition: transform 0.3s ease-in-out;
+}
+.stage-wardrobe .door-l {
+  transform-origin: 4px 0;
+}
+.stage-wardrobe .door-r {
+  transform-origin: 72px 0;
+}
+.stage-scene.open .door {
+  transform: scaleX(0.12);
+}
+.stage-fly {
+  position: absolute;
+  right: 34px;
+  bottom: 52px;
+  opacity: 0;
+  pointer-events: none;
+}
+.stage-scene.open .stage-fly {
+  animation: stage-fly 1s ease-out infinite;
+  animation-delay: calc(var(--k, 0) * 0.17s);
+}
+@keyframes stage-fly {
+  0% { opacity: 0; transform: translate(0, 10px) scale(0.5) rotate(0); }
+  25% { opacity: 1; transform: translate(-8px, -44px) scale(1) rotate(-14deg); }
+  100% { opacity: 0; transform: translate(calc(-46px - var(--k, 0) * 12px), -6px) scale(1) rotate(40deg); }
+}
+.stage-poof {
+  position: absolute;
+  right: 22px;
+  bottom: 46px;
+  font-size: 34px;
+  opacity: 0;
+  color: #f2cf4a;
+  -webkit-text-stroke: 1px #222;
+}
+.stage-scene[data-phase='change'] .stage-poof {
+  animation: stage-poof 0.25s ease-out;
+}
+@keyframes stage-poof {
+  0% { opacity: 0; transform: scale(0.3) rotate(0); }
+  60% { opacity: 1; transform: scale(1.4) rotate(40deg); }
+  100% { opacity: 0.2; transform: scale(1.7) rotate(80deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-body, .stage-fly, .stage-poof { animation: none !important; }
+  .stage-figure { transition: none; }
+}
+
 /* 옷이 바뀌면 캐릭터가 살짝 튀어 올랐다 내려오며 새 옷을 보여준다 */
 .stylist-swap {
   animation: stylist-pop 0.45s ease-out;
