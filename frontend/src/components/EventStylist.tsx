@@ -194,6 +194,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   // 별 조건 없는 여행·등산 같은 일정은 날씨 엔진이 이미 반영하므로 보여주지 않는다(이미 분위기를 골라 둔 일정은 바꿀 수 있게 계속 보여준다)
   if (!visible) return null
 
+  const hasPicked = !!style || !!chosen // 한 번 고르면 칩은 사라지고, 입력창이 "원하는 옷이 아닌가요?"로 바뀐다
   const chips = ((talk?.options.length ? talk.options : opening?.options) ?? []).slice(0, 2)
   const comboKey = `${idx}:${itemsKey(shown)}`
   const staging = phase !== 'idle'
@@ -219,21 +220,23 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           )}
         </div>
 
-        <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
-          {chips.map((o, i) => (
-            // 이미 고른 느낌을 다시 누르면 풀려서, 느낌 없이 날씨와 옷장만 보고 고른 기본 코디로 돌아간다
-            <DoodleButton key={o.style} seed={i} selected={style === o.style} disabled={busy} onClick={() => void (style === o.style ? releaseStyle() : ask({ style: o.style }, talk?.reply))}>
-              {o.label}
-            </DoodleButton>
-          ))}
-        </div>
-        {style && <p className="tiny stylist-hint">고른 느낌을 다시 누르면 풀려요</p>}
+        {/* 칩은 고르기 전에만 보인다. 고른 뒤 마음에 안 들면 아래 입력창에 원하는 스타일을 말하면 된다 */}
+        {!hasPicked && chips.length > 0 && (
+          <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
+            {chips.map((o, i) => (
+              <DoodleButton key={o.style} seed={i} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>
+                {o.label}
+              </DoodleButton>
+            ))}
+          </div>
+        )}
 
         <div className="stylist-say">
+          {hasPicked && <p className="tiny stylist-ask">원하는 옷이 아닌가요? 원하는 스타일을 말씀해주세요</p>}
           <SayBox
             id="stylist-say"
-            label="어떻게 입고 싶은지 직접 말하기"
-            placeholder="예) 면접인데 단정하게 입고 싶어"
+            label={hasPicked ? '원하는 스타일 말하기' : '어떻게 입고 싶은지 직접 말하기'}
+            placeholder={hasPicked ? '예) 좀 더 편하게 입고 싶어' : '예) 면접인데 단정하게 입고 싶어'}
             value={text}
             onChange={setText}
             onSubmit={(t) => {
@@ -246,6 +249,12 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
             submitOnVoice
           />
         </div>
+
+        {style && !busy && phase === 'idle' && (
+          <button type="button" className="linklike tiny" onClick={() => void releaseStyle()}>
+            고른 느낌 풀고 날씨와 옷장만 보고 고르기
+          </button>
+        )}
 
         {error && (
           <p className="tiny" role="alert">

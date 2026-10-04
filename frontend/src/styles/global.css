@@ -3989,3 +3989,7 @@ a.card {
   background: var(--paper, #fcfcfa);
   white-space: nowrap;
 }
+
+.stylist-ask {
+  margin: 0 0 4px;
+}

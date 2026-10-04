@@ -1,4 +1,5 @@
 import { ClothingArt } from './ClothingDoodle'
+import { colorHex } from '../mocks/clothes'
 import { BackDecor, FrontDecor, type Accessories } from './CharacterDecor'
 
 export type Mood =
@@ -235,13 +236,17 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                 <clipPath id="wb-top-torso">
                   <rect x="29" y="0" width="42" height="100" />
                 </clipPath>
-                <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={wear?.outer ? 'url(#wb-top-torso)' : undefined}>
+                {/* 뒤적이는 중에는 옷의 축 처진 소매를 잘라내고(몸통만 남김), 소매는 아래 팔과 함께 움직이게 따로 그린다 */}
+                <clipPath id="wb-dig-torso">
+                  <rect x="44" y="0" width="34" height="140" />
+                </clipPath>
+                <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={digging ? 'url(#wb-dig-torso)' : wear?.outer ? 'url(#wb-top-torso)' : undefined}>
                   <ClothingArt type={wear.top.type} color={wear.top.color} pattern={wear.top.pattern} />
                 </g>
               </>
             )}
             {wear?.outer && (
-              <g transform="translate(24 41) scale(0.72)" strokeWidth="3.2">
+              <g transform="translate(24 41) scale(0.72)" strokeWidth="3.2" clipPath={digging ? 'url(#wb-dig-torso)' : undefined}>
                 <ClothingArt type={wear.outer.type} color={wear.outer.color} pattern={wear.outer.pattern} />
               </g>
             )}
@@ -249,14 +254,31 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             {digging ? (
               /* 뒤적이는 중: 두 팔을 옷장 쪽으로 뻗고, 어깨를 축으로 번갈아 위아래로 휘젓는다(손이 옷 더미를 헤집는 모양) */
               <g className="dig-arms">
-                <g className="dig-arm a">
-                  <path d="M68 60 L92 74 L126 62" strokeWidth="3" />
-                  <circle cx="129" cy="61" r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
-                </g>
-                <g className="dig-arm b">
-                  <path d="M66 66 L90 80 L124 78" strokeWidth="3" />
-                  <circle cx="127" cy="78" r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
-                </g>
+                {(() => {
+                  // 입은 옷의 소매가 팔을 따라 움직인다: 긴 소매는 손목까지, 반팔은 팔꿈치까지 옷 색으로 두껍게 덮는다
+                  const sleeveColor = wear?.outer?.color ?? wear?.top?.color
+                  const hex = sleeveColor ? (colorHex[sleeveColor] ?? null) : null
+                  const longSleeve = !!wear?.outer || (!!wear?.top && wear.top.type !== '반팔' && wear.top.type !== '반팔셔츠')
+                  const arms = [
+                    { k: 'a', full: 'M68 60 L92 74 L126 62', upper: 'M68 60 L92 74', fore: 'M92 74 L126 62', hand: [129, 61] },
+                    { k: 'b', full: 'M66 66 L90 80 L124 78', upper: 'M66 66 L90 80', fore: 'M90 80 L124 78', hand: [127, 78] },
+                  ]
+                  return arms.map((a) => (
+                    <g key={a.k} className={`dig-arm ${a.k}`}>
+                      {hex ? (
+                        <>
+                          {/* 소매: 테두리 + 옷 색으로 두껍게(긴 소매는 손목까지, 반팔은 팔꿈치까지) */}
+                          <path d={longSleeve ? a.full : a.upper} stroke={ink} strokeWidth="11" />
+                          <path d={longSleeve ? a.full : a.upper} stroke={hex} strokeWidth="7.4" />
+                          {!longSleeve && <path d={a.fore} strokeWidth="3" />}
+                        </>
+                      ) : (
+                        <path d={a.full} strokeWidth="3" />
+                      )}
+                      <circle cx={a.hand[0]} cy={a.hand[1]} r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
+                    </g>
+                  ))
+                })()}
               </g>
             ) : (
               <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
