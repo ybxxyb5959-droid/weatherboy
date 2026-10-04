@@ -26,7 +26,6 @@ describe('AI 한도: 사진 인식과 말 입력은 따로 센다', () => {
     expect(blocked.status).toBe(429)
     expect(blocked.body.code).toBe('PHOTO_RATE_LIMITED')
     expect(blocked.body.message).toContain('사진 인식')
-    expect(blocked.body.message).toContain('직접')
     // 같은 사용자의 말 입력은 아직 그대로 쓸 수 있다
     expect((await request(a).post('/text')).status).toBe(200)
   })
@@ -48,11 +47,11 @@ describe('AI 한도: 사진 인식과 말 입력은 따로 센다', () => {
   })
 })
 
-describe('한도 안내 문장', () => {
-  it('언제 풀리는지와 그동안 할 수 있는 일을 알려준다', () => {
-    expect(limitMessage('photo', 12 * 60_000)).toBe('사진 인식을 한 시간에 쓸 수 있는 만큼 다 썼어요. 12분쯤 뒤에 다시 쓸 수 있어요. 지금은 옷을 직접 골라서 넣을 수 있어요.')
-    expect(limitMessage('photo', 30_000)).toContain('1분쯤 뒤에')
-    expect(limitMessage('text', null)).toContain('잠시 뒤에')
-    expect(limitMessage('text', 5 * 60_000)).toContain('버튼으로 직접')
+describe('한도 안내 문장: 한 문장으로 짧게', () => {
+  it('무엇이 막혔고 언제 다시 되는지만 알려준다', () => {
+    expect(limitMessage('photo', 12 * 60_000)).toBe('사진 인식은 12분 뒤에 다시 쓸 수 있어요.')
+    expect(limitMessage('photo', 30_000)).toBe('사진 인식은 1분 뒤에 다시 쓸 수 있어요.')
+    expect(limitMessage('text', 5 * 60_000)).toBe('말로 입력은 5분 뒤에 다시 쓸 수 있어요.')
+    expect(limitMessage('text', null)).toBe('말로 입력은 잠시 뒤에 다시 쓸 수 있어요.')
   })
 })

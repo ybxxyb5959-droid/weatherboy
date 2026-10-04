@@ -101,7 +101,6 @@ export default function ScanClosetPage() {
 
       {limited ? (
         <LimitNotice message={error}>
-          {items.length > 0 && <p className="tiny">여기까지 찾은 옷 {items.length}벌은 아래에서 그대로 등록할 수 있어요.</p>}
           <DoodleButton seed={1} className="small" onClick={() => nav('/wardrobe/add')}>
             직접 골라서 넣기
           </DoodleButton>
