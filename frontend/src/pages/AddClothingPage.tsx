@@ -5,7 +5,8 @@ import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
 import Fields from '../components/ClothingFields'
 import SayBox from '../components/SayBox'
-import { api, errorMessage } from '../api'
+import { api, ApiError, errorMessage } from '../api'
+import LimitNotice from '../components/LimitNotice'
 import { resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
 import { clothingLabel, parseClothing, type ParsedClothing } from '../lib/clothingParse'
 
@@ -27,6 +28,7 @@ export default function AddClothingPage() {
   const [showManual, setShowManual] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [limited, setLimited] = useState(false) // 사진 인식 한도에 걸림
   const fileRef = useRef<HTMLInputElement>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiNote, setAiNote] = useState('')
@@ -51,6 +53,7 @@ export default function AddClothingPage() {
     if (!file || analyzing) return
     setAnalyzing(true)
     setError('')
+    setLimited(false)
     setAiNote('')
     try {
       const image = await resizeImageToDataUrl(file)
@@ -59,6 +62,7 @@ export default function AddClothingPage() {
       setAiNote('AI가 종류·색·무늬를 채워 목록에 담았어요. 맞는지 확인하고 저장해주세요.')
       setAiMenu(false)
     } catch (e) {
+      setLimited(e instanceof ApiError && e.code === 'PHOTO_RATE_LIMITED')
       setError(e instanceof Error && !('status' in e) ? e.message : errorMessage(e))
     } finally {
       setAnalyzing(false)
@@ -155,7 +159,7 @@ export default function AddClothingPage() {
         </div>
       )}
 
-      {error && <p role="alert">{error}</p>}
+      {limited ? <LimitNotice message={error} /> : error && <p role="alert">{error}</p>}
 
       {drafts.length > 0 && (
         <section className="add-list" aria-label="담은 옷">

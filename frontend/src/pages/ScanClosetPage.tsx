@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import { clothingTypes, colorNames, patternNames } from '../mocks/clothes'
-import { api, errorMessage } from '../api'
+import { api, ApiError, errorMessage } from '../api'
+import LimitNotice from '../components/LimitNotice'
 import { splitForScan, type ClothingSuggestion } from '../lib/ai'
 
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
@@ -20,15 +21,18 @@ export default function ScanClosetPage() {
   const [busy, setBusy] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [limited, setLimited] = useState(false) // 사진 인식 한도에 걸림: 직접 등록으로 안내한다
 
   const analyze = async (files: FileList | null) => {
     if (!files || files.length === 0 || busy) return
     setBusy(true)
     setError('')
+    setLimited(false)
     const failed: string[] = []
+    let stop = false // 한도에 걸리면 남은 조각/사진은 더 부르지 않는다
     try {
       const list = Array.from(files).slice(0, 4)
-      for (let i = 0; i < list.length; i++) {
+      for (let i = 0; i < list.length && !stop; i++) {
         try {
           const tiles = await splitForScan(list[i]!)
           // 같은 사진의 바로 앞 조각에서 찾은 옷 (겹치는 구간의 같은 옷을 가려내기 위해)
@@ -45,6 +49,10 @@ export default function ScanClosetPage() {
             prevTile = found
           }
         } catch (e) {
+          if (e instanceof ApiError && e.code === 'PHOTO_RATE_LIMITED') {
+            setLimited(true)
+            stop = true
+          }
           failed.push(e instanceof Error && !('status' in e) ? e.message : errorMessage(e))
         }
       }
@@ -91,7 +99,16 @@ export default function ScanClosetPage() {
         <p className="tiny ai-note">행거 사진은 가로로 길면 자동으로 3구간으로 나눠 찾아요(최대 4장). 종류·색·무늬만 찾아요.</p>
       </div>
 
-      {error && <p role="alert">{error}</p>}
+      {limited ? (
+        <LimitNotice message={error}>
+          {items.length > 0 && <p className="tiny">여기까지 찾은 옷 {items.length}벌은 아래에서 그대로 등록할 수 있어요.</p>}
+          <DoodleButton seed={1} className="small" onClick={() => nav('/wardrobe/add')}>
+            직접 골라서 넣기
+          </DoodleButton>
+        </LimitNotice>
+      ) : (
+        error && <p role="alert">{error}</p>
+      )}
 
       {items.length > 0 && (
         <>

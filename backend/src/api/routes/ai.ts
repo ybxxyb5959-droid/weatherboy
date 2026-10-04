@@ -1,7 +1,6 @@
 import { Router, type RequestHandler } from 'express'
-import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
-import { env } from '../../config/env.js'
+import { photoLimiter, textLimiter } from '../middleware/aiLimits.js'
 import { aiEnabled } from '../../services/ai/explain.js'
 import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingVision.js'
 import { parseEventText } from '../../services/ai/eventParse.js'
@@ -19,19 +18,6 @@ import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/comm
 
 export const aiRouter = Router()
 aiRouter.use(requireAuth)
-
-// AI 호출은 비용이 들어서 사용자당 시간당 횟수를 제한한다.
-const aiLimiter = rateLimit({
-  windowMs: 60 * 60_000,
-  limit: env.NODE_ENV === 'test' ? 10_000 : 60, // 행거 사진 한 장이 3번 호출된다
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  keyGenerator: (req) => (req as AuthedRequest).userId,
-  validate: { keyGeneratorIpFallback: false },
-  handler: (_req, res) => {
-    res.status(429).json({ code: 'RATE_LIMITED', message: 'AI를 너무 자주 불렀어요. 잠시 후 다시 시도해주세요.' })
-  },
-})
 
 aiRouter.get('/status', (_req, res) => {
   res.json({ enabled: aiEnabled() })
@@ -55,7 +41,7 @@ function readImage(body: unknown) {
 
 aiRouter.post(
   '/clothing-from-photo',
-  aiLimiter,
+  photoLimiter,
   wrap(async (req, res) => {
     res.json(await clothingFromPhoto(readImage(req.body)))
   }),
@@ -64,7 +50,7 @@ aiRouter.post(
 // 옷장/행거 사진 한 장에서 옷 여러 벌을 찾는다 (사용자가 목록에서 골라 등록)
 aiRouter.post(
   '/clothes-from-photo',
-  aiLimiter,
+  photoLimiter,
   wrap(async (req, res) => {
     res.json({ items: await clothesFromPhoto(readImage(req.body)) })
   }),
@@ -74,7 +60,7 @@ const eventSchema = z.object({ text: z.string().trim().min(2).max(200) })
 
 aiRouter.post(
   '/parse-event',
-  aiLimiter,
+  textLimiter,
   wrap(async (req, res) => {
     const { text } = parse(eventSchema, req.body)
     res.json(await parseEventText(text))
@@ -83,7 +69,7 @@ aiRouter.post(
 
 // AI 를 실제로 부르는 요청만 호출 한도에 센다. 칩(느낌을 직접 지정)과, 원하는 옷을 규칙으로 알아듣는 말("검정색 상의")은 AI 가 필요 없다.
 const usesAi = (body: { text?: unknown; style?: unknown } | undefined) => typeof body?.text === 'string' && !body.style && !parseWish(body.text)
-const stylistLimit: RequestHandler = (req, res, next) => (usesAi(req.body) ? aiLimiter(req, res, next) : next())
+const stylistLimit: RequestHandler = (req, res, next) => (usesAi(req.body) ? textLimiter(req, res, next) : next())
 
 // 일정 상세의 코디 상담. text 로 말하면 분위기를 묻거나(options) 바로 코디(outfit)를 주고, style 을 골랐으면 AI 없이 바로 코디를 준다.
 const stylistSchema = z
