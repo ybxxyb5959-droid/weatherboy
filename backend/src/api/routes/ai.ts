@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type RequestHandler } from 'express'
 import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { env } from '../../config/env.js'
@@ -8,7 +8,8 @@ import { parseEventText } from '../../services/ai/eventParse.js'
 import { prisma } from '../../db.js'
 import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
 import { stylistApplicable } from '../../rules/outfitStyle.js'
-import { defaultOptions, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
+import { defaultOptions, detectStyle, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
+import { parseWish } from '../../rules/outfitWish.js'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
 import { badRequest, notFound } from '../../utils/errors.js'
@@ -79,6 +80,10 @@ aiRouter.post(
   }),
 )
 
+// AI 를 실제로 부르는 요청만 호출 한도에 센다. 칩(느낌을 직접 지정)과, 원하는 옷을 규칙으로 알아듣는 말("검정색 상의")은 AI 가 필요 없다.
+const usesAi = (body: { text?: unknown; style?: unknown } | undefined) => typeof body?.text === 'string' && !body.style && !parseWish(body.text)
+const stylistLimit: RequestHandler = (req, res, next) => (usesAi(req.body) ? aiLimiter(req, res, next) : next())
+
 // 일정 상세의 코디 상담. text 로 말하면 분위기를 묻거나(options) 바로 코디(outfit)를 주고, style 을 골랐으면 AI 없이 바로 코디를 준다.
 const stylistSchema = z
   .object({
@@ -107,33 +112,44 @@ aiRouter.get(
 
 aiRouter.post(
   '/event-stylist',
-  aiLimiter,
+  stylistLimit,
   wrap(async (req, res) => {
     const b = parse(stylistSchema, req.body)
     const userId = (req as AuthedRequest).userId
     const event = await prisma.event.findFirst({ where: { id: b.eventId, userId } })
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
+    // "검정색 상의를 입고 싶어"처럼 원하는 옷을 말하면 옷장에 없어도 그 옷을 예시로 입혀 보여준다(AI 없이 규칙으로 알아듣는다)
+    const wish = !b.style && b.text ? parseWish(b.text) : null
     let reply = ''
     let style = b.style ?? null
     let options: StyleOption[] = []
-    if (!style) {
+    if (!style && wish) {
+      style = detectStyle(b.text!) // "검정 정장"처럼 느낌까지 말했으면 그 느낌도 같이
+    } else if (!style) {
       const turn = await stylistReply(await stylistContext(user, event), b.history, b.text!)
       reply = turn.reply
       style = turn.style
       options = turn.options
     }
-    if (!style) return res.json({ reply, options, outfit: null })
-    // 고른 분위기는 일정에 저장한다: 일정 상세의 "이렇게 입어요"가 이 분위기를 따른다. 예보가 아직 없어도 저장해 두면 예보가 열릴 때 적용된다.
-    const saved = b.preview ? event : await setEventStyle(user, event, style)
-    const outfit = await stylistOutfit(user, saved, style)
-    if (!outfit) return res.json({ reply: b.preview ? `${styleLabel[style]} 느낌이네요. 아직 이 날짜의 정확한 예보가 없어서 예보가 열리면 그 느낌으로 골라드릴게요.` : `${styleLabel[style]} 느낌으로 기억해 둘게요. 아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 그 느낌으로 골라드릴게요.`, options: [], outfit: null, style })
+    if (!style && !wish) return res.json({ reply, options, outfit: null })
+    // 고른 분위기는 일정에 저장한다. 원하는 옷만 말했다면 느낌은 그대로 두고(저장하지 않고) 일정에 저장돼 있던 느낌으로 보여준다.
+    const saved = b.preview || !style ? event : await setEventStyle(user, event, style)
+    const outfit = await stylistOutfit(user, saved, style ?? event.outfitStyle ?? null, wish)
+    if (!outfit) {
+      const noForecast = '아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 골라드릴게요.'
+      return res.json({ reply: style ? `${styleLabel[style]} 느낌으로 기억해 둘게요. ${noForecast}` : `말씀하신 옷은 기억해 두기 어려워요. ${noForecast}`, options: [], outfit: null, style: style ?? undefined })
+    }
     const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
+    const sample = outfit.examples.length ? `옷장에 없는 ${outfit.examples.map((l) => l.replace(/(예시)/, '').trim()).join(', ')}은 예시로 입혀봤어요.` : ''
+    let lead: string
+    if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
+    else if (sample) lead = `${reply || `${styleLabel[style!]} 스타일로 입혀봤어요.`} ${sample}`
     // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다
-    const lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style]} 스타일로 골라보고 싶었지만, ${lack}`
+    else lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style!]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style!]} 스타일로 골라보고 싶었지만, ${lack}`
     // 옷이 부족하면 무엇이 있으면 좋은지, 피하지 못한 어색한 점이 있으면 솔직하게 알린다
     const extra = [!outfit.styleMatched ? outfit.gap : null, ...outfit.tabooReasons.slice(0, 2)].filter((t): t is string => !!t)
-    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style })
+    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style: style ?? undefined })
   }),
 )
 

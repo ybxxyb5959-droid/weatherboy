@@ -167,11 +167,12 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, history: lastReply ? [{ role: 'ai', text: lastReply }] : [], ...body })
       setTalk({ reply: r.reply, options: r.options })
       setText('')
-      if (r.style) {
+      if (r.style || r.outfit) {
+        // 느낌을 골랐거나, 원하는 옷만 말해서 예시로 입혀본 경우: 입은 모습을 바꾼다
         setAltIdx(0)
         setChosen(r.outfit ?? null)
-        changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
       }
+      if (r.style) changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
     })
 
   // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디
@@ -190,7 +191,9 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   // 별 조건 없는 여행·등산 같은 일정은 날씨 엔진이 이미 반영하므로 보여주지 않는다(이미 분위기를 골라 둔 일정은 바꿀 수 있게 계속 보여준다)
   if (!visible) return null
 
-  const hasPicked = !!style || !!chosen // 한 번 고르면 칩은 사라지고, 입력창이 "원하는 옷이 아닌가요?"로 바뀐다
+  // 한 번 고르면 칩은 사라지고, 입력창이 "원하는 옷이 아닌가요?"로 바뀐다. 졸라맨이 다 입고 제자리로 돌아온 뒤에 나타난다.
+  const hasPicked = !!style || !!chosen
+  const settled = hasPicked && phase === 'idle'
   const chips = ((talk?.options.length ? talk.options : opening?.options) ?? []).slice(0, 2)
   const comboKey = `${idx}:${itemsKey(shown)}`
   const staging = phase !== 'idle'
@@ -217,7 +220,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         </div>
 
         {/* 칩은 고르기 전에만 보인다. 고른 뒤 마음에 안 들면 아래 입력창에 원하는 스타일을 말하면 된다 */}
-        {!hasPicked && chips.length > 0 && (
+        {!settled && chips.length > 0 && (
           <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
             {chips.map((o, i) => (
               <DoodleButton key={o.style} seed={i} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>
@@ -228,11 +231,11 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         )}
 
         <div className="stylist-say">
-          {hasPicked && <p className="tiny stylist-ask">원하는 옷이 아닌가요? 원하는 스타일을 말씀해주세요</p>}
+          {settled && <p className="tiny stylist-ask">원하는 옷이 아닌가요? 원하는 스타일을 말씀해주세요</p>}
           <SayBox
             id="stylist-say"
-            label={hasPicked ? '원하는 스타일 말하기' : '어떻게 입고 싶은지 직접 말하기'}
-            placeholder={hasPicked ? '예) 좀 더 편하게 입고 싶어' : '예) 면접인데 단정하게 입고 싶어'}
+            label={settled ? '원하는 스타일 말하기' : '어떻게 입고 싶은지 직접 말하기'}
+            placeholder={settled ? '예) 검정색 상의를 입고 싶어' : '예) 면접인데 단정하게 입고 싶어'}
             value={text}
             onChange={setText}
             onSubmit={(t) => {

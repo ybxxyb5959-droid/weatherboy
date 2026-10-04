@@ -2,6 +2,7 @@
 import type { Event, User } from '@prisma/client'
 import { eventKindMap } from '../config/mappings.js'
 import { styleGapHint, styleLabel, type OutfitStyle } from '../rules/outfitStyle.js'
+import { applySuit, applyWish, type Wish } from '../rules/outfitWish.js'
 import type { OutingPoint } from '../rules/outfitEngine.js'
 import { kstDate } from '../utils/time.js'
 import type { StylistContext } from './ai/stylist.js'
@@ -41,9 +42,11 @@ export async function setEventStyle(user: User, e: Event, style: OutfitStyle | n
 }
 
 export interface StylistOutfit {
-  style: OutfitStyle
-  styleLabel: string
+  style: OutfitStyle | null
+  styleLabel: string | null
   items: unknown[]
+  /** 옷장에 없어서 예시로 입힌 옷들의 이름(없으면 빈 배열) */
+  examples: string[]
   alternatives: unknown[][]
   headline: string
   sub: string
@@ -58,15 +61,31 @@ export interface StylistOutfit {
   tabooReasons: string[]
 }
 
-/** 예보가 아직 없으면 null */
-export async function stylistOutfit(user: User, e: Event, style: OutfitStyle): Promise<StylistOutfit | null> {
-  const c = await compute(user, e, e.startAt, e.endAt, new Date(), undefined, style)
+/**
+ * 예보가 아직 없으면 null. style 이 null 이면 느낌 없이 날씨와 옷장만으로 고른 코디(원하는 옷만 말한 경우).
+ * 포멀이면 정장 세트를, 원하는 옷(wish)이 있으면 그 옷을, 옷장에 없어도 예시로 입힌다.
+ */
+export async function stylistOutfit(user: User, e: Event, style: OutfitStyle | null, wish?: Wish | null): Promise<StylistOutfit | null> {
+  const c = await compute(user, e, e.startAt, e.endAt, new Date(), undefined, style ?? undefined)
   if (!c) return null
   const r = c.result
+  let items = r.items
+  const examples: string[] = []
+  if (style === 'FORMAL') {
+    const s = applySuit(items)
+    items = s.items
+    examples.push(...s.filled)
+  }
+  if (wish) {
+    const w = applyWish(items, wish)
+    items = w.items
+    examples.push(...w.applied)
+  }
   return {
     style,
-    styleLabel: styleLabel[style],
-    items: r.items,
+    styleLabel: style ? styleLabel[style] : null,
+    items,
+    examples: [...new Set(examples)],
     alternatives: r.alternatives,
     headline: r.headline,
     sub: r.sub,
@@ -74,7 +93,7 @@ export async function stylistOutfit(user: User, e: Event, style: OutfitStyle): P
     needMask: r.needMask,
     styleMatched: r.styleMatched ?? false,
     insufficientWardrobe: r.insufficientWardrobe,
-    gap: styleGapHint(style, c.wardrobe.filter((w) => w.owned).map((w) => w.type)),
+    gap: style && !examples.length ? styleGapHint(style, c.wardrobe.filter((w) => w.owned).map((w) => w.type)) : null,
     tabooReasons: r.tabooReasons ?? [],
   }
 }

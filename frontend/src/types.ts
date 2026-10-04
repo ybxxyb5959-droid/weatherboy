@@ -52,6 +52,8 @@ export interface ApiOutfitItem {
   pattern?: string
   label: string
   owned: boolean
+  /** 옷장에 없지만 사용자가 말한 옷/정장 세트라서 "예시"로 입혀 보여주는 옷(색을 그대로 쓴다) */
+  example?: boolean
 }
 
 export interface ApiRecommendation {

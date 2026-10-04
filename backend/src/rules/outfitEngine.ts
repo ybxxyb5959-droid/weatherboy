@@ -69,6 +69,8 @@ export interface OutfitItem {
   pattern: string // 한글 (무지/체크/줄무늬/도트/프린트)
   label: string
   owned: boolean
+  /** 옷장에 없지만 사용자가 말한 옷/정장 세트라서 "예시"로 입혀 보여주는 옷 */
+  example?: boolean
 }
 
 export interface EngineResult {

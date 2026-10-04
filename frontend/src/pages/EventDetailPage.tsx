@@ -153,7 +153,7 @@ function EventDetail({ id }: { id: string }) {
   const days = outfit.data?.days ?? []
   const styleLabel = outfit.data?.styleLabel ?? null
   // 코디 도우미의 캐릭터가 입는 옷: 지금 일정에 보이는 코디
-  const stylistItems = rec ? rec.items.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) })) : []
+  const stylistItems = rec ? rec.items.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) })) : []
 
   return (
     <main>
@@ -269,7 +269,7 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
 
       {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} />}
     </main>
