@@ -79,7 +79,7 @@ export async function sendToUser(
         ok = true
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode
-        lastErr = `status=${status ?? 'n/a'}`
+        lastErr = `status=${status ?? 'n/a'} ${e instanceof Error ? e.message.slice(0, 150) : ''}`.trim()
         if (status === 404 || status === 410) {
           await prisma.pushSubscription.delete({ where: { id: s.id } }).catch(() => undefined)
           break

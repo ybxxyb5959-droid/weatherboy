@@ -51,11 +51,11 @@ export default function PushToggle({ onChange }: { onChange?: (s: PushState) => 
     setBusy(true)
     setNote('')
     try {
-      const r = await api<{ outcome: string }>('POST', '/api/push/test')
+      const r = await api<{ outcome: string; detail?: string | null }>('POST', '/api/push/test')
       if (r.outcome === 'SENT') setNote('시험 알림을 보냈어요. 잠시 뒤 알림이 오는지 확인해주세요.')
       else if (r.outcome === 'NOT_CONFIGURED') setNote('서버에 알림 설정이 아직 없어요.')
       else if (r.outcome === 'NO_SUBSCRIPTION') setNote('이 계정에 등록된 기기가 없어요. 알림을 껐다가 다시 허용해주세요.')
-      else setNote('알림을 보내지 못했어요. 잠시 뒤 다시 시도해주세요.')
+      else setNote(`알림을 보내지 못했어요. 잠시 뒤 다시 시도해주세요.${r.detail ? ` (${r.detail})` : ''}`)
     } catch (e) {
       setNote(errorMessage(e))
     }

@@ -44,14 +44,16 @@ pushRouter.delete(
   }),
 )
 
-// 내 기기로 시험 알림 1건을 보낸다(설정 화면의 "알림 시험"). 방해금지 시간은 무시하고, 30초에 한 번만.
+// 내 기기로 시험 알림 1건을 보낸다(설정 화면의 "알림 시험"). 방해금지 시간은 무시하고, 성공하면 30초에 한 번(실패는 5초 뒤 다시 시도 가능).
 pushRouter.post(
   '/test',
   wrap(async (req, res) => {
     const userId = (req as AuthedRequest).userId
-    const recent = await prisma.notifyLog.findFirst({ where: { userId, kind: 'TEST', createdAt: { gte: new Date(Date.now() - 30_000) } }, select: { id: true } })
+    const recent = await prisma.notifyLog.findFirst({ where: { userId, kind: 'TEST', OR: [{ status: 'SENT', createdAt: { gte: new Date(Date.now() - 30_000) } }, { createdAt: { gte: new Date(Date.now() - 5_000) } }] }, select: { id: true } })
     if (recent) throw new AppError(429, 'TOO_MANY', '잠시 뒤에 다시 눌러주세요.')
     const outcome = await sendToUser(userId, null, { title: '알림 시험', body: '이 알림이 보이면 휴대폰 알림이 잘 켜진 거예요.', url: '/home', tag: 'test' }, { kind: 'TEST', ignoreQuiet: true })
-    res.json({ outcome })
+    // 실패했을 때는 사유(상태 코드와 오류 문구, 비밀값 아님)를 같이 돌려줘 원인을 바로 볼 수 있게 한다
+    const failed = outcome === 'FAILED' ? await prisma.notifyLog.findFirst({ where: { userId, kind: 'TEST', status: 'FAILED' }, orderBy: { createdAt: 'desc' }, select: { message: true } }) : null
+    res.json({ outcome, detail: failed?.message ?? null })
   }),
 )
