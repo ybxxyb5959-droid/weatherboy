@@ -47,6 +47,8 @@ export interface StylistOutfit {
   items: unknown[]
   /** 옷장에 없어서 예시로 입힌 옷들의 이름(없으면 빈 배열) */
   examples: string[]
+  /** 말한 대로 했지만 알려둘 점(예: 겉옷 없이는 추울 수 있어요). 없으면 null */
+  warn: string | null
   alternatives: unknown[][]
   headline: string
   sub: string
@@ -86,6 +88,7 @@ export async function stylistOutfit(user: User, e: Event, style: OutfitStyle | n
     styleLabel: style ? styleLabel[style] : null,
     items,
     examples: [...new Set(examples)],
+    warn: wish?.noOuter && r.needOuter ? '날씨가 쌀쌀해서 겉옷 없이는 추울 수 있어요.' : null,
     alternatives: r.alternatives,
     headline: r.headline,
     sub: r.sub,

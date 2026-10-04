@@ -54,7 +54,7 @@ describe('applySuit: 정장 세트(셔츠 + 자켓 + 바지)', () => {
   it('옷장에 정장이 없으면 셔츠·슬랙스·자켓을 예시로 채운다', () => {
     const r = applySuit([own('후드티', '회색'), own('바지', '파랑')])
     expect(r.items.map((i) => i.type)).toEqual(['셔츠', '바지', '자켓'])
-    expect(r.items.every((i) => i.example)).toBe(false) // 바지는 이미 바지라서 그대로 둔다
+    expect(r.items.every((i) => i.example)).toBe(true) // 파랑 바지(청바지처럼 보임)는 정장 바지가 아니라서 슬랙스 예시로 바꾼다
     expect(r.items[0]).toMatchObject({ example: true, owned: false })
     expect(r.items[2]).toMatchObject({ type: '자켓', color: '검정', example: true })
   })
@@ -109,5 +109,42 @@ describe('톤 원하기: 옷장에서 먼저 찾고 없으면 예시', () => {
     const r = applyWish([own('긴팔', '하늘색'), own('바지', '베이지')], wish)
     expect(r.items[0]).toMatchObject({ type: '긴팔', color: '검정', example: true })
     expect(r.items[1]).toMatchObject({ owned: true, color: '베이지' })
+  })
+})
+
+describe('"겉옷 없이"는 겉옷을 원하지 않는다는 뜻', () => {
+  it('"겉옷없이 갈색 맨투맨에 베이지 바지로 톤온톤" -> 상의 갈색, 하의 베이지, 겉옷 없음', () => {
+    const w = parseWish('겉옷없이 갈색 맨투맨에 베이지 바지로 톤온톤')!
+    expect(w.noOuter).toBe(true)
+    expect(w.pieces.find((p) => p.role === 'top')).toMatchObject({ type: '맨투맨', color: '갈색' })
+    expect(w.pieces.find((p) => p.role === 'bottom')).toMatchObject({ type: '바지', color: '베이지' })
+    expect(w.pieces.find((p) => p.role === 'outer')).toBeUndefined()
+  })
+  it('"자켓 빼고", "코트는 안 입고"도 같은 뜻', () => {
+    expect(parseWish('검정 상의 자켓 빼고')?.noOuter).toBe(true)
+    expect(parseWish('흰 셔츠에 코트는 안 입고 싶어')?.noOuter).toBe(true)
+  })
+  it('겉옷을 원하면 noOuter 가 아니다', () => expect(parseWish('베이지 코트 입을래')?.noOuter).toBeUndefined())
+  it('applyWish 는 겉옷을 입히지 않는다(날씨 때문에 골랐어도)', () => {
+    const items = [own('맨투맨', '회색'), own('바지', '파랑'), own('가디건', '초록')]
+    const r = applyWish(items, parseWish('겉옷 없이 갈색 맨투맨')!)
+    expect(r.items.map((i) => i.type)).toEqual(['맨투맨', '바지'])
+    expect(r.items[0]).toMatchObject({ color: '갈색', example: true })
+  })
+})
+
+describe('정장 바지는 청바지처럼 보이는 바지를 쓰지 않는다', () => {
+  it('파랑·네이비·베이지 바지는 검정 슬랙스 예시로 바꾼다', () => {
+    for (const color of ['파랑', '네이비', '베이지']) {
+      const r = applySuit([own('셔츠', '흰색'), own('바지', color), own('자켓', '검정')])
+      expect(r.items[1]).toMatchObject({ type: '바지', color: '검정', example: true })
+      expect(r.filled).toContain('검정 슬랙스(예시)')
+    }
+  })
+  it('검정·회색 무지 바지는 그대로 쓴다', () => {
+    for (const color of ['검정', '회색']) {
+      const pants = own('바지', color)
+      expect(applySuit([own('셔츠', '흰색'), pants, own('자켓', '검정')]).items[1]).toBe(pants)
+    }
   })
 })

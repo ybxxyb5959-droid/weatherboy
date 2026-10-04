@@ -18,6 +18,8 @@ export interface WishPiece {
 export interface Wish {
   /** "정장"이라고 말했는가: 정장 세트를 입힌다 */
   suit: boolean
+  /** "겉옷 없이"라고 말했는가: 겉옷은 입히지 않는다 */
+  noOuter?: boolean
   pieces: WishPiece[]
 }
 
@@ -129,12 +131,15 @@ export function parseWish(text: string): Wish | null {
   }
   for (const p of pieces) if (p.color) delete p.tone // 색을 콕 집어 말했으면 그 색이 우선
   const suit = /정장|수트|슈트/.test(t)
+  // "겉옷 없이", "자켓 빼고", "코트는 안 입고": 겉옷을 원하지 않는다는 말(겉옷 낱말이 있어도 원하는 옷이 아니다)
+  const noOuter = /(겉옷|외투|자켓|재킷|가디건|코트|패딩|점퍼|바람막이)\s*(은|는|도)?\s*(없이|빼고|말고|안\s*입|필요\s*없|싫)/.test(t)
+  if (noOuter) for (let i = pieces.length - 1; i >= 0; i--) if (pieces[i]!.role === 'outer') pieces.splice(i, 1)
   // 옷 낱말 없이 색만 말했다면 상의의 색으로 본다("검정색으로 입고 싶어")
-  if (pieces.length === 0 && !suit && orphanColors.length > 0) pieces.push({ role: 'top', color: orphanColors[0] })
+  if (pieces.length === 0 && !suit && !noOuter && orphanColors.length > 0) pieces.push({ role: 'top', color: orphanColors[0] })
   // 옷 낱말 없이 톤만 말했다면("전체적으로 어둡게") 상의와 하의에 같은 톤을 준다
-  else if (pieces.length === 0 && !suit && orphanTones.length > 0) pieces.push({ role: 'top', tone: orphanTones[0] }, { role: 'bottom', tone: orphanTones[0] })
-  if (pieces.length === 0 && !suit) return null
-  return { suit, pieces }
+  else if (pieces.length === 0 && !suit && !noOuter && orphanTones.length > 0) pieces.push({ role: 'top', tone: orphanTones[0] }, { role: 'bottom', tone: orphanTones[0] })
+  if (pieces.length === 0 && !suit && !noOuter) return null
+  return { suit, noOuter: noOuter || undefined, pieces }
 }
 
 const example = (type: string, color: string, label?: string): OutfitItem & { example: true } => ({
@@ -157,16 +162,17 @@ const DRESSY_OUTER = ['자켓', '코트']
 export function applySuit(items: OutfitItem[]): { items: OutfitItem[]; filled: string[] } {
   const out = [...items]
   const filled: string[] = []
-  const put = (role: Role, ok: (t: string) => boolean, make: () => OutfitItem) => {
+  const put = (role: Role, ok: (t: string, it: OutfitItem) => boolean, make: () => OutfitItem) => {
     const i = out.findIndex((it) => roleOf(it.type) === role)
-    if (i >= 0 && ok(out[i]!.type)) return
+    if (i >= 0 && ok(out[i]!.type, out[i]!)) return
     const item = make()
     if (i >= 0) out[i] = item
     else out.push(item)
     filled.push(item.label)
   }
   put('top', (t) => DRESSY_TOP.includes(t), () => example('셔츠', '흰색'))
-  put('bottom', (t) => t === '바지', () => example('바지', '검정', '검정 슬랙스(예시)'))
+  // 정장 바지는 검정/회색 무지 슬랙스만 인정한다(청바지나 면바지처럼 보이는 파랑·베이지·네이비 바지는 정장에 어울리지 않아 예시로 바꾼다)
+  put('bottom', (t, it) => t === '바지' && ['검정', '회색'].includes(it.color) && it.pattern === '무지', () => example('바지', '검정', '검정 슬랙스(예시)'))
   put('outer', (t) => DRESSY_OUTER.includes(t), () => example('자켓', '검정', '검정 정장 자켓(예시)'))
   return { items: out, filled }
 }
@@ -195,7 +201,8 @@ function satisfies(item: OutfitItem | null, p: WishPiece): boolean {
 export function applyWish(items: OutfitItem[], wish: Wish): { items: OutfitItem[]; applied: string[] } {
   let out = [...items]
   const applied: string[] = []
-  if (wish.suit) {
+  if (wish.noOuter) out = out.filter((it) => roleOf(it.type) !== 'outer') // 겉옷 없이: 날씨 때문에 골랐어도 입히지 않는다
+  if (wish.suit && !wish.noOuter) {
     const r = applySuit(out)
     out = r.items
     applied.push(...r.filled)
@@ -222,6 +229,8 @@ interface PieceWish {
   types?: string[] // DB 종류 (SHIRT ...)
 }
 export interface EngineWish {
+  /** 겉옷을 원하지 않음: 보온이 허락하면 겉옷 없는 조합을 먼저 고른다 */
+  noOuter?: boolean
   top?: PieceWish
   bottom?: PieceWish
   outer?: PieceWish
@@ -238,7 +247,7 @@ const safe = <T,>(fn: () => T): T | undefined => {
 }
 
 export function toEngineWish(w: Wish): EngineWish {
-  const out: EngineWish = {}
+  const out: EngineWish = { noOuter: w.noOuter }
   for (const p of w.pieces) {
     const color = p.color ? safe(() => colorMap.toDb(p.color as never)) : undefined
     const type = p.type ? safe(() => clothingTypeMap.toDb(p.type as never)) : undefined
@@ -268,5 +277,6 @@ const topColorWished = (w: EngineWish) => !!(w.top?.colors?.length || w.top?.ton
 /** 조합이 말한 조건에 얼마나 가까운가(높을수록 가까움) */
 export function wishFit(w: EngineWish, c: { top: { type: string; color: string }; bottom: { type: string; color: string }; outer: { type: string; color: string } | null }): number {
   const outerHarmony = !w.outer && c.outer && topColorWished(w) ? (NEUTRAL_DB.has(c.outer.color) ? 3 : -3) : 0
-  return pieceFit(w.top, c.top) + pieceFit(w.bottom, c.bottom) + pieceFit(w.outer, c.outer) + outerHarmony
+  const noOuterFit = w.noOuter ? (c.outer ? -6 : 3) : 0
+  return pieceFit(w.top, c.top) + pieceFit(w.bottom, c.bottom) + pieceFit(w.outer, c.outer) + outerHarmony + noOuterFit
 }

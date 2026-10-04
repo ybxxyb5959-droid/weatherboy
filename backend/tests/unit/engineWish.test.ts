@@ -51,3 +51,13 @@ describe('상의 색을 말하면 겉옷은 튀지 않는 색을 고른다', () 
     expect(outer?.clothingId).toBe(black.id)
   })
 })
+
+describe('겉옷 없이: 보온이 허락하면 겉옷 없는 조합을 먼저 고른다', () => {
+  it('선선한 날, 겉옷이 있어도 없는 조합이 먼저', () => {
+    const top = cloth('SWEATSHIRT', 'BROWN')
+    const bottom = cloth('PANTS', 'BEIGE')
+    const cardigan = cloth('CARDIGAN', 'GREEN')
+    const r = run([top, bottom, cardigan], '겉옷 없이 갈색 맨투맨에 베이지 바지', 20)
+    expect(r.items.find((i) => i.type === '가디건')).toBeUndefined()
+  })
+})
