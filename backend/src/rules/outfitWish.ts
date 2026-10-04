@@ -261,7 +261,12 @@ function pieceFit(w: PieceWish | undefined, piece: { type: string; color: string
   return s
 }
 
+// 상의 색을 콕 집어 말했을 때, 위에 걸치는 겉옷은 튀지 않는 색이 낫다(분홍 상의에 초록 가디건처럼 부딪치거나 상의를 가리지 않게)
+const NEUTRAL_DB = new Set(['BLACK', 'NAVY', 'GRAY', 'WHITE', 'BEIGE'])
+const topColorWished = (w: EngineWish) => !!(w.top?.colors?.length || w.top?.tone)
+
 /** 조합이 말한 조건에 얼마나 가까운가(높을수록 가까움) */
 export function wishFit(w: EngineWish, c: { top: { type: string; color: string }; bottom: { type: string; color: string }; outer: { type: string; color: string } | null }): number {
-  return pieceFit(w.top, c.top) + pieceFit(w.bottom, c.bottom) + pieceFit(w.outer, c.outer)
+  const outerHarmony = !w.outer && c.outer && topColorWished(w) ? (NEUTRAL_DB.has(c.outer.color) ? 3 : -3) : 0
+  return pieceFit(w.top, c.top) + pieceFit(w.bottom, c.bottom) + pieceFit(w.outer, c.outer) + outerHarmony
 }

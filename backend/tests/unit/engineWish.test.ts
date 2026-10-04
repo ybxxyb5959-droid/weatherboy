@@ -39,3 +39,15 @@ describe('원하는 톤은 날씨 조건 안에서 옷장 조합을 고른다', 
     expect(r.items.find((i) => i.type === '반바지')).toBeUndefined()
   })
 })
+
+describe('상의 색을 말하면 겉옷은 튀지 않는 색을 고른다', () => {
+  it('분홍 상의를 원하면 초록 가디건보다 검정 가디건', () => {
+    const top = cloth('LONG_SLEEVE', 'WHITE')
+    const bottom = cloth('PANTS', 'BLACK')
+    const green = cloth('CARDIGAN', 'GREEN')
+    const black = cloth('CARDIGAN', 'BLACK')
+    const r = run([top, bottom, green, black], '핑크색 상의에 어두운 바지', 15)
+    const outer = r.items.find((i) => i.type === '가디건')
+    expect(outer?.clothingId).toBe(black.id)
+  })
+})
