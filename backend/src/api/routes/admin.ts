@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
 import { AppError, notFound } from '../../utils/errors.js'
+import { avgMsByKind, buildDays, failureRate, type UsageRow } from '../../services/ai/aiUsageReport.js'
+import { getGlobalUsage } from '../../services/ai/aiQuota.js'
 import { parse, requireAdmin, wrap } from '../middleware/common.js'
 
 export const adminRouter = Router()
@@ -63,6 +65,53 @@ adminRouter.get(
       push: toMap(notify),
       ai: { calls: aiTotal, fallbacks: aiFallback },
       recentErrors,
+    })
+  }),
+)
+
+// ───── AI 사용 현황: 하루/종류별 호출, 실패율, 상위 사용자, 한도 설정 ─────
+adminRouter.get(
+  '/ai-usage',
+  wrap(async (_req, res) => {
+    const DAYS = 7
+    const since = new Date(Date.now() - DAYS * 86400_000)
+    const since24h = new Date(Date.now() - 86400_000)
+    const [raw, top, g] = await Promise.all([
+      prisma.$queryRaw<{ d: string; kind: string | null; status: 'SUCCESS' | 'FAILED'; c: number; avg_ms: number | null }[]>`
+        SELECT to_char(("createdAt" AT TIME ZONE 'Asia/Seoul')::date, 'YYYY-MM-DD') AS d, "kind", "status"::text AS status,
+               COUNT(*)::int AS c, AVG("durationMs")::int AS avg_ms
+        FROM "AiCallLog" WHERE "createdAt" >= ${since} GROUP BY 1, 2, 3`,
+      prisma.aiCallLog.groupBy({ by: ['userId', 'kind'], where: { createdAt: { gte: since24h }, userId: { not: null } }, _count: true }),
+      getGlobalUsage(),
+    ])
+    const rows: UsageRow[] = raw.map((r) => ({ d: r.d, kind: r.kind, status: r.status, c: r.c, avgMs: r.avg_ms }))
+    const days = buildDays(rows, DAYS)
+    // 최근 24시간 상위 사용자(고객번호만 보여준다: 사용자 ID 앞 8자리)
+    const perUser = new Map<string, { photo: number; text: number }>()
+    for (const t of top) {
+      const cur = perUser.get(t.userId!) ?? { photo: 0, text: 0 }
+      if (t.kind === 'photo') cur.photo += t._count
+      else if (t.kind === 'text') cur.text += t._count
+      perUser.set(t.userId!, cur)
+    }
+    const topUsers = [...perUser.entries()]
+      .map(([id, v]) => ({ code: id.slice(0, 8).toUpperCase(), photo: v.photo, text: v.text, total: v.photo + v.text }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10)
+    res.json({
+      days,
+      failureRate: failureRate(days),
+      avgMs: avgMsByKind(rows),
+      topUsers,
+      global: { used: g.used, cap: g.cap, open: g.open },
+      limits: {
+        photoDaily: env.AI_PHOTO_DAILY,
+        photoNewUser: env.AI_PHOTO_NEWUSER,
+        textDaily: env.AI_TEXT_DAILY,
+        textNewUser: env.AI_TEXT_NEWUSER,
+        newUserHours: env.AI_NEWUSER_HOURS,
+        hourly: 60,
+      },
     })
   }),
 )

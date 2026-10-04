@@ -12,6 +12,14 @@ interface Dashboard {
   reviews: { total: number; average: number | null; unread: number }
   support: { total: number; unread: number }
 }
+interface AiUsage {
+  days: { date: string; photo: number; text: number; other: number; total: number; failed: number }[]
+  failureRate: number | null
+  avgMs: { photo: number | null; text: number | null }
+  topUsers: { code: string; photo: number; text: number; total: number }[]
+  global: { used: number; cap: number; open: boolean }
+  limits: { photoDaily: number; photoNewUser: number; textDaily: number; textNewUser: number; newUserHours: number; hourly: number }
+}
 interface ReviewRow {
   id: string
   rating: number
@@ -126,6 +134,50 @@ function LineChart({ rows }: { rows: { d: string; c: number }[] }) {
   )
 }
 
+const secs = (ms: number | null) => (ms == null ? '-' : `${(ms / 1000).toFixed(1)}초`)
+
+/** AI 사용 현황: 최근 7일 호출 수, 실패율, 평균 응답, 서버 전체 상한과 상위 사용자, 지금 한도 설정 */
+function AiUsageSection({ ai }: { ai: AiUsage }) {
+  const today = ai.days.at(-1)
+  const week = ai.days.reduce((a, d) => a + d.total, 0)
+  const pct = Math.min(100, Math.round((ai.global.used / ai.global.cap) * 100))
+  return (
+    <section>
+      <h2>
+        <HandText>AI 사용 현황</HandText>
+      </h2>
+      <div className="admin-stats">
+        <Stat label="오늘 호출" value={today?.total ?? 0} sub={`사진 ${today?.photo ?? 0} · 말 ${today?.text ?? 0} · 그 밖 ${today?.other ?? 0}`} />
+        <Stat label="7일 호출" value={week} sub={ai.failureRate == null ? '아직 없어요' : `실패 ${ai.failureRate}%`} />
+        <Stat label="사진 평균 응답" value={secs(ai.avgMs.photo)} sub={`말 입력 ${secs(ai.avgMs.text)}`} />
+        <Stat label="서버 전체 24시간" value={`${pct}%`} sub={`${ai.global.used} / ${ai.global.cap}${ai.global.open ? '' : ' · 지금 쉬는 중'}`} />
+      </div>
+      <p className="tiny" style={{ marginTop: 12 }}>하루 호출 수 (최근 7일)</p>
+      <Bars rows={ai.days.map((d) => ({ label: d.date.slice(5).replace('-', '/'), value: d.total }))} />
+      <p className="tiny" style={{ marginTop: 12 }}>
+        지금 한도: 시간당 {ai.limits.hourly}회 · 사진 하루 {ai.limits.photoDaily}회(가입 {ai.limits.newUserHours}시간 동안 {ai.limits.photoNewUser}회) · 말 하루 {ai.limits.textDaily}회(가입 직후 {ai.limits.textNewUser}회)
+      </p>
+      <p className="tiny" style={{ marginTop: 12 }}>최근 24시간 많이 쓴 사용자</p>
+      {ai.topUsers.length === 0 ? (
+        <p className="tiny">아직 사용자별 기록이 없어요. (사용자 기록은 이번 업데이트 이후 호출부터 쌓여요)</p>
+      ) : (
+        <ul className="admin-reviews">
+          {ai.topUsers.map((u) => (
+            <li key={u.code} className="box w1">
+              <div className="row between">
+                <b>사용자 {u.code}</b>
+                <span className="tiny">
+                  사진 {u.photo} · 말 {u.text} · 합계 {u.total}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function Login({ onDone }: { onDone: () => void }) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
@@ -160,6 +212,7 @@ function Login({ onDone }: { onDone: () => void }) {
 export default function AdminPage() {
   const [state, setState] = useState<'checking' | 'login' | 'ready'>('checking')
   const [dash, setDash] = useState<Dashboard | null>(null)
+  const [ai, setAi] = useState<AiUsage | null>(null)
   const [reviews, setReviews] = useState<ReviewRow[]>([])
   const [support, setSupport] = useState<SupportRow[]>([])
   const [error, setError] = useState('')
@@ -172,6 +225,8 @@ export default function AdminPage() {
       setDash(d)
       setReviews(r)
       setSupport(sp)
+      // AI 사용 현황은 따로 받는다: 실패해도 나머지 화면은 그대로 보인다
+      setAi(await api<AiUsage>('GET', '/api/admin/ai-usage').catch(() => null))
       setState('ready')
     } catch (e) {
       // 로그인 전/만료: 로그인 화면으로
@@ -200,6 +255,7 @@ export default function AdminPage() {
   const logout = async () => {
     await api('POST', '/api/admin/logout').catch(() => undefined)
     setDash(null)
+    setAi(null)
     setReviews([])
     setSupport([])
     setState('login')
@@ -253,6 +309,13 @@ export default function AdminPage() {
             </h2>
             <LineChart rows={dash.daily} />
           </section>
+        </>
+      )}
+
+      {ai && (
+        <>
+          <hr className="scribble" />
+          <AiUsageSection ai={ai} />
         </>
       )}
 
