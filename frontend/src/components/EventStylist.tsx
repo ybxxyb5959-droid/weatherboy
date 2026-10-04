@@ -51,6 +51,8 @@ interface Props {
   fillItems?: (items: ApiOutfitItem[]) => ApiOutfitItem[]
   /** 이 도우미가 화면에 나오는지 알린다(안 나오면 위쪽이 코디 카드를 대신 보여준다) */
   onApplicable?: (on: boolean) => void
+  /** 며칠짜리 일정: 코디는 날짜별 카드(아래쪽)가 보여주므로 여기서는 카드를 펼치지 않고 캐릭터만 갈아입는다 */
+  multiDay?: boolean
   /** 분위기가 저장/해제되어 일정 코디가 바뀌었을 때(위쪽 데이터를 다시 불러온다) */
   onChanged: () => void
 }
@@ -65,7 +67,7 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
  * 옷은 Rule Engine 이 고르고 AI 는 말만 거든다. 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산),
  * 다른 조합은 저장하지 않고 구경만 한다.
  */
-export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, onChanged }: Props) {
+export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, multiDay = false, onChanged }: Props) {
   const character = useCharacter().data
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말과 기본 칩
   const [talk, setTalk] = useState<Talk | null>(null)
@@ -82,6 +84,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const [runPx, setRunPx] = useState(150) // 옷장까지 달려갈 거리
   const rowRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef<ApiOutfitItem[]>([])
+  const changedRef = useRef(false) // 연출이 끝난 뒤에 일정 데이터를 다시 불러온다(날짜별 코디 카드가 갈아입은 뒤에 갱신되도록)
 
   const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 다른 느낌도 눌러볼 수 있어요.` : null
 
@@ -130,13 +133,20 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         setError(errorMessage(e))
       }
     }
+    const flush = () => {
+      if (changedRef.current) {
+        changedRef.current = false
+        onChanged()
+      }
+    }
     if (reducedMotion()) {
       await run()
       setBusy(false)
+      flush()
       return
     }
     setFrozen(shownRef.current)
-    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 46))
+    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 72))
     setPhase('run')
     await sleep(450)
     setPhase('dig')
@@ -150,7 +160,8 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
     await sleep(450)
     setPhase('idle')
     setBusy(false)
-  }, [])
+    flush()
+  }, [onChanged])
 
   const ask = (body: { style?: StyleId; text?: string }, lastReply?: string) =>
     stage(async () => {
@@ -161,7 +172,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         setWeatherOnly(false)
         setAltIdx(0)
         setChosen(r.outfit ?? null)
-        onChanged() // 느낌이 저장됐다: 일정 데이터를 다시 불러온다
+        changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
       }
     })
 
@@ -175,7 +186,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       setWeatherOnly(true)
       setAltIdx(0)
       setTalk({ reply: '느낌은 풀고, 날씨와 내 옷장만 보고 골라봤어요.', options: [] })
-      onChanged()
+      changedRef.current = true
     })
 
   // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디
@@ -207,7 +218,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           <div className="stylist-figure">
             <div className="stage-figure">
               <div key={staging ? 'stage' : comboKey} className={staging ? 'stage-body' : 'stylist-swap'}>
-                <StickPerson mood="stand" size={104} wear={wear} digging={phase === 'dig'} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+                <StickPerson mood="stand" size={104} wear={wear} persona={null} accessories={character?.unlocked ? character.config : undefined} />
               </div>
             </div>
           </div>
@@ -262,7 +273,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           </p>
         )}
 
-        {base && !busy && phase === 'idle' && (
+        {base && !multiDay && !busy && phase === 'idle' && (
           <div className="look-wrap" aria-live="polite">
             <div key={comboKey} className="box w3 look-cards">
               {shown.map((it, i) => (

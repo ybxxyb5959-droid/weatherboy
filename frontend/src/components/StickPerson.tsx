@@ -1,5 +1,4 @@
 import { ClothingArt } from './ClothingDoodle'
-import { colorHex } from '../mocks/clothes'
 import { BackDecor, FrontDecor, type Accessories } from './CharacterDecor'
 
 export type Mood =
@@ -20,8 +19,6 @@ interface Props {
   wear?: { top?: WornItem; bottom?: WornItem; outer?: WornItem }
   /** mood='stand' 일 때 우산을 들고 서 있기 */
   umbrella?: boolean
-  /** mood='stand' 일 때 두 팔을 옆(옷장 쪽)으로 뻗어 번갈아 뒤적이기 */
-  digging?: boolean
   /** 내 캐릭터의 칭호(예: 'DARK_CHILD'). 칭호마다 상징 소품이 붙는다. mood='stand' 에서만 */
   persona?: string | null
   /** 내 캐릭터 꾸미기(모자·헤어핀·안경·목·기타). mood='stand' 에서만 */
@@ -36,12 +33,10 @@ const ink = '#222'
  *  - 반팔: 소매 아래로 맨 팔뚝이 나오고 그 끝에 손
  *  - 긴 소매(긴팔·맨투맨·후드티 등)와 겉옷: 소매 끝에서 손만 삐져나온다
  */
-export function Hands({ top, outer, only }: { top?: string; outer?: string; only?: 'L' | 'R' }) {
+export function Hands({ top, outer }: { top?: string; outer?: string }) {
   // 옷 그림 좌표(100x100) -> 졸라맨 좌표. 상의는 scale .65 @ (27.5,39.6), 겉옷은 scale .72 @ (24,41)
   const at = (scale: number, tx: number, ty: number) => (x: number, y: number) => [tx + x * scale, ty + y * scale] as const
-  const hand = (cx: number, cy: number, key: string) => (only && only !== (key === 'l' ? 'L' : 'R') ? null : <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />)
-  const showL = only !== 'R'
-  const showR = only !== 'L'
+  const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
 
   if (outer) {
     const w = at(0.72, 24, 41) // 겉옷 소매 끝(왼 14.5,69 / 오른 85.5,69) 바로 아래
@@ -63,7 +58,7 @@ export function Hands({ top, outer, only }: { top?: string; outer?: string; only
     const [rex, rey] = w(91, 66)
     return (
       <g>
-        <path d={`${showL ? `M${lsx} ${lsy} L${lex} ${ley}` : ''} ${showR ? `M${rsx} ${rsy} L${rex} ${rey}` : ''}`} strokeWidth="2.6" />
+        <path d={`M${lsx} ${lsy} L${lex} ${ley} M${rsx} ${rsy} L${rex} ${rey}`} strokeWidth="2.6" />
         {hand(lex - 0.5, ley + 3, 'l')}
         {hand(rex + 0.5, rey + 3, 'r')}
       </g>
@@ -80,7 +75,7 @@ export function Hands({ top, outer, only }: { top?: string; outer?: string; only
   )
 }
 
-export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, digging = false, persona = null, accessories = {} }: Props) {
+export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, persona = null, accessories = {} }: Props) {
   const clothed = !!(wear?.top || wear?.outer)
   const showUmbrella = mood === 'rain' || (mood === 'stand' && umbrella)
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
@@ -224,8 +219,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <g>
             {/* 팔은 내리고 가만히 서 있다. 우산이 필요하면 오른팔로 우산대를 잡는다. */}
             {/* 옷을 입으면 팔은 소매 안에 가려지므로 뼈대를 그리지 않는다(허리께로 삐져나오지 않게). 팔뚝/손은 아래 Hands 가 그린다 */}
-            {!clothed && !digging && <path d="M60 58 L45 92" />}
-            {(!clothed || umbrella) && !digging && <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />}
+            {!clothed && <path d="M60 58 L45 92" />}
+            {(!clothed || umbrella) && <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />}
             {/* 추천 옷 입히기: 하의 -> 상의 -> 겉옷 순으로 덧그린다 */}
             {wear?.bottom && (
               <g transform="translate(35 86) scale(0.5)" strokeWidth="3.6">
@@ -238,52 +233,18 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                 <clipPath id="wb-top-torso">
                   <rect x="29" y="0" width="42" height="100" />
                 </clipPath>
-                {/* 뒤적이는 중에는 옷장 쪽(오른쪽)으로 뻗는 팔의 축 처진 소매만 잘라내고, 그 소매는 아래 팔과 함께 움직이게 따로 그린다. 왼팔은 그대로 내려둔다 */}
-                <clipPath id="wb-dig-torso">
-                  <path d="M0 0 H76 V140 H0Z" />
-                </clipPath>
-                <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={digging ? 'url(#wb-dig-torso)' : wear?.outer ? 'url(#wb-top-torso)' : undefined}>
+                <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={wear?.outer ? 'url(#wb-top-torso)' : undefined}>
                   <ClothingArt type={wear.top.type} color={wear.top.color} pattern={wear.top.pattern} />
                 </g>
               </>
             )}
             {wear?.outer && (
-              <g transform="translate(24 41) scale(0.72)" strokeWidth="3.2" clipPath={digging ? 'url(#wb-dig-torso)' : undefined}>
+              <g transform="translate(24 41) scale(0.72)" strokeWidth="3.2">
                 <ClothingArt type={wear.outer.type} color={wear.outer.color} pattern={wear.outer.pattern} />
               </g>
             )}
             {/* 소매 밖의 팔/손 */}
-            {digging ? (
-              /* 뒤적이는 중: 두 팔을 옷장 쪽으로 뻗고, 어깨를 축으로 번갈아 위아래로 휘젓는다(손이 옷 더미를 헤집는 모양) */
-              <g className="dig-arms">
-                {(() => {
-                  // 입은 옷의 소매가 팔을 따라 움직인다: 긴 소매는 손목까지, 반팔은 팔꿈치까지 옷 색으로 두껍게 덮는다
-                  const sleeveColor = wear?.outer?.color ?? wear?.top?.color
-                  const hex = sleeveColor ? (colorHex[sleeveColor] ?? null) : null
-                  const longSleeve = !!wear?.outer || (!!wear?.top && wear.top.type !== '반팔' && wear.top.type !== '반팔셔츠')
-                  const arms = [{ k: 'a', full: 'M80 58 L100 72 L128 62', upper: 'M80 58 L100 72', fore: 'M100 72 L128 62', hand: [131, 61] }]
-                  return arms.map((a) => (
-                    <g key={a.k} className={`dig-arm ${a.k}`}>
-                      {hex ? (
-                        <>
-                          {/* 소매: 테두리 + 옷 색으로 두껍게(긴 소매는 손목까지, 반팔은 팔꿈치까지) */}
-                          <path d={longSleeve ? a.full : a.upper} stroke={ink} strokeWidth="11" />
-                          <path d={longSleeve ? a.full : a.upper} stroke={hex} strokeWidth="7.4" />
-                          {!longSleeve && <path d={a.fore} strokeWidth="3" />}
-                        </>
-                      ) : (
-                        <path d={a.full} strokeWidth="3" />
-                      )}
-                      <circle cx={a.hand[0]} cy={a.hand[1]} r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
-                    </g>
-                  ))
-                })()}
-                {/* 안 뻗는 왼팔은 원래처럼 내려둔다 */}
-                <Hands top={wear?.top?.type} outer={wear?.outer?.type} only="L" />
-              </g>
-            ) : (
-              <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
-            )}
+            <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
             {/* 칭호 소품과 꾸미기: 옷 위에 얹는다 */}
             <FrontDecor persona={persona} acc={accessories} />
           </g>

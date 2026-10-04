@@ -84,7 +84,7 @@ function DayOutfits({ days }: { days: EventDayOutfit[] }) {
       <p className="tiny">같은 옷을 며칠 내내 입지 않도록 날마다 다르게 골랐어요. 옷장에 옷이 적으면 겹칠 수 있어요.</p>
       <div className="day-outfits">
         {days.map((d, i) => (
-          <div key={d.date} className={`box w${(i % 3) + 1} day-outfit`}>
+          <div key={d.date} className={`box w${(i % 3) + 1} day-outfit`} style={{ ['--i' as string]: i }}>
             <div className="ev-day-head">
               <b>{i + 1}일차 · {dayLabel(d.date)}</b>
               <span className="tiny">{d.headline}</span>
@@ -269,9 +269,9 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
 
-      {!waiting && days.length >= 2 && <DayOutfits days={days} />}
+      {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} />}
     </main>
   )
 }
