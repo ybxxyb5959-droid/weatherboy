@@ -3756,15 +3756,15 @@ a.card {
 }
 /* 뒤적이는 팔: 어깨를 축으로 두 팔이 엇갈려 위아래로 휘젓는다 */
 .dig-arm {
-  transform-origin: 68px 62px;
+  transform-origin: 80px 58px;
   animation: dig-arm 0.34s ease-in-out infinite alternate;
 }
 .dig-arm.b {
   animation-direction: alternate-reverse;
 }
 @keyframes dig-arm {
-  from { transform: rotate(-15deg); }
-  to { transform: rotate(17deg); }
+  from { transform: rotate(-18deg); }
+  to { transform: rotate(20deg); }
 }
 .stylist-hint {
   margin: 2px 0 6px;

@@ -36,10 +36,12 @@ const ink = '#222'
  *  - 반팔: 소매 아래로 맨 팔뚝이 나오고 그 끝에 손
  *  - 긴 소매(긴팔·맨투맨·후드티 등)와 겉옷: 소매 끝에서 손만 삐져나온다
  */
-export function Hands({ top, outer }: { top?: string; outer?: string }) {
+export function Hands({ top, outer, only }: { top?: string; outer?: string; only?: 'L' | 'R' }) {
   // 옷 그림 좌표(100x100) -> 졸라맨 좌표. 상의는 scale .65 @ (27.5,39.6), 겉옷은 scale .72 @ (24,41)
   const at = (scale: number, tx: number, ty: number) => (x: number, y: number) => [tx + x * scale, ty + y * scale] as const
-  const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+  const hand = (cx: number, cy: number, key: string) => (only && only !== (key === 'l' ? 'L' : 'R') ? null : <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />)
+  const showL = only !== 'R'
+  const showR = only !== 'L'
 
   if (outer) {
     const w = at(0.72, 24, 41) // 겉옷 소매 끝(왼 14.5,69 / 오른 85.5,69) 바로 아래
@@ -61,7 +63,7 @@ export function Hands({ top, outer }: { top?: string; outer?: string }) {
     const [rex, rey] = w(91, 66)
     return (
       <g>
-        <path d={`M${lsx} ${lsy} L${lex} ${ley} M${rsx} ${rsy} L${rex} ${rey}`} strokeWidth="2.6" />
+        <path d={`${showL ? `M${lsx} ${lsy} L${lex} ${ley}` : ''} ${showR ? `M${rsx} ${rsy} L${rex} ${rey}` : ''}`} strokeWidth="2.6" />
         {hand(lex - 0.5, ley + 3, 'l')}
         {hand(rex + 0.5, rey + 3, 'r')}
       </g>
@@ -236,9 +238,9 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                 <clipPath id="wb-top-torso">
                   <rect x="29" y="0" width="42" height="100" />
                 </clipPath>
-                {/* 뒤적이는 중에는 옷의 축 처진 소매를 잘라내고(몸통만 남김), 소매는 아래 팔과 함께 움직이게 따로 그린다 */}
+                {/* 뒤적이는 중에는 옷장 쪽(오른쪽)으로 뻗는 팔의 축 처진 소매만 잘라내고, 그 소매는 아래 팔과 함께 움직이게 따로 그린다. 왼팔은 그대로 내려둔다 */}
                 <clipPath id="wb-dig-torso">
-                  <rect x="44" y="0" width="34" height="140" />
+                  <path d="M0 0 H76 V140 H0Z" />
                 </clipPath>
                 <g transform="translate(27.5 39.6) scale(0.65)" strokeWidth="3.4" clipPath={digging ? 'url(#wb-dig-torso)' : wear?.outer ? 'url(#wb-top-torso)' : undefined}>
                   <ClothingArt type={wear.top.type} color={wear.top.color} pattern={wear.top.pattern} />
@@ -259,10 +261,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                   const sleeveColor = wear?.outer?.color ?? wear?.top?.color
                   const hex = sleeveColor ? (colorHex[sleeveColor] ?? null) : null
                   const longSleeve = !!wear?.outer || (!!wear?.top && wear.top.type !== '반팔' && wear.top.type !== '반팔셔츠')
-                  const arms = [
-                    { k: 'a', full: 'M68 60 L92 74 L126 62', upper: 'M68 60 L92 74', fore: 'M92 74 L126 62', hand: [129, 61] },
-                    { k: 'b', full: 'M66 66 L90 80 L124 78', upper: 'M66 66 L90 80', fore: 'M90 80 L124 78', hand: [127, 78] },
-                  ]
+                  const arms = [{ k: 'a', full: 'M80 58 L100 72 L128 62', upper: 'M80 58 L100 72', fore: 'M100 72 L128 62', hand: [131, 61] }]
                   return arms.map((a) => (
                     <g key={a.k} className={`dig-arm ${a.k}`}>
                       {hex ? (
@@ -279,6 +278,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
                     </g>
                   ))
                 })()}
+                {/* 안 뻗는 왼팔은 원래처럼 내려둔다 */}
+                <Hands top={wear?.top?.type} outer={wear?.outer?.type} only="L" />
               </g>
             ) : (
               <Hands top={wear?.top?.type} outer={wear?.outer?.type} />

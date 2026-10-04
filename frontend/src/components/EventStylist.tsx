@@ -136,7 +136,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       return
     }
     setFrozen(shownRef.current)
-    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 62))
+    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 46))
     setPhase('run')
     await sleep(450)
     setPhase('dig')
