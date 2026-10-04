@@ -7,6 +7,7 @@ import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import { eventMood } from '../lib/eventMood'
 import StickPerson from '../components/StickPerson'
+import { WeatherDoodle } from '../components/DoodleWeather'
 import UmbrellaDoodle from '../components/UmbrellaDoodle'
 import { dDay, formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
@@ -43,11 +44,18 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
       <div className="ev-weather">
         {days.map((d) => (
           <div key={d.date} className="box w2 ev-day">
-            <div className="ev-day-head">
-              <b>{dayLabel(d.date)}</b>
-              <span className="tiny">
-                최저 {d.tempMin}° · 최고 {d.tempMax}°{d.pop >= 30 || d.rain ? ` · 비 ${d.pop}%` : ''}
-              </span>
+            <div className="ev-wday-head">
+              <div className="ev-wday-main">
+                <b>{dayLabel(d.date)}</b>
+                <span className="ev-temps">
+                  <span className="t-min">최저 {d.tempMin}°</span>
+                  <span className="t-max">최고 {d.tempMax}°</span>
+                </span>
+              </div>
+              <div className="ev-wday-icon">
+                <WeatherDoodle kind={d.condition ?? (d.rain ? 'rain' : 'partly')} size={40} />
+                {(d.pop >= 30 || d.rain) && <span className="tiny wpop">{d.pop}%</span>}
+              </div>
             </div>
             {d.slots ? (
               <div className="ev-slots">
@@ -71,7 +79,7 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
           </div>
         ))}
       </div>
-      {approx && <p className="tiny">대략적인 예보예요. 가까워지면 아침·낮·저녁 기온으로 다시 알려줄게요.</p>}
+      {approx && <p className="tiny ev-note">대략적인 예보예요. 가까워지면 아침·낮·저녁 기온으로 다시 알려줄게요.</p>}
     </section>
   )
 }

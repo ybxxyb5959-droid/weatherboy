@@ -85,6 +85,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const [runPx, setRunPx] = useState(150) // 옷장까지 달려갈 거리
   const rowRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef<ApiOutfitItem[]>([])
+  const [pickedDone, setPickedDone] = useState(false) // 한 번 다 입고 돌아왔으면 true: 이후 연출 중에도 칩은 다시 나타나지 않는다
   const changedRef = useRef(false) // 연출이 끝난 뒤에 일정 데이터를 다시 불러온다(날짜별 코디 카드가 갈아입은 뒤에 갱신되도록)
 
   const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 마음에 안 들면 아래에 원하는 스타일을 말해주세요.` : null
@@ -108,6 +109,9 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   }, [eventId])
 
   const visible = applicable !== false || !!style
+  useEffect(() => {
+    if (phase === 'idle' && (!!style || !!chosen)) setPickedDone(true)
+  }, [phase, style, chosen])
   useEffect(() => {
     if (applicable !== null) onApplicable?.(visible)
   }, [applicable, visible, onApplicable])
@@ -194,8 +198,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   if (!visible) return null
 
   // 한 번 고르면 칩은 사라지고, 입력창이 "원하는 옷이 아닌가요?"로 바뀐다. 졸라맨이 다 입고 제자리로 돌아온 뒤에 나타난다.
-  const hasPicked = !!style || !!chosen
-  const settled = hasPicked && phase === 'idle'
+  const settled = pickedDone && phase === 'idle'
   const chips = ((talk?.options.length ? talk.options : opening?.options) ?? []).slice(0, 2)
   const comboKey = `${idx}:${itemsKey(shown)}`
   const staging = phase !== 'idle'
@@ -222,7 +225,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         </div>
 
         {/* 칩은 고르기 전에만 보인다. 고른 뒤 마음에 안 들면 아래 입력창에 원하는 스타일을 말하면 된다 */}
-        {!settled && chips.length > 0 && (
+        {!pickedDone && chips.length > 0 && (
           <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
             {chips.map((o, i) => (
               <DoodleButton key={o.style} seed={i} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>

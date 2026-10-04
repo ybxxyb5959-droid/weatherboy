@@ -244,9 +244,18 @@ export interface WindowForecast {
   expectedCount: number
 }
 
+/** 중기예보 문구(맑음/구름많음/흐림) -> 하늘 상태 */
+export function skyOfText(t: string | null): 'clear' | 'partly' | 'cloudy' | null {
+  if (!t) return null
+  if (t.includes('맑')) return 'clear'
+  if (t.includes('구름')) return 'partly'
+  if (t.includes('흐')) return 'cloudy'
+  return null
+}
+
 export function toOutingPoint(h: HourlyForecast): { point: OutingPoint; method: string } {
   const f = feelsLike({ tempC: h.temp, windMs: h.wind, humidity: h.humidity, month: toKstParts(h.targetAt).month })
-  return { point: { at: h.targetAt, temp: h.temp, feels: f.feels, pop: h.pop, precip: h.precip, wind: h.wind }, method: f.method }
+  return { point: { at: h.targetAt, temp: h.temp, feels: f.feels, pop: h.pop, precip: h.precip, wind: h.wind, sky: h.sky }, method: f.method }
 }
 
 /**
@@ -296,8 +305,9 @@ export async function forecastForWindow(region: Region, start: Date, end: Date, 
     for (const d of daily) {
       if (!missing.includes(d.date)) continue
       const at = fromKst(d.date, '12:00')
-      out.points.push({ at, temp: d.tempMin, feels: d.tempMin, pop: d.pop, precip: d.precip, wind: 0 })
-      out.points.push({ at, temp: d.tempMax, feels: d.tempMax, pop: d.pop, precip: d.precip, wind: 0 })
+      const sky = skyOfText(d.skyText)
+      out.points.push({ at, temp: d.tempMin, feels: d.tempMin, pop: d.pop, precip: d.precip, wind: 0, sky })
+      out.points.push({ at, temp: d.tempMax, feels: d.tempMax, pop: d.pop, precip: d.precip, wind: 0, sky })
       out.usedMid = true
       if (out.stage === 'WAITING') out.stage = 'MIDTERM'
     }

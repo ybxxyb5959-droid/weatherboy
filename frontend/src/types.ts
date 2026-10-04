@@ -93,6 +93,8 @@ export interface EventDayWeather {
   tempMax: number
   pop: number
   rain: boolean
+  /** 그날을 대표하는 날씨 그림 종류 */
+  condition?: 'clear' | 'partly' | 'cloudy' | 'rain' | 'shower' | 'snow' | 'sleet'
   slots: { morning: EventDaySlot | null; afternoon: EventDaySlot | null; evening: EventDaySlot | null } | null
 }
 

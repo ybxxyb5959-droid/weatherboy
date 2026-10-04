@@ -51,8 +51,29 @@ interface DayWeather {
   tempMax: number
   pop: number
   rain: boolean
+  /** 그날을 대표하는 날씨 그림 종류(비/눈이 오면 그것, 아니면 낮의 하늘 상태) */
+  condition: 'clear' | 'partly' | 'cloudy' | 'rain' | 'shower' | 'snow' | 'sleet'
   /** 시간별 예보가 있는 날만: 아침(6~11시)/낮(12~17시)/저녁(18시~) 평균. 일정 시간 밖은 포함하지 않는다. 중기예보 날짜는 null */
   slots: { morning: DaySlot | null; afternoon: DaySlot | null; evening: DaySlot | null } | null
+}
+
+/** 그날의 대표 날씨: 비/눈이 오는 시각이 있으면 가장 많은 종류, 없으면 낮(6~18시)의 가장 흔한 하늘 상태(없으면 강수확률로 짐작) */
+export function conditionOfDay(pts: OutingPoint[]): DayWeather['condition'] {
+  const wet = pts.filter((p) => p.precip !== 'none')
+  if (wet.length > 0) {
+    const count = new Map<string, number>()
+    for (const p of wet) count.set(p.precip, (count.get(p.precip) ?? 0) + 1)
+    return [...count.entries()].sort((a, b) => b[1] - a[1])[0]![0] as DayWeather['condition']
+  }
+  const day = pts.filter((p) => { const h = toKstParts(p.at).hour; return h >= 6 && h < 18 })
+  const skies = (day.length ? day : pts).map((p) => p.sky).filter((s): s is 'clear' | 'partly' | 'cloudy' => !!s)
+  if (skies.length) {
+    const count = new Map<string, number>()
+    for (const s of skies) count.set(s, (count.get(s) ?? 0) + 1)
+    return [...count.entries()].sort((a, b) => b[1] - a[1])[0]![0] as DayWeather['condition']
+  }
+  const pop = Math.max(...pts.map((p) => p.pop))
+  return pop >= 50 ? 'cloudy' : pop >= 20 ? 'partly' : 'clear'
 }
 
 const avg = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)
@@ -77,6 +98,7 @@ function weatherByDay(points: OutingPoint[]): DayWeather[] {
         tempMax: Math.round(Math.max(...pts.map((p) => p.temp))),
         pop: Math.max(...pts.map((p) => p.pop)),
         rain: pts.some((p) => p.precip !== 'none'),
+        condition: conditionOfDay(pts),
         slots: hourly ? { morning: slotOf(pts.filter((p) => hourOf(p) >= 6 && hourOf(p) < 12)), afternoon: slotOf(pts.filter((p) => hourOf(p) >= 12 && hourOf(p) < 18)), evening: slotOf(pts.filter((p) => hourOf(p) >= 18 || hourOf(p) < 6)) } : null,
       }
     })

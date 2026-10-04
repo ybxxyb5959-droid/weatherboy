@@ -18,6 +18,8 @@ export interface OutingPoint {
   pop: number // 강수확률 %
   precip: PrecipType
   wind: number // m/s
+  /** 하늘 상태(있으면). 날씨 그림을 고르는 데만 쓰고 코디 판단에는 쓰지 않는다 */
+  sky?: 'clear' | 'partly' | 'cloudy' | null
 }
 
 export interface WardrobeItem {

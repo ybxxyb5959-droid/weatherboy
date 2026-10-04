@@ -3220,6 +3220,41 @@ a.card {
   justify-content: space-between;
   gap: 8px;
 }
+/* 일정 날씨 카드 머리: 날짜 옆에 최저(파랑)·최고(빨강), 오른쪽에는 그날의 날씨 그림 */
+.ev-wday-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ev-wday-main {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.ev-temps {
+  display: inline-flex;
+  gap: 8px;
+}
+.t-min {
+  color: #3d7fc4;
+  font-weight: 700;
+}
+.t-max {
+  color: #d9503f;
+  font-weight: 700;
+}
+.ev-wday-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  min-width: 44px;
+}
+.ev-note {
+  margin-top: 16px;
+}
 .ev-slots {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
