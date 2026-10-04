@@ -2,7 +2,7 @@ import type { Clothing, Event, Prisma, Recommendation, User } from '@prisma/clie
 import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
-import { applySuit, applyWish, savedWish, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
+import { applySuit, applyWish, hasWishEffect, roleOf, savedWish, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
 import { aiEnabled, explain, templateExplanation } from './ai/explain.js'
@@ -190,6 +190,8 @@ export interface DayOutfit {
   needUmbrella: boolean
   needMask: boolean
   notes: string[]
+  /** 앞선 날 입은 옷장 옷과 겹친 자리(옷장에 다른 옷이 부족해서). 겹침이 없으면 빈 배열 */
+  overlapSlots: ('상의' | '하의' | '겉옷')[]
 }
 
 /**
@@ -204,7 +206,9 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
   }
   if (byDay.size < 2) return []
   const used: string[] = []
-  const wish = savedWish(event.outfitWish) // 말로 정한 원하는 옷("3일 모두 검정옷"): 날마다 이 조건을 따르되 옷은 겹치지 않게
+  const saved = savedWish(event.outfitWish) // 말로 정한 원하는 옷("3일 모두 검정옷"): 날마다 이 조건을 따르되 옷은 겹치지 않게
+  const strictAvoid = saved?.variety === true // "전부 다르게": 겹침 금지를 가장 먼저 본다
+  const wish = hasWishEffect(saved) ? saved : null // 방식(다르게)만 말했다면 입힐 옷은 없다
   const style = event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined
   return [...byDay.entries()].map(([date, points], dayIndex) => {
     const r = recommend({
@@ -222,12 +226,20 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
       now,
       varietySeed: `${user.id}:${event.id}:${date}`,
       avoidIds: used,
+      strictAvoid,
+    })
+    const SLOT = { top: '상의', bottom: '하의', outer: '겉옷' } as const
+    const overlapSlots = r.items.flatMap((it) => {
+      const role = roleOf(it.type)
+      return it.clothingId && used.includes(it.clothingId) && role ? [SLOT[role]] : []
     })
     for (const it of r.items) if (it.clothingId) used.push(it.clothingId)
     let items = r.items
     if (style === 'FORMAL') items = applySuit(items).items // 정장이면 날마다 정장 세트(없는 부분은 예시)
     if (wish) items = applyWish(items, wish, dayIndex).items
-    return { date, items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes: r.comboWhy[0]?.notes ?? [] }
+    const notes = [...(r.comboWhy[0]?.notes ?? [])]
+    if (overlapSlots.length > 0 && dayIndex > 0) notes.push(`옷장에 다른 옷이 부족해서 ${overlapSlots.join('·')}은 앞선 날과 겹쳐요`)
+    return { date, items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes, overlapSlots: dayIndex > 0 ? overlapSlots : [] }
   })
 }
 

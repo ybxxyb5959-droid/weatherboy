@@ -2,7 +2,7 @@
 import type { Event, User } from '@prisma/client'
 import { eventKindMap } from '../config/mappings.js'
 import { styleGapHint, styleLabel, type OutfitStyle } from '../rules/outfitStyle.js'
-import { applySuit, applyWish, toEngineWish, type Wish } from '../rules/outfitWish.js'
+import { applySuit, applyWish, hasWishEffect, toEngineWish, type Wish } from '../rules/outfitWish.js'
 import type { OutingPoint } from '../rules/outfitEngine.js'
 import { kstDate } from '../utils/time.js'
 import type { StylistContext } from './ai/stylist.js'
@@ -67,7 +67,8 @@ export interface StylistOutfit {
  * 예보가 아직 없으면 null. style 이 null 이면 느낌 없이 날씨와 옷장만으로 고른 코디(원하는 옷만 말한 경우).
  * 포멀이면 정장 세트를, 원하는 옷(wish)이 있으면 그 옷을, 옷장에 없어도 예시로 입힌다.
  */
-export async function stylistOutfit(user: User, e: Event, style: OutfitStyle | null, wish?: Wish | null): Promise<StylistOutfit | null> {
+export async function stylistOutfit(user: User, e: Event, style: OutfitStyle | null, rawWish?: Wish | null): Promise<StylistOutfit | null> {
+  const wish = hasWishEffect(rawWish) ? rawWish : null // "다르게"처럼 방식만 말한 요청은 입힐 옷이 없다
   const c = await compute(user, e, e.startAt, e.endAt, new Date(), undefined, style ?? undefined, wish ? toEngineWish(wish) : undefined)
   if (!c) return null
   const r = c.result

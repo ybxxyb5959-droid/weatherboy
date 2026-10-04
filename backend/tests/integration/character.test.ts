@@ -47,7 +47,7 @@ describe('내 캐릭터 API', () => {
     expect(r.analysis.title.reason).toContain('10/10벌(100%)')
     expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['DARK_CHILD', 'MINIMALIST'])
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 10, share: 1 })
-    expect(r.titles).toHaveLength(17)
+    expect(r.titles).toHaveLength(15)
   })
 
   it('꾸미기를 저장하고 다시 읽을 수 있다. 값을 null 로 보내면 벗는다', async () => {

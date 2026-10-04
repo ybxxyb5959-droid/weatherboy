@@ -109,6 +109,8 @@ export interface EventDayOutfit {
   needUmbrella: boolean
   needMask: boolean
   notes: string[]
+  /** 앞선 날 입은 내 옷과 겹친 자리(옷장에 다른 옷이 부족해서). 없으면 빈 배열(예전 응답에는 없을 수 있다) */
+  overlapSlots?: ('상의' | '하의' | '겉옷')[]
 }
 
 export interface EventOutfit {

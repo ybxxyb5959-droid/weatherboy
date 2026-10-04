@@ -21,8 +21,13 @@ export interface Wish {
   suit: boolean
   /** "겉옷 없이"라고 말했는가: 겉옷은 입히지 않는다 */
   noOuter?: boolean
+  /** "전부 다르게", "겹치지 않게"라고 말했는가: 며칠짜리 일정에서 날마다 옷이 겹치지 않게 고른다(원하는 옷이 아니라 고르는 방식) */
+  variety?: boolean
   pieces: WishPiece[]
 }
+
+/** 코디에 입힐 옷(색·종류·정장·겉옷 없이)을 담고 있는가. variety 만 있으면 false(옷을 바꾸지 않고 고르는 방식만 바꾼다) */
+export const hasWishEffect = (w: Wish | null | undefined): w is Wish => !!w && (w.suit || !!w.noOuter || w.pieces.some((p) => !!(p.type || p.color || p.tone)))
 
 export const TOP_TYPES = ['반팔', '반팔셔츠', '긴팔', '셔츠', '맨투맨', '니트', '후드티']
 export const BOTTOM_TYPES = ['바지', '반바지', '치마']
@@ -139,8 +144,10 @@ export function parseWish(text: string): Wish | null {
   if (pieces.length === 0 && !suit && !noOuter && orphanColors.length > 0) pieces.push({ role: 'top', color: orphanColors[0] }, { role: 'bottom', color: orphanColors[0] })
   // 옷 낱말 없이 톤만 말했다면("전체적으로 어둡게") 상의와 하의에 같은 톤을 준다
   else if (pieces.length === 0 && !suit && !noOuter && orphanTones.length > 0) pieces.push({ role: 'top', tone: orphanTones[0] }, { role: 'bottom', tone: orphanTones[0] })
-  if (pieces.length === 0 && !suit && !noOuter) return null
-  return { suit, noOuter: noOuter || undefined, pieces }
+  // "전부 다르게", "안 겹치게", "매일 다르게": 날마다 다른 옷을 원한다는 말
+  const variety = /(겹치(지|는)\s*(않|거\s*없)|안\s*겹치|(전부|모두|다|매일|날마다|하루하루|서로|각각)\s*다르게|다\s*다른|서로\s*다른|매일\s*다른|날마다\s*다른)/.test(t)
+  if (pieces.length === 0 && !suit && !noOuter && !variety) return null
+  return { suit, noOuter: noOuter || undefined, variety: variety || undefined, pieces }
 }
 
 const example = (type: string, color: string, label?: string): OutfitItem & { example: true } => ({
@@ -299,7 +306,7 @@ const COLOR_NAME_SET = new Set<string>(COLOR_WORDS.map(([, name]) => name))
 /** DB 에 저장된 값을 믿지 않고 다시 검사해서 Wish 로 돌려준다(모양이 다르면 null) */
 export function savedWish(json: unknown): Wish | null {
   if (!json || typeof json !== 'object') return null
-  const j = json as { suit?: unknown; noOuter?: unknown; pieces?: unknown }
+  const j = json as { suit?: unknown; noOuter?: unknown; variety?: unknown; pieces?: unknown }
   if (!Array.isArray(j.pieces)) return null
   const pieces: WishPiece[] = []
   for (const p of j.pieces.slice(0, 3)) {
@@ -313,8 +320,8 @@ export function savedWish(json: unknown): Wish | null {
       tone: q.tone === 'dark' || q.tone === 'light' ? q.tone : undefined,
     })
   }
-  const wish: Wish = { suit: j.suit === true, noOuter: j.noOuter === true || undefined, pieces }
-  return wish.suit || wish.noOuter || pieces.length ? wish : null
+  const wish: Wish = { suit: j.suit === true, noOuter: j.noOuter === true || undefined, variety: j.variety === true || undefined, pieces }
+  return wish.suit || wish.noOuter || wish.variety || pieces.length ? wish : null
 }
 
 /** 옷장에 없어서 예시로 입힌 옷을 알리는 문장(없으면 빈 문자열). 조사는 마지막 옷 이름에 맞춘다. */

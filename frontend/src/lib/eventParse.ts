@@ -49,7 +49,7 @@ const MOUNTAIN = /([가-힣]{1,4}산)(?=[에으로을를\s]|$)/
 const NOT_MOUNTAIN = new Set(['부산', '울산', '마산', '군산', '익산', '오산', '경산', '양산', '서산', '안산', '논산', '산본', '광산', '청산', '용산', '아산', '일산', '화산', '출산', '예산', '재산', '계산', '생산'])
 
 // 장소가 아닌 말(날짜·시간·일정 말)
-const NOT_PLACE = /^(오늘|내일|모레|글피|이번|다음|다다음|담주|주말|평일|아침|점심|저녁|밤|새벽|오전|오후|낮|[월화수목금토일](요일|욜)?|\d+.*|가족|친구|회사|팀|엄마|아빠|동생|언니|오빠|누나|형)$/
+const NOT_PLACE = /^(부터|까지|동안|쯤|경|오늘|내일|모레|글피|이번|다음|다다음|담주|주말|평일|아침|점심|저녁|밤|새벽|오전|오후|낮|[월화수목금토일](요일|욜)?|\d+.*|가족|친구|회사|팀|엄마|아빠|동생|언니|오빠|누나|형)$/
 
 /** 문장 -> 일정 칸. today 는 한국 날짜 YYYY-MM-DD */
 export function parseEventText(input: string, today: string): EventDraft {
@@ -181,6 +181,9 @@ export function parseEventText(input: string, today: string): EventDraft {
   if (start && end && end > start) nights = dayNo(end) - dayNo(start)
   else if (start && nights && nights > 0) end = addDays(start, nights)
   else end = null
+
+  // 날짜를 뺀 뒤에 홀로 남은 "부터/까지" 같은 말은 장소·제목으로 새지 않게 지운다 ("10월 31일 부터 1박 2일 캠핑")
+  text = text.replace(/(^|\s)(부터|까지|~|-|쯤|경)(?=\s|$)/g, ' ')
 
   // ── 시간 ──
   const times: number[] = [] // 하루 중 분

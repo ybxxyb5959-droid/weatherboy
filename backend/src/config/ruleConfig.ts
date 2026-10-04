@@ -61,6 +61,9 @@ export const ruleConfig = {
   // 일정/외출 구간 중 최저와 평균을 섞는 가중(최저 비중) - 캠핑은 더 높음
   minTempWeight: { COMMUTE: 0.3, OTHER: 0.3, TRAVEL: 0.5, CAMPING: 0.7, EXERCISE: 0.3, HIKING: 0.6, OUTDOOR: 0.5 } as Record<EventKind, number>,
 
+  // "전부 다르게" 요청(strictAvoid): 앞선 날 옷과 겹치지 않는 조합을 찾으려고 보온 허용폭을 이만큼 더 넓힌다(날씨 조건은 그대로 만족)
+  strictAvoidSlack: 3,
+
   umbrellaPopThreshold: 60,
   windStrongMs: 7, // 방풍 옷 우선 기준 (m/s)
   maskMinGrade: 3, // AirKorea 3=나쁨, 4=매우나쁨

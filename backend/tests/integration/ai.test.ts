@@ -119,7 +119,8 @@ describe('AI 경로', () => {
     const r = await a.post('/api/ai/event-stylist').send({ eventId: ev.id, style: 'FORMAL' })
     expect(r.status).toBe(200)
     expect(Array.isArray(r.body.outfit.tabooReasons)).toBe(true)
-    if (!r.body.outfit.styleMatched) expect(r.body.reply).toContain('가장 가까운 옷')
+    // 옷장에 없는 정장은 예시로 채우므로(examples), 예시가 없을 때만 "가장 가까운 옷" 안내가 붙는다
+    if (!r.body.outfit.styleMatched && r.body.outfit.examples.length === 0) expect(r.body.reply).toContain('가장 가까운 옷')
     const o = await a.get(`/api/events/${ev.id}/outfit`)
     expect(Array.isArray(o.body.situationNotes)).toBe(true)
   })

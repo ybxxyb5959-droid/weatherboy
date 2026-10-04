@@ -9,7 +9,7 @@ import { prisma } from '../../db.js'
 import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
 import { stylistApplicable } from '../../rules/outfitStyle.js'
 import { defaultOptions, detectStyle, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
-import { exampleNote, parseWish } from '../../rules/outfitWish.js'
+import { exampleNote, hasWishEffect, parseWish, savedWish } from '../../rules/outfitWish.js'
 import { Prisma } from '@prisma/client'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
@@ -149,7 +149,10 @@ aiRouter.post(
     // 며칠짜리 일정은 원하는 옷을 일정에 저장해서 날짜별 코디가 날마다 이 조건을 따르게 한다. 하루짜리는 저장하지 않고 입혀서 보여주기만 한다.
     let wishChanged = false
     if (multiDay && (wish || clearing)) {
-      await prisma.event.update({ where: { id: event.id }, data: { outfitWish: clearing ? Prisma.DbNull : (wish as unknown as Prisma.InputJsonValue) } })
+      // "다르게"만 말했으면 이미 정한 옷 조건은 두고 방식만 더한다. 새 옷 조건을 말해도 "다르게"는 유지한다.
+      const prev = savedWish(event.outfitWish)
+      const merged = wish && prev && !hasWishEffect(wish) ? { ...prev, variety: true } : wish && prev?.variety ? { ...wish, variety: true } : wish
+      await prisma.event.update({ where: { id: event.id }, data: { outfitWish: clearing ? Prisma.DbNull : (merged as unknown as Prisma.InputJsonValue) } })
       wishChanged = true
     }
     // 고른 분위기는 일정에 저장한다. 원하는 옷만 말했다면 느낌은 그대로 두고(저장하지 않고) 일정에 저장돼 있던 느낌으로 보여준다.
@@ -163,6 +166,7 @@ aiRouter.post(
     const sample = exampleNote(outfit.examples)
     let lead: string
     if (clearing) lead = '원하는 옷은 지우고 원래 코디로 돌아왔어요.'
+    else if (wish?.variety && !hasWishEffect(wish)) lead = multiDay ? '날짜마다 옷이 겹치지 않게 골랐어요.' : '하루짜리 일정이라 옷이 겹칠 일은 없어요.'
     else if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
     else if (sample) lead = `${reply || `${styleLabel[style!]} 스타일로 입혀봤어요.`} ${sample}`
     // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다

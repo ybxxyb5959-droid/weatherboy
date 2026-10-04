@@ -86,10 +86,14 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
 
 /** 며칠짜리 일정: 날마다 그날 날씨에 맞춰 다른 옷으로 고른 코디 */
 function DayOutfits({ days }: { days: EventDayOutfit[] }) {
+  // 실제로 겹친 날이 있으면 "다르게 골랐어요"라고만 말하지 않는다
+  const overlapped = days.some((d) => (d.overlapSlots?.length ?? 0) > 0)
   return (
     <section className="section">
       <h2>날짜별 코디</h2>
-      <p className="tiny">같은 옷을 며칠 내내 입지 않도록 날마다 다르게 골랐어요. 옷장에 옷이 적으면 겹칠 수 있어요.</p>
+      <p className="tiny">
+        {overlapped ? '옷장에 옷이 적어서 겹치는 옷이 있어요. 아래 날짜별 안내를 확인해 보세요.' : '날마다 다른 옷으로 골랐어요.'}
+      </p>
       <div className="day-outfits">
         {days.map((d, i) => (
           <div key={d.date} className={`box w${(i % 3) + 1} day-outfit`} style={{ ['--i' as string]: i }}>

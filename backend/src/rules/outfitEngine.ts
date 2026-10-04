@@ -60,6 +60,8 @@ export interface EngineInput {
   feelsMethod?: string // 체감온도 산출 방식(Reason Code용)
   /** 며칠짜리 일정에서 앞선 날에 이미 고른 옷. 알맞은 조합 중 이 옷과 덜 겹치는 조합을 먼저 고른다(상의 > 하의 > 겉옷 순으로 비중) */
   avoidIds?: string[]
+  /** true 면 avoidIds 와 겹치는 옷이 적은 조합을 가장 먼저(분위기·색보다 앞서) 고르고, 후보를 보온 허용폭 안에서 조금 더 넓힌다 */
+  strictAvoid?: boolean
   /** 있으면 보온 조건을 만족하는 조합 중 이 분위기에 가장 가까운 옷을 먼저 고른다 (varietySeed 와 함께 쓰지 않는다) */
   style?: OutfitStyle
   /** 일정 제목에서 알아낸 자리(면접·결혼식·장례식·데이트). 그 자리에 어색한 옷은 강하게 감점한다(완전히 빼지는 않는다) */
@@ -297,7 +299,16 @@ export function recommend(input: EngineInput): EngineResult {
     const first = valid[0]!
     const [wp, rp] = rank(first)
     const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
-    let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
+    const avoidSet = new Set(input.avoidIds ?? [])
+    const strict = !!input.strictAvoid && avoidSet.size > 0
+    const slack = ruleConfig.varietyWarmthSlack + (strict ? ruleConfig.strictAvoidSlack : 0)
+    let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + slack)
+    // 겹침 금지: 상의·하의·겉옷을 똑같이 보고, 앞선 날 옷과 겹치는 자리가 가장 적은 조합만 먼저 남긴다
+    if (strict && group.length > 1) {
+      const hit = (c: Candidate) => (avoidSet.has(c.top.id) ? 1 : 0) + (avoidSet.has(c.bottom.id) ? 1 : 0) + (c.outer && avoidSet.has(c.outer.id) ? 1 : 0)
+      const fewest = Math.min(...group.map(hit))
+      group = group.filter((c) => hit(c) === fewest)
+    }
     // 분위기를 골랐으면 분위기 점수가 가장 높은 조합만 남긴다(여러 날 일정에서 날마다 돌려 고를 때도 분위기는 지킨다)
     if ((input.style || input.situation || input.wish) && group.length > 1) {
       const bestFit = Math.max(...group.map(fitOf))
