@@ -94,7 +94,34 @@ describe('옷장·행거 사진에서 여러 벌 찾기', () => {
     await clothesFromPhoto(photo, f)
     const body = JSON.parse(((f as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { body: string }).body)
     const props = Object.keys(body.generationConfig.responseSchema.properties.items.items.properties)
-    expect(props).toEqual(['label', 'type', 'color', 'pattern'])
+    // 종류/색/무늬 외에는 모델이 종류를 따져 보게 하는 근거(evidence)와 확신도(confidence)뿐이다
+    expect(props).toEqual(['label', 'type', 'color', 'pattern', 'evidence', 'confidence'])
+  })
+
+  it('행거에 걸린 바지를 알아보는 구분 단서를 지시문에 담는다', async () => {
+    const f = gemini({ items: [item('체크 셔츠')] })
+    await clothesFromPhoto(photo, f)
+    const body = JSON.parse(((f as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { body: string }).body)
+    const text: string = body.contents[0].parts[0].text
+    for (const cue of ['허리밴드', '청(데님)', '발목 쪽 고무밴드', '상의/하의/겉옷']) expect(text).toContain(cue)
+  })
+
+  it('확신도를 돌려주고, 빠지거나 이상한 값이면 보통으로 본다. 근거는 화면으로 보내지 않는다', async () => {
+    const r = await clothesFromPhoto(photo, gemini({ items: [{ ...item('검정 바지', '바지', '검정', '무지'), evidence: '허리끈', confidence: '헷갈림' }, { ...item('회색 후드티', '후드티', '회색', '무지'), evidence: '모자', confidence: '확실' }, { ...item('베이지 바지', '바지', '베이지', '무지'), confidence: '모름' }, item('청바지', '바지', '파랑', '무지')] }))
+    expect(r.map((x) => x.confidence)).toEqual(['헷갈림', '확실', '보통', '보통'])
+    expect(r.some((x) => 'evidence' in x)).toBe(false)
+  })
+
+  it('사진 전용 모델(GEMINI_PHOTO_MODEL)이 있으면 그 모델로 부른다', async () => {
+    const saved = env.GEMINI_PHOTO_MODEL
+    env.GEMINI_PHOTO_MODEL = 'photo-model-x'
+    try {
+      const f = gemini({ items: [item('체크 셔츠')] })
+      await clothesFromPhoto(photo, f)
+      expect(String((f as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toContain('photo-model-x')
+    } finally {
+      env.GEMINI_PHOTO_MODEL = saved
+    }
   })
 
   const item = (label: string, type = '긴팔', color = '네이비', pattern = '체크') => ({ label, type, color, pattern })

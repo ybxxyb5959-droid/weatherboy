@@ -22,6 +22,8 @@ const schema = z.object({
   AI_ENABLED: bool,
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default(''),
+  // 옷 사진 인식에만 쓸 모델(선택). 비우면 GEMINI_MODEL 을 쓴다. 사진 분류는 가벼운 모델이 바지를 상의로 착각하는 일이 있어 더 큰 모델로 바꿔 볼 수 있다(호출 단가는 올라간다).
+  GEMINI_PHOTO_MODEL: z.string().default(''),
   // AI 하루 사용량 한도(최근 24시간 호출 수). 시간당 60회 한도와 별개로, 하루 총량을 막는다. 숫자는 호출 기록(aiCallLog)을 보고 조정한다.
   AI_PHOTO_DAILY: z.coerce.number().int().min(1).default(120),
   AI_TEXT_DAILY: z.coerce.number().int().min(1).default(150),

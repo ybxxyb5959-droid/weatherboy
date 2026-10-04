@@ -17,10 +17,10 @@ export interface GeminiImage {
   base64: string
 }
 
-async function log(status: 'SUCCESS' | 'FAILED', started: number, message?: string) {
+async function log(status: 'SUCCESS' | 'FAILED', started: number, model: string, message?: string) {
   try {
     const scope = currentAiScope() // 요청 안에서 불렀다면 누가 어떤 종류로 불렀는지 같이 남긴다
-    await prisma.aiCallLog.create({ data: { model: env.GEMINI_MODEL || 'none', status, fallback: false, durationMs: Date.now() - started, message: message?.slice(0, 300), userId: scope?.userId, kind: scope?.kind } })
+    await prisma.aiCallLog.create({ data: { model: model || 'none', status, fallback: false, durationMs: Date.now() - started, message: message?.slice(0, 300), userId: scope?.userId, kind: scope?.kind } })
   } catch (e) {
     logger.warn({ err: String(e) }, 'ai log write failed')
   }
@@ -32,13 +32,14 @@ export const aiDisabledError = () => new AppError(503, 'AI_DISABLED', 'AI 기능
  * @param schema Gemini responseSchema (OpenAPI 부분집합, type 은 대문자)
  * @param validate 응답을 다시 검증하는 zod 스키마. 통과하지 못하면 AI 실패로 본다.
  */
-export async function geminiJson<T>(opts: { prompt: string; image?: GeminiImage; schema: object; validate: ZodType<T>; fetchImpl?: typeof fetch }): Promise<T> {
+export async function geminiJson<T>(opts: { prompt: string; image?: GeminiImage; schema: object; validate: ZodType<T>; fetchImpl?: typeof fetch; model?: string }): Promise<T> {
   if (!aiEnabled()) throw aiDisabledError()
+  const model = opts.model || env.GEMINI_MODEL
   const started = Date.now()
   const parts: object[] = [{ text: opts.prompt }]
   if (opts.image) parts.push({ inlineData: { mimeType: opts.image.mimeType, data: opts.image.base64 } })
   try {
-    const res = await (opts.fetchImpl ?? fetch)(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`, {
+    const res = await (opts.fetchImpl ?? fetch)(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
       body: JSON.stringify({
@@ -53,10 +54,10 @@ export async function geminiJson<T>(opts: { prompt: string; image?: GeminiImage;
     if (!text) throw new Error('gemini empty response')
     const parsed = opts.validate.safeParse(JSON.parse(text))
     if (!parsed.success) throw new Error('gemini response failed validation')
-    await log('SUCCESS', started)
+    await log('SUCCESS', started, model)
     return parsed.data
   } catch (e) {
-    await log('FAILED', started, e instanceof Error ? e.message : String(e))
+    await log('FAILED', started, model, e instanceof Error ? e.message : String(e))
     throw new AppError(502, 'AI_FAILED', 'AI가 답을 못 만들었어요. 잠시 후 다시 시도해주세요.')
   }
 }

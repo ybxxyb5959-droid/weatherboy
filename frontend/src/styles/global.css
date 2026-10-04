@@ -4123,3 +4123,23 @@ a.card {
 .char-title .btn-icon {
   vertical-align: -4px;
 }
+
+/* 옷장 스캔 결과: 상의/하의/겉옷을 한 번에 바꾸는 줄과 종류가 헷갈린다는 표시 */
+.scan-cats {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.scan-cats .mini {
+  padding: 2px 10px;
+  font-size: 15px;
+}
+.scan-cats .mini.on {
+  background: var(--pick);
+  font-weight: 700;
+}
+.unsure {
+  color: #c2562f;
+  font-weight: 700;
+  white-space: nowrap; /* "확인 / 해 주세요"처럼 끊기지 않게 */
+}

@@ -24,6 +24,8 @@ export interface ClothingSuggestion {
   type: string
   color: string
   pattern: string
+  /** 옷장 사진 여러 벌 인식에서만: 종류를 얼마나 확신하는지 */
+  confidence?: '확실' | '보통' | '헷갈림'
 }
 
 export interface EventSuggestion {

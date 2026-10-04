@@ -3,7 +3,7 @@ import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
-import { clothingTypes, colorNames, patternNames } from '../mocks/clothes'
+import { categories, clothingTypes, colorNames, patternNames } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
@@ -13,6 +13,10 @@ import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
 let nextKey = 1
+
+// 한 번에 상의/하의/겉옷을 바꾸는 줄: 바꾸면 그 구분의 대표 종류로 놓고, 자세한 종류는 "수정"에서 고른다
+const CAT_DEFAULT = ['긴팔', '바지', '자켓']
+const categoryIndex = (type: string) => categories.findIndex((c) => c.types.includes(type))
 
 /** 옷장/행거 사진으로 옷을 한꺼번에 찾아서, 골라서 등록한다. AI 는 제안만 하고 사용자가 확인한다. */
 export default function ScanClosetPage() {
@@ -48,7 +52,8 @@ export default function ScanClosetPage() {
             const sameAsBefore = (it: ClothingSuggestion & { label: string }) => prevTile.some((p) => p.type === it.type && p.color === it.color && p.pattern === it.pattern && p.label === it.label)
             const found: Found[] = r.items.map((it) => {
               const dup = sameAsBefore(it)
-              return { ...it, key: nextKey++, checked: !dup, dup }
+              // 종류가 헷갈린다고 한 옷은 체크를 풀어 둔다(틀린 옷이 그대로 등록되지 않게)
+              return { ...it, key: nextKey++, checked: !dup && it.confidence !== '헷갈림', dup }
             })
             setItems((prev) => [...prev, ...found])
             prevTile = found
@@ -131,9 +136,23 @@ export default function ScanClosetPage() {
                   <div className="scan-info">
                     <strong>{it.label}</strong>
                     {it.dup && <span className="tiny"> · 겹쳐 찍힌 옷일 수 있어요</span>}
+                    {it.confidence === '헷갈림' && <div className="tiny unsure">종류를 확인해 주세요</div>}
                     <div className="tiny">
                       {it.type} · {it.color}
                       {it.pattern !== '무지' ? ` · ${it.pattern}` : ''}
+                    </div>
+                    <div className="scan-cats" role="group" aria-label="종류 구분">
+                      {categories.map((c, ci) => (
+                        <button
+                          key={c.name}
+                          type="button"
+                          className={`mini${categoryIndex(it.type) === ci ? ' on' : ''}`}
+                          aria-pressed={categoryIndex(it.type) === ci}
+                          onClick={() => categoryIndex(it.type) !== ci && patch(it.key, { type: CAT_DEFAULT[ci]!, label: `${it.color} ${CAT_DEFAULT[ci]!}`, confidence: '확실', checked: true })}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <button type="button" className="mini" onClick={() => setEditing(editing === it.key ? null : it.key)}>
