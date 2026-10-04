@@ -141,7 +141,7 @@ aiRouter.post(
       return res.json({ reply: style ? `${styleLabel[style]} 느낌으로 기억해 둘게요. ${noForecast}` : `말씀하신 옷은 기억해 두기 어려워요. ${noForecast}`, options: [], outfit: null, style: style ?? undefined })
     }
     const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
-    const sample = outfit.examples.length ? `옷장에 없는 ${outfit.examples.map((l) => l.replace(/(예시)/, '').trim()).join(', ')}은 예시로 입혀봤어요.` : ''
+    const sample = outfit.examples.length ? `옷장에 없는 ${outfit.examples.map((l) => l.replace(/\(예시\)/, '').trim()).join(', ')}은 예시로 입혀봤어요.` : ''
     let lead: string
     if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
     else if (sample) lead = `${reply || `${styleLabel[style!]} 스타일로 입혀봤어요.`} ${sample}`
