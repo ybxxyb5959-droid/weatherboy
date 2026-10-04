@@ -330,6 +330,7 @@ export default function SettingsPage() {
             {isGuest && (
               <div className="field">
                 <p>카카오 계정을 연결하면 지금까지 만든 옷장과 일정을 그대로 이어서 쓸 수 있어요.</p>
+                <p className="tiny">단, 이미 카카오로 쓰던 계정이 있다면 그 계정으로 로그인돼요. 이때 지금 옷장·일정은 합쳐지지 않아요.</p>
                 <KakaoLoginButton onClick={() => { window.location.href = '/api/auth/kakao' }} />
               </div>
             )}
