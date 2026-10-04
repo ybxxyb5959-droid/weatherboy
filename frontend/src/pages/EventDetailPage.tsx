@@ -275,7 +275,7 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} items={stylistItems} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} onChanged={outfit.reload} />
+      <EventStylist eventId={e.id} items={stylistItems} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
     </main>
   )
 }

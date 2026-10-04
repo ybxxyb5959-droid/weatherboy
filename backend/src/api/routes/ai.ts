@@ -84,6 +84,8 @@ const stylistSchema = z
     eventId: z.string().uuid(),
     text: z.string().trim().min(1).max(300).optional(),
     style: z.enum(OUTFIT_STYLES).optional(),
+    /** true 면 코디만 계산해서 보여주고 일정에는 저장하지 않는다(눌러보며 비교하는 미리보기) */
+    preview: z.boolean().optional(),
     history: z.array(z.object({ role: z.enum(['user', 'ai']), text: z.string().max(300) })).max(12).default([]),
   })
   .refine((b) => b.text || b.style)
@@ -121,9 +123,9 @@ aiRouter.post(
     }
     if (!style) return res.json({ reply, options, outfit: null })
     // 고른 분위기는 일정에 저장한다: 일정 상세의 "이렇게 입어요"가 이 분위기를 따른다. 예보가 아직 없어도 저장해 두면 예보가 열릴 때 적용된다.
-    const saved = await setEventStyle(user, event, style)
+    const saved = b.preview ? event : await setEventStyle(user, event, style)
     const outfit = await stylistOutfit(user, saved, style)
-    if (!outfit) return res.json({ reply: `${styleLabel[style]} 느낌으로 기억해 둘게요. 아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 그 느낌으로 골라드릴게요.`, options: [], outfit: null, style })
+    if (!outfit) return res.json({ reply: b.preview ? `${styleLabel[style]} 느낌이네요. 아직 이 날짜의 정확한 예보가 없어서 예보가 열리면 그 느낌으로 골라드릴게요.` : `${styleLabel[style]} 느낌으로 기억해 둘게요. 아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 그 느낌으로 골라드릴게요.`, options: [], outfit: null, style })
     const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
     // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다
     const lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style]} 스타일로 골라보고 싶었지만, ${lack}`

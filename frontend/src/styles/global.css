@@ -3702,6 +3702,39 @@ a.card {
   gap: 8px;
   margin: 8px 0;
 }
+/* 옷이 바뀌면 캐릭터가 살짝 튀어 올랐다 내려오며 새 옷을 보여준다 */
+.stylist-swap {
+  animation: stylist-pop 0.45s ease-out;
+}
+@keyframes stylist-pop {
+  0% { opacity: 0.2; transform: translateY(8px) scale(0.92); }
+  60% { opacity: 1; transform: translateY(-6px) scale(1.04); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stylist-swap { animation: none; }
+}
+.stylist-wear {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.stylist-wear li + li::before {
+  content: '+';
+  margin-right: 10px;
+}
+.linklike {
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: center;
+}
 .stylist-result {
   margin-top: 6px;
 }
