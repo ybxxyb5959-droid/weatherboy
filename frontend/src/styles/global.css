@@ -4098,3 +4098,28 @@ a.card {
 @media (prefers-reduced-motion: reduce) {
   .usage-fill { transition: none; }
 }
+
+/* 캐릭터 탭의 자물쇠(옷을 더 등록해야 열림) */
+.navicon {
+  position: relative;
+  display: inline-flex;
+}
+.nav-lock {
+  position: absolute;
+  right: -9px;
+  top: -5px;
+  display: inline-flex;
+  background: var(--paper);
+  border-radius: 50%;
+  padding: 1px;
+}
+.char-lock-badge {
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  display: inline-flex;
+  transform: rotate(8deg);
+}
+.char-title .btn-icon {
+  vertical-align: -4px;
+}

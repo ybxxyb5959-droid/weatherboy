@@ -24,29 +24,29 @@ describe('내 캐릭터 API', () => {
     await a.post('/api/auth/guest').expect(201)
     await a.post('/api/onboarding/complete').send({ sensitivity: '보통', location: '서울 마포구', closetMode: 'sample' }).expect(200)
     const r = (await a.get('/api/character').expect(200)).body
-    expect(r.analysis).toMatchObject({ count: 0, ready: false, need: 5, title: null })
+    expect(r.analysis).toMatchObject({ count: 0, ready: false, need: 10, title: null })
     expect(r.config).toEqual({})
     expect(r.catalog.map((s: { slot: string }) => s.slot)).toEqual(['hat', 'hairpin', 'glasses', 'neck', 'face', 'extra'])
   })
 
   it('옷장을 채우기 전에는 캐릭터가 잠겨 있다: 꾸미기 저장은 409', async () => {
     const r = (await a.get('/api/character').expect(200)).body
-    expect(r).toMatchObject({ unlocked: false, minClothes: 5 })
+    expect(r).toMatchObject({ unlocked: false, minClothes: 10 })
     const put = await a.put('/api/character').send({ config: { hat: 'beanie' } })
     expect(put.status).toBe(409)
     expect(put.body.code).toBe('CHARACTER_LOCKED')
     expect((await a.get('/api/character')).body.config).toEqual({}) // 저장되지 않았다
   })
 
-  it('검정 옷을 5벌 담으면 "어둠의 아이"가 되고 색 비중이 나온다', async () => {
-    for (const t of ['후드티', '바지', '반팔', '긴팔', '맨투맨']) await a.post('/api/clothes').send({ type: t, color: '검정' }).expect(201)
+  it('검정 옷을 10벌 담으면 "어둠의 아이"가 되고 색 비중이 나온다', async () => {
+    for (const t of ['후드티', '바지', '반팔', '긴팔', '맨투맨', '후드티', '바지', '반팔', '긴팔', '맨투맨']) await a.post('/api/clothes').send({ type: t, color: '검정' }).expect(201)
     const r = (await a.get('/api/character').expect(200)).body
     expect(r.analysis.ready).toBe(true)
     expect(r.unlocked).toBe(true) // 옷장을 채우면 캐릭터가 열린다
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
-    expect(r.analysis.title.reason).toContain('5/5벌(100%)')
+    expect(r.analysis.title.reason).toContain('10/10벌(100%)')
     expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['DARK_CHILD', 'MINIMALIST'])
-    expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 5, share: 1 })
+    expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 10, share: 1 })
     expect(r.titles).toHaveLength(17)
   })
 
@@ -74,10 +74,10 @@ describe('내 캐릭터 API', () => {
     expect(r.analysis.count).toBe(0)
   })
 
-  it('5벌로 꾸미기는 열려도 칭호 조건이 안 맞으면 억지로 균형 칭호를 주지 않는다', async () => {
+  it('10벌로 꾸미기는 열려도 칭호 조건이 안 맞으면 억지로 균형 칭호를 주지 않는다', async () => {
     const b = agent()
     await b.post('/api/auth/guest').expect(201)
-    for (let i = 0; i < 5; i++) await b.post('/api/clothes').send({ type: '바지', color: '기타' }).expect(201)
+    for (let i = 0; i < 10; i++) await b.post('/api/clothes').send({ type: '바지', color: '기타' }).expect(201)
     const r = (await b.get('/api/character').expect(200)).body
     expect(r.unlocked).toBe(true)
     expect(r.analysis).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
@@ -88,16 +88,16 @@ describe('내 캐릭터 API', () => {
     const b = agent()
     await b.post('/api/auth/guest').expect(201)
     const ids: string[] = []
-    for (const color of ['초록', '보라', '빨강', '초록', '보라']) {
+    for (const color of ['초록', '보라', '빨강', '초록', '보라', '초록', '보라', '빨강', '초록', '보라']) {
       const r = await b.post('/api/clothes').send({ type: '니트', color, thickness: '얇음' }).expect(201)
       ids.push(r.body.id)
     }
     const keys = async () => (await b.get('/api/character').expect(200)).body.analysis.matchedTitles.map((t: { key: string }) => t.key)
     expect(await keys()).not.toContain('WARM_BEAR')
-    for (const id of ids.slice(0, 3)) await b.patch(`/api/clothes/${id}`).send({ thickness: '두꺼움' }).expect(200)
+    for (const id of ids.slice(0, 5)) await b.patch(`/api/clothes/${id}`).send({ thickness: '두꺼움' }).expect(200)
     expect(await keys()).toContain('WARM_BEAR')
     await b.delete(`/api/clothes/${ids[0]}`).expect(204)
     const r = (await b.get('/api/character').expect(200)).body
-    expect(r).toMatchObject({ unlocked: false, analysis: { count: 4, ready: false, need: 1, title: null, matchedTitles: [] } })
+    expect(r).toMatchObject({ unlocked: false, analysis: { count: 9, ready: false, need: 1, title: null, matchedTitles: [] } })
   })
 })

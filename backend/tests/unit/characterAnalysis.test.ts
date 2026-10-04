@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { ClothingColor, ClothingPattern, ClothingType, Thickness } from '@prisma/client'
-import { analyze, MIN_CLOTHES, TITLES, type ClothesForAnalysis, type TitleKey } from '../../src/services/character/analysis.js'
+import { analyze as analyzeWith, MIN_CLOTHES, TITLES, type ClothesForAnalysis, type TitleKey } from '../../src/services/character/analysis.js'
 import { CATALOG, cleanConfig } from '../../src/services/character/catalog.js'
 
+// 칭호 규칙을 시험하는 옷장은 5~10벌 안팎으로 만들어져 있어서, 규칙 시험에서는 열리는 기준을 5벌로 두고 본다.
+// 실제 열리는 기준(MIN_CLOTHES)은 아래 '캐릭터가 열리는 기준' 시험에서 따로 확인한다.
+const RULE_TEST_MIN = 5
+const analyze = (items: ClothesForAnalysis[]) => analyzeWith(items, RULE_TEST_MIN)
 const c = (type: ClothingType, color: ClothingColor, pattern: ClothingPattern = 'SOLID', thickness: Thickness = 'NORMAL'): ClothesForAnalysis => ({ type, color, pattern, thickness })
 const many = (n: number, f: (i: number) => ClothesForAnalysis) => Array.from({ length: n }, (_, i) => f(i))
 const MIX: ClothingColor[] = ['GREEN', 'PURPLE', 'RED', 'GREEN', 'PURPLE']
@@ -40,9 +44,9 @@ describe('17개 칭호: 충족 조건과 경계', () => {
     expect(qualifies(yes, key)).toBe(true)
     expect(qualifies(no, key)).toBe(false)
   })
-  it('옷이 5벌 미만이면 주·부칭호와 충족 목록·힌트가 모두 비어 있다', () => {
+  it('옷이 열리는 기준 미만이면 주·부칭호와 충족 목록·힌트가 모두 비어 있다', () => {
     for (let n = 0; n < MIN_CLOTHES; n++) {
-      expect(analyze(many(n, () => c('HOODIE', 'BLACK')))).toMatchObject({ count: n, ready: false, need: 5 - n, title: null, subTitle: null, matchedTitles: [], next: null, strength: 0 })
+      expect(analyzeWith(many(n, () => c('HOODIE', 'BLACK')))).toMatchObject({ count: n, ready: false, need: MIN_CLOTHES - n, title: null, subTitle: null, matchedTitles: [], next: null, strength: 0 })
     }
   })
   it.each(['HOODIE', 'SHIRT', 'SKIRT'] as ClothingType[])('%s는 2벌로 칭호를 받지 못한다', (type) => {
@@ -170,10 +174,10 @@ describe('칭호 선정과 설명', () => {
     const b = analyze([...seasonal].reverse())
     expect(b).toEqual(a)
   })
-  it('삭제에 해당하는 옷 제외 후 5벌 미만이면 다시 잠긴다', () => {
-    const items = many(5, () => c('HOODIE', 'BLACK'))
-    expect(analyze(items).ready).toBe(true)
-    expect(analyze(items.slice(1))).toMatchObject({ ready: false, title: null, matchedTitles: [] })
+  it('삭제에 해당하는 옷 제외 후 열리는 기준 미만이면 다시 잠긴다', () => {
+    const items = many(MIN_CLOTHES, () => c('HOODIE', 'BLACK'))
+    expect(analyzeWith(items).ready).toBe(true)
+    expect(analyzeWith(items.slice(1))).toMatchObject({ ready: false, title: null, matchedTitles: [] })
   })
   it('색상·종류·무늬 비중의 합은 1이며 빈 옷장에는 NaN이 없다', () => {
     for (const list of [analyze(seasonal).colors, analyze(seasonal).types, analyze(seasonal).patterns]) {
@@ -221,5 +225,13 @@ describe('꾸미기 카탈로그', () => {
       expect(s.items.length).toBeGreaterThan(0)
       expect(new Set(s.items.map((i) => i.id)).size).toBe(s.items.length)
     }
+  })
+})
+
+describe('캐릭터가 열리는 기준', () => {
+  it('내 옷이 10벌 이상이어야 열린다', () => {
+    expect(MIN_CLOTHES).toBe(10)
+    expect(analyzeWith(many(9, () => c('PANTS', 'BLACK')))).toMatchObject({ ready: false, need: 1 })
+    expect(analyzeWith(many(10, () => c('PANTS', 'BLACK')))).toMatchObject({ ready: true, need: 0 })
   })
 })

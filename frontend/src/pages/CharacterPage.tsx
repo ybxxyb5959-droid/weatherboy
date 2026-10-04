@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import StickPerson from '../components/StickPerson'
 import { ShareIcon } from '../components/icons'
+import { LockIcon } from '../components/ToolIcons'
 import ThemeScribble from '../components/ThemeScribble'
 import { ItemThumb, type Accessories, type Slot } from '../components/CharacterDecor'
 import { colorHex } from '../mocks/clothes'
@@ -73,6 +74,10 @@ export default function CharacterPage() {
           <div className="char-stage">
             <ThemeScribble persona={shownLocked?.key ?? null} />
             <StickPerson mood="stand" size={200} wear={(shownLocked && PERSONA_WEAR[shownLocked.key]) || BASIC_WEAR} persona={shownLocked?.key ?? null} />
+            {/* 아직 잠겨 있다는 표시: 옷을 더 등록하면 열린다 */}
+            <span className="char-lock-badge" role="img" aria-label="잠겨 있어요">
+              <LockIcon size={46} />
+            </span>
           </div>
           {shownLocked ? (
             <>
@@ -85,7 +90,9 @@ export default function CharacterPage() {
             </>
           ) : (
             <>
-              <h2 className="char-title">옷장을 채우면 열려요</h2>
+              <h2 className="char-title">
+                <LockIcon size={26} /> 옷장을 채우면 열려요
+              </h2>
               <p className="char-tag">
                 옷을 {data.minClothes}벌 이상 등록하면 내 옷장을 분석해서 <b>조건에 맞는 칭호</b>를 찾고, 캐릭터를 <b>꾸밀 수</b> 있어요.
               </p>

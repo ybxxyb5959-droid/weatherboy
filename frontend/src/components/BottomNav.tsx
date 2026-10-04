@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useCharacter } from '../lib/character'
 import HandText from './HandText'
+import { LockIcon } from './ToolIcons'
 
 const stroke = {
   fill: 'none',
@@ -28,13 +31,28 @@ const tabs = [
 ]
 
 export default function BottomNav() {
+  const { data, reload } = useCharacter()
+  const { pathname } = useLocation()
+  const locked = !!data && !data.unlocked // 옷을 더 등록해야 열리는 캐릭터 탭에 자물쇠를 단다
+  // 잠겨 있는 동안은 화면을 옮길 때마다 다시 확인해서, 옷을 채워 열리면 자물쇠가 바로 사라진다
+  useEffect(() => {
+    if (locked) reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
   return (
     <nav className="bottom-nav" aria-label="메뉴">
       {tabs.map((t) => (
         <NavLink key={t.to} to={t.to} className={({ isActive }) => `navitem ${isActive ? 'active' : ''}`}>
-          <svg className="doodle" width="28" height="28" viewBox="0 0 28 28" {...stroke} aria-hidden="true">
-            {icons[t.icon]}
-          </svg>
+          <span className="navicon">
+            <svg className="doodle" width="28" height="28" viewBox="0 0 28 28" {...stroke} aria-hidden="true">
+              {icons[t.icon]}
+            </svg>
+            {t.icon === 'character' && locked && (
+              <span className="nav-lock" role="img" aria-label="잠겨 있어요">
+                <LockIcon size={15} />
+              </span>
+            )}
+          </span>
           <span><HandText>{t.label}</HandText></span>
         </NavLink>
       ))}

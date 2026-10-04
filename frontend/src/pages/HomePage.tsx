@@ -369,7 +369,11 @@ export default function HomePage() {
         <hr className="scribble under-title" />
         <div className="box w2 first-guide" role="note">
           <b>👋 먼저 내 옷을 등록해 볼까요?</b>
-          <p className="tiny">지금은 옷장이 비어 있어서 추천을 드릴 수 없어요. 내 옷을 등록하면 진짜 내 옷으로 코디해 드려요. 5벌 이상 등록하면 내 캐릭터도 열려요!</p>
+          <p className="tiny empty-note">
+            지금은 옷장이 비어 있어서 추천을 드릴 수 없어요.
+            <br />
+            내 옷을 등록하면 진짜 내 옷으로 코디해 드려요.
+          </p>
           <Link to="/wardrobe/add" className="dbtn w1 small">
             + 옷 등록하러 가기
           </Link>

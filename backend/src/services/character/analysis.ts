@@ -1,7 +1,7 @@
 import type { ClothingColor, ClothingPattern, ClothingType, Thickness } from '@prisma/client'
 import { categoryOfType, clothingTypeMap, colorMap, patternMap } from '../../config/mappings.js'
 
-export const MIN_CLOTHES = 5
+export const MIN_CLOTHES = 10
 
 export type TitleKey =
   | 'DARK_CHILD' | 'MINIMALIST' | 'PATTERN_MASTER' | 'PASTEL_FAIRY'
@@ -138,9 +138,9 @@ const DEX: TitleKey[] = ['DARK_CHILD', 'MINIMALIST', 'PATTERN_MASTER', 'PASTEL_F
 export const TITLES = DEX.map((key) => def(RULES.find((r) => r.key === key)!))
 export const titleOf = (key: TitleKey) => TITLES.find((t) => t.key === key)!
 
-const evaluate = (items: ClothesForAnalysis[]) => {
+const evaluate = (items: ClothesForAnalysis[], min = MIN_CLOTHES) => {
   const n = items.length
-  if (n < MIN_CLOTHES) return []
+  if (n < min) return []
   return RULES.flatMap((r, priority) => {
     const values = r.requirements.map((req) => ({ req, count: req.count(items) }))
     if (!values.every(({ req, count: m }) => (req.min === undefined || m >= req.min)
@@ -167,11 +167,12 @@ const shares = (names: string[]): Share[] => {
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'))
 }
 
-export function analyze(clothes: ClothesForAnalysis[]): Analysis {
+/** min: 캐릭터가 열리는 최소 옷 벌 수(기본은 MIN_CLOTHES). 칭호 규칙만 따로 시험할 때 바꿔 쓴다. */
+export function analyze(clothes: ClothesForAnalysis[], min = MIN_CLOTHES): Analysis {
   const n = clothes.length
-  const passed = evaluate(clothes)
+  const passed = evaluate(clothes, min)
   let next: Analysis['next'] = null
-  if (n >= MIN_CLOTHES) {
+  if (n >= min) {
     for (const r of RULES) {
       if (passed.some((p) => p.title.key === r.key)) continue
       const fav = favorite(clothes)
@@ -179,7 +180,7 @@ export function analyze(clothes: ClothesForAnalysis[]): Analysis {
       if (!example) continue
       for (let more = 1; more <= Math.min(3, 500 - n); more++) {
         // 비율뿐 아니라 복합 조건과 선정 순위까지 같은 판정기로 검증한다.
-        const projected = evaluate([...clothes, ...Array.from({ length: more }, () => example)])
+        const projected = evaluate([...clothes, ...Array.from({ length: more }, () => example)], min)
         if (!projected.slice(0, 2).some((p) => p.title.key === r.key)) continue
         if (!next || more < next.more) next = {
           title: titleOf(r.key), more, example,
@@ -190,7 +191,7 @@ export function analyze(clothes: ClothesForAnalysis[]): Analysis {
     }
   }
   return {
-    count: n, ready: n >= MIN_CLOTHES, need: Math.max(0, MIN_CLOTHES - n),
+    count: n, ready: n >= min, need: Math.max(0, min - n),
     title: passed[0]?.title ?? null, subTitle: passed[1]?.title ?? null,
     strength: passed[0]?.strength ?? 0, matchedTitles: passed.map((p) => p.title), next,
     colors: shares(clothes.map((c) => colorMap.toUi(c.color))),

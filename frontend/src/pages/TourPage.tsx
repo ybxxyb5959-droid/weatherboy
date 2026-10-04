@@ -78,7 +78,7 @@ const STEPS: Step[] = [
   },
   {
     title: '캐릭터',
-    sub: '5벌 이상 등록하면 열려요 · 위아래로 밀어보세요',
+    sub: '10벌 이상 등록하면 열려요 · 위아래로 밀어보세요',
     frames: [
       {
         image: '/tour/character.jpg',

@@ -7,6 +7,7 @@ import { prisma } from '../../db.js'
 import { AppError, notFound } from '../../utils/errors.js'
 import { avgMsByKind, buildDays, failureRate, type UsageRow } from '../../services/ai/aiUsageReport.js'
 import { getGlobalUsage } from '../../services/ai/aiQuota.js'
+import { MIN_CLOTHES } from '../../services/character/analysis.js'
 import { parse, requireAdmin, wrap } from '../middleware/common.js'
 
 export const adminRouter = Router()
@@ -131,9 +132,9 @@ adminRouter.get(
       prisma.$queryRaw<{ d: string; c: number }[]>`
         SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS d, count(*)::int AS c
         FROM "User" WHERE "createdAt" >= NOW() - INTERVAL '7 days' GROUP BY 1 ORDER BY 1`,
-      // 직접 담은 옷(예시 옷 제외)이 1벌 이상 / 5벌 이상인 사용자 수
+      // 직접 담은 옷(예시 옷 제외)이 1벌 이상 / 캐릭터가 열리는 벌 수(MIN_CLOTHES) 이상인 사용자 수
       prisma.$queryRaw<{ c1: number; c5: number }[]>`
-        SELECT (count(*) FILTER (WHERE n >= 1))::int AS c1, (count(*) FILTER (WHERE n >= 5))::int AS c5
+        SELECT (count(*) FILTER (WHERE n >= 1))::int AS c1, (count(*) FILTER (WHERE n >= ${MIN_CLOTHES}))::int AS c5
         FROM (SELECT "userId", count(*) AS n FROM "Clothing" WHERE "isSample" = false AND active = true GROUP BY "userId") t`,
       prisma.$queryRaw<{ c: number }[]>`SELECT count(DISTINCT "userId")::int AS c FROM "Event"`,
       prisma.user.count({ where: { regionSido: { not: null } } }),
@@ -147,12 +148,12 @@ adminRouter.get(
     res.json({
       users: { total, kakao: prov.KAKAO ?? 0, guest: prov.GUEST ?? 0, active24h, active7d },
       daily,
-      // 가입 -> 위치 설정 -> 옷 1벌 -> 옷 5벌(캐릭터 해금) -> 일정 등록: 어디서 떠나는지 본다
+      // 가입 -> 위치 설정 -> 옷 1벌 -> 옷 MIN_CLOTHES 벌(캐릭터 해금) -> 일정 등록: 어디서 떠나는지 본다
       funnel: [
         { step: '가입', count: total },
         { step: '내 지역 설정', count: locationUsers },
         { step: '옷 1벌 이상', count: f.c1 },
-        { step: '옷 5벌 이상', count: f.c5 },
+        { step: `옷 ${MIN_CLOTHES}벌 이상`, count: f.c5 },
         { step: '일정 등록', count: eventUsers[0]?.c ?? 0 },
       ],
       reviews: { total: reviewAgg._count, average: reviewAgg._avg.rating ? Math.round(reviewAgg._avg.rating * 10) / 10 : null, unread },
