@@ -44,8 +44,6 @@ export const PERSONA_WEAR: Record<string, Wear> = {
   VITAMIN: { top: { type: '반팔', color: '노랑' }, bottom: { type: '반바지', color: '주황' } },
   RAINBOW: { top: { type: '후드티', color: '빨강' }, bottom: { type: '바지', color: '파랑' } },
   COLOR_LOVER: { top: { type: '후드티', color: '초록' }, bottom: { type: '바지', color: '초록' } },
-  ALL_SEASON: { top: { type: '반팔셔츠', color: '흰색' }, bottom: { type: '바지', color: '베이지' }, outer: { type: '가디건', color: '네이비' } },
-  BALANCED: { top: { type: '맨투맨', color: '회색' }, bottom: { type: '바지', color: '파랑' } },
 }
 export const BASIC_WEAR: Wear = { top: { type: '반팔', color: '흰색' }, bottom: { type: '바지', color: '파랑' } }
 

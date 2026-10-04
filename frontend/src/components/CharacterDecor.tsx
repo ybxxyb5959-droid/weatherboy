@@ -443,24 +443,6 @@ function PersonaDecor({ persona, acc }: { persona: string; acc: Accessories }) {
       ) : null
     case 'RAINBOW':
       return free && !acc.hat ? EXTRA.rainbow : null
-    case 'BALANCED':
-      // 머리 위에서 시소 균형을 잡는 중: 한쪽엔 티셔츠, 한쪽엔 바지가 삐뚤게 올라가 있고, 식은땀과 '=' 이 둥둥
-      return (
-        <g>
-          {free && !acc.hat && (
-            <g>
-              <path d="M52 12 L60.5 3 L69 12Z" fill="#a7dccb" strokeWidth="1.6" />
-              <path d="M40 4 L81 -1" strokeWidth="2.2" />
-              <path d="M44 3 L41 -8 L45 -6 L47 -9 L50 -7 L53 -9 L52 3Z" fill="#8ec3f0" strokeWidth="1.4" />
-              <path d="M70 -2 L71 -9 L76 -9 L77 -2 L75 -2 L74 -6 L72 -2Z" fill="#f6d44c" strokeWidth="1.4" />
-              <path d="M58 -12 l1.5 -2.5 l1.5 2.5 M63 -14 l1.5 -2.5 l1.5 2.5" strokeWidth="1.2" opacity="0.7" />
-            </g>
-          )}
-          <path d="M80 24 C77 28 77 31 79 32 C81 31 81 28 80 24Z" fill="#9cd4e8" stroke="#4aa6a0" strokeWidth="1.2" />
-          <path d="M30 18 h8 M30 22 h8" strokeWidth="1.8" />
-          <path d="M91 40 l5 -2 l-1 6 z" fill="#f6d44c" strokeWidth="1" />
-        </g>
-      )
     default:
       return null
   }

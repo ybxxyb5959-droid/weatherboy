@@ -14,8 +14,6 @@ const base = (n = 10) => many(n, (i) => c('PANTS', MIX[i % MIX.length]!))
 const mixedType = (type: ClothingType, number: number) => base().map((x, i) => i < number ? { ...x, type } : x)
 const mixedColor = (color: ClothingColor, number: number) => base().map((x, i) => i < number ? { ...x, color } : x)
 const qualifies = (items: ClothesForAnalysis[], key: TitleKey) => analyze(items).matchedTitles.some((t) => t.key === key)
-const balanced = [c('SHORT_SLEEVE', 'RED'), c('PANTS', 'BLUE'), c('JACKET', 'GREEN'), c('KNIT', 'RED'), c('SKIRT', 'BLUE'), c('SHIRT', 'GREEN')]
-const seasonal = [c('SHORT_SLEEVE', 'GREEN'), c('LONG_SLEEVE', 'PURPLE'), c('CARDIGAN', 'RED'), c('PADDING', 'GREEN'), c('PANTS', 'PURPLE'), c('PANTS', 'RED'), c('SHIRT', 'GREEN'), c('SHORTS', 'PURPLE')]
 const rainbowColors: ClothingColor[] = ['RED', 'BLUE', 'GREEN', 'YELLOW', 'PURPLE', 'PINK', 'ORANGE', 'BROWN']
 const rainbow = rainbowColors.map((color, i) => c(i % 2 ? 'PANTS' : 'LONG_SLEEVE', color))
 
@@ -33,13 +31,11 @@ const boundaryCases: { key: TitleKey; yes: ClothesForAnalysis[]; no: ClothesForA
   { key: 'EARTH_TONE', yes: mixedColor('BROWN', 6), no: mixedColor('BROWN', 5) },
   { key: 'BLUE_SEA', yes: mixedColor('NAVY', 6), no: mixedColor('NAVY', 5) },
   { key: 'VITAMIN', yes: many(10, (i) => c('PANTS', i < 6 ? 'YELLOW' : 'PURPLE')), no: many(10, (i) => c('PANTS', i < 5 ? 'YELLOW' : 'PURPLE')) },
-  { key: 'RAINBOW', yes: rainbow, no: rainbow.slice(0, 5) },
+  { key: 'RAINBOW', yes: rainbow, no: rainbow.slice(0, 6) },
   { key: 'COLOR_LOVER', yes: mixedColor('GREEN', 6), no: base() },
-  { key: 'ALL_SEASON', yes: seasonal, no: seasonal.filter((x) => x.type !== 'PADDING') },
-  { key: 'BALANCED', yes: balanced, no: many(6, () => c('PANTS', 'OTHER')) },
 ]
 
-describe('17개 칭호: 충족 조건과 경계', () => {
+describe('15개 칭호: 충족 조건과 경계', () => {
   it.each(boundaryCases)('$key: 조건을 채운 옷장만 통과한다', ({ key, yes, no }) => {
     expect(qualifies(yes, key)).toBe(true)
     expect(qualifies(no, key)).toBe(false)
@@ -54,11 +50,11 @@ describe('17개 칭호: 충족 조건과 경계', () => {
     expect(qualifies([c(type, 'GREEN'), c(type, 'RED'), ...base(3)], key)).toBe(false)
     expect(qualifies([c(type, 'GREEN'), c(type, 'RED'), c(type, 'PURPLE'), ...base(2)], key)).toBe(true)
   })
-  it('도감의 17개 이름·순서·조건이 유지되고 실제 판정 수치가 문구에 나온다', () => {
-    expect(TITLES).toHaveLength(17)
-    expect(new Set(TITLES.map((t) => t.key)).size).toBe(17)
+  it('도감의 15개 이름·순서·조건이 유지되고 실제 판정 수치가 문구에 나온다', () => {
+    expect(TITLES).toHaveLength(15)
+    expect(new Set(TITLES.map((t) => t.key)).size).toBe(15)
     expect(TITLES[0]?.key).toBe('DARK_CHILD')
-    expect(TITLES.at(-1)?.key).toBe('BALANCED')
+    expect(TITLES.at(-1)?.key).toBe('COLOR_LOVER')
     for (const t of TITLES) expect(t.name && t.tagline && t.rule).toBeTruthy()
     expect(TITLES.find((t) => t.key === 'DARK_CHILD')?.rule).toContain('60% 이상')
     expect(TITLES.find((t) => t.key === 'SKIRT_LOVER')?.rule).toContain('3벌 이상')
@@ -74,11 +70,8 @@ describe('17개 칭호: 충족 조건과 경계', () => {
 })
 
 describe('납득하기 어려웠던 옷장 회귀 사례', () => {
-  it('기타색 바지만 있어도 꾸미기는 열리지만 균형 칭호를 억지로 붙이지 않는다', () => {
+  it('기타색 바지만 있어도 꾸미기는 열리지만 칭호를 억지로 붙이지 않는다', () => {
     expect(analyze(many(5, () => c('PANTS', 'OTHER')))).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
-  })
-  it('종류가 하나뿐인 다양한 색 바지도 균형 잡힌 옷장이 아니다', () => {
-    expect(qualifies(base(), 'BALANCED')).toBe(false)
   })
   it('무채색 80%와 무지 80%가 각각 있어도 같은 옷이 아니면 미니멀리스트가 아니다', () => {
     const items = base().map((x, i) => ({ ...x, color: i < 8 ? 'GRAY' as const : x.color, pattern: i < 2 ? 'CHECK' as const : 'SOLID' as const }))
@@ -106,42 +99,19 @@ describe('납득하기 어려웠던 옷장 회귀 사례', () => {
   it('흰색 무지 옷장은 단색 칭호 대신 미니멀리스트로 설명한다', () => {
     expect(analyze(many(6, () => c('PANTS', 'WHITE'))).title?.key).toBe('MINIMALIST')
   })
-  it('무지개는 무채색·기타를 6가지 색 수에 끼워 넣지 않는다', () => {
+  it('무지개는 무채색·기타를 7가지 색 수에 끼워 넣지 않는다', () => {
     const colors: ClothingColor[] = ['BLACK', 'WHITE', 'GRAY', 'GREEN', 'PURPLE', 'OTHER']
     expect(qualifies(colors.map((color) => c('PANTS', color)), 'RAINBOW')).toBe(false)
   })
-  it('무지개는 6색이어도 한 색이 30%를 넘거나 유채색이 80% 미만이면 안 된다', () => {
-    expect(qualifies([...rainbow.slice(0, 6), ...many(4, () => c('PANTS', 'RED'))], 'RAINBOW')).toBe(false)
+  it('무지개는 7색이어도 한 색이 30%를 넘거나 유채색이 80% 미만이면 안 된다', () => {
+    expect(qualifies([...rainbow.slice(0, 7), ...many(4, () => c('PANTS', 'RED'))], 'RAINBOW')).toBe(false)
     expect(qualifies([...rainbow.slice(0, 7), c('PANTS', 'BLACK'), c('PANTS', 'GRAY'), c('PANTS', 'OTHER')], 'RAINBOW')).toBe(false)
   })
   it('무지개의 한 색 30%와 유채색 80%는 정확한 경계에서도 인정된다', () => {
-    expect(qualifies([...rainbow.slice(0, 6), c('PANTS', 'RED'), c('PANTS', 'RED'), c('PANTS', 'BLACK'), c('PANTS', 'GRAY')], 'RAINBOW')).toBe(true)
-  })
-  it('균형 칭호는 한 종류 40%와 한 색 50%를 초과하면 안 된다', () => {
-    const items = [c('PANTS', 'RED'), c('PANTS', 'RED'), c('LONG_SLEEVE', 'RED'), c('JACKET', 'GREEN'), c('SKIRT', 'BLUE')]
-    expect(qualifies(items, 'BALANCED')).toBe(false)
-    expect(qualifies(balanced.map((x, i) => i < 3 ? { ...x, type: 'PANTS' } : x), 'BALANCED')).toBe(false)
+    expect(qualifies([...rainbow.slice(0, 7), c('PANTS', 'RED'), c('PANTS', 'BLACK'), c('PANTS', 'GRAY')], 'RAINBOW')).toBe(true)
   })
 })
 
-describe('사계절 준비: 계절별 상의·하의와 실제 겉옷 두께', () => {
-  it('반바지를 반팔 상의 대신 세지 않는다', () => {
-    expect(qualifies(seasonal.map((x) => x.type === 'SHORT_SLEEVE' ? { ...x, type: 'SHORTS' } : x), 'ALL_SEASON')).toBe(false)
-  })
-  it('반팔셔츠는 여름 상의로 인정한다', () => {
-    expect(qualifies(seasonal.map((x) => x.type === 'SHORT_SLEEVE' ? { ...x, type: 'SHORT_SLEEVE_SHIRT' } : x), 'ALL_SEASON')).toBe(true)
-  })
-  it('하의가 없으면 사계절 준비가 아니다', () => {
-    expect(qualifies(seasonal.map((x) => x.type === 'PANTS' || x.type === 'SHORTS' ? { ...x, type: 'LONG_SLEEVE' } : x), 'ALL_SEASON')).toBe(false)
-  })
-  it('얇은 패딩은 겨울용, 두꺼운 가디건은 가벼운 겉옷으로 세지 않는다', () => {
-    expect(qualifies(seasonal.map((x) => x.type === 'PADDING' ? { ...x, thickness: 'THIN' } : x), 'ALL_SEASON')).toBe(false)
-    expect(qualifies(seasonal.map((x) => x.type === 'CARDIGAN' ? { ...x, thickness: 'THICK' } : x), 'ALL_SEASON')).toBe(false)
-  })
-  it('구성이 모두 있어도 7벌이면 준비 완료라고 하지 않는다', () => {
-    expect(qualifies(seasonal.slice(0, 7), 'ALL_SEASON')).toBe(false)
-  })
-})
 
 describe('칭호 선정과 설명', () => {
   it('치마 비중이 50%여도 검정 80%보다 과대평가하지 않는다', () => {
@@ -170,8 +140,8 @@ describe('칭호 선정과 설명', () => {
     expect(a.title?.reason).toBe('초록 옷 6/10벌(60%)')
   })
   it('옷 입력 순서가 바뀌어도 결과와 근거가 같다', () => {
-    const a = analyze(seasonal)
-    const b = analyze([...seasonal].reverse())
+    const a = analyze(rainbow)
+    const b = analyze([...rainbow].reverse())
     expect(b).toEqual(a)
   })
   it('삭제에 해당하는 옷 제외 후 열리는 기준 미만이면 다시 잠긴다', () => {
@@ -180,7 +150,7 @@ describe('칭호 선정과 설명', () => {
     expect(analyzeWith(items.slice(1))).toMatchObject({ ready: false, title: null, matchedTitles: [] })
   })
   it('색상·종류·무늬 비중의 합은 1이며 빈 옷장에는 NaN이 없다', () => {
-    for (const list of [analyze(seasonal).colors, analyze(seasonal).types, analyze(seasonal).patterns]) {
+    for (const list of [analyze(rainbow).colors, analyze(rainbow).types, analyze(rainbow).patterns]) {
       expect(list.reduce((s, x) => s + x.share, 0)).toBeCloseTo(1, 10)
     }
     expect(analyze([]).colors).toEqual([])

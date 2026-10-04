@@ -7,7 +7,7 @@ export type TitleKey =
   | 'DARK_CHILD' | 'MINIMALIST' | 'PATTERN_MASTER' | 'PASTEL_FAIRY'
   | 'HOODIE_ADDICT' | 'WARM_BEAR' | 'TEE_ONLY' | 'OUTER_FAN'
   | 'SHIRT_GENTLE' | 'SKIRT_LOVER' | 'EARTH_TONE' | 'BLUE_SEA'
-  | 'VITAMIN' | 'RAINBOW' | 'COLOR_LOVER' | 'ALL_SEASON' | 'BALANCED'
+  | 'VITAMIN' | 'RAINBOW' | 'COLOR_LOVER'
 
 export interface TitleDef {
   key: TitleKey
@@ -69,11 +69,7 @@ const plain: Predicate = (c) => c.pattern === 'SOLID'
 const neutral = isColor('BLACK', 'GRAY', 'WHITE')
 const colorful: Predicate = (c) => c.color !== 'OTHER' && !neutral(c)
 const shortTop = isType('SHORT_SLEEVE', 'SHORT_SLEEVE_SHIRT')
-const longTop = isType('LONG_SLEEVE', 'SHIRT', 'SWEATSHIRT', 'KNIT', 'HOODIE')
-const bottom: Predicate = (c) => categoryOfType[c.type] === 'BOTTOM'
 const outer: Predicate = (c) => ['LIGHT_OUTER', 'HEAVY_OUTER'].includes(categoryOfType[c.type])
-const lightOuter: Predicate = (c) => isType('WINDBREAKER', 'JACKET', 'CARDIGAN')(c) && c.thickness !== 'THICK'
-const winterOuter: Predicate = (c) => isType('COAT', 'PADDING')(c) && c.thickness !== 'THIN'
 const warm: Predicate = (c) => isType('KNIT', 'COAT', 'PADDING')(c) && c.thickness !== 'THIN'
 const distinct = (items: ClothesForAnalysis[], field: 'color' | 'type', pred: Predicate = () => true) => new Set(items.filter(pred).map((c) => c[field])).size
 const largest = (items: ClothesForAnalysis[], field: 'color' | 'type', pred: Predicate = () => true) => {
@@ -84,7 +80,6 @@ const largest = (items: ClothesForAnalysis[], field: 'color' | 'type', pred: Pre
 const favorite = (items: ClothesForAnalysis[]) => [...new Set(items.filter(colorful).map((c) => c.color))]
   .sort((a, b) => count(items, isColor(b)) - count(items, isColor(a)) || a.localeCompare(b))[0]
 const ratio = (label: string, pred: Predicate, percent: number, min = 3): Requirement => ({ label, count: (items) => count(items, pred), percent, min })
-const present = (label: string, pred: Predicate): Requirement => ({ label, count: (items) => count(items, pred), min: 1 })
 const hint = (type: ClothingType, color: ClothingColor = 'GREEN', pattern: ClothingPattern = 'SOLID', thickness: Thickness = 'NORMAL'): ClothesForAnalysis => ({ type, color, pattern, thickness })
 
 // 수치와 도감 문구는 같은 requirements에서 생성한다. 비율의 분모는 항상 내 옷 전체다.
@@ -105,25 +100,9 @@ const RULES: TitleRule[] = [
   { key: 'BLUE_SEA', name: '푸른 바다', tagline: '파도처럼 시원한 옷장', requirements: [ratio('파랑·네이비·하늘색 옷', isColor('BLUE', 'NAVY', 'SKYBLUE'), 60)], hint: hint('PANTS', 'BLUE') },
   { key: 'VITAMIN', name: '비타민 폭탄', tagline: '눈이 번쩍! 에너지 충전 완료', requirements: [ratio('빨강·주황·노랑 옷', isColor('RED', 'ORANGE', 'YELLOW'), 60)], hint: hint('PANTS', 'RED') },
   { key: 'RAINBOW', name: '무지개 수집가', tagline: '어느 색이든 환영이야', structural: true, requirements: [
-    { label: '검정·회색·흰색·기타를 제외한 색', count: (items) => distinct(items, 'color', colorful), min: 6, unit: '색' },
-    ratio('검정·회색·흰색·기타를 제외한 옷', colorful, 80, 6),
+    { label: '검정·회색·흰색·기타를 제외한 색', count: (items) => distinct(items, 'color', colorful), min: 7, unit: '색' },
+    ratio('검정·회색·흰색·기타를 제외한 옷', colorful, 80, 7),
     { label: '가장 많은 한 색', count: (items) => largest(items, 'color'), maxPercent: 30 },
-  ] },
-  { key: 'ALL_SEASON', name: '사계절 준비 완료', tagline: '계절별 상의·하의·겉옷을 갖춘 옷장', structural: true, requirements: [
-    { label: '내 옷', count: (items) => items.length, min: 8 },
-    present('반팔·반팔셔츠 상의', shortTop),
-    present('긴팔·셔츠·맨투맨·니트·후드티 상의', longTop),
-    present('하의(바지·반바지·치마)', bottom),
-    present('얇음·보통 바람막이·자켓·가디건', lightOuter),
-    present('보통·두꺼움 코트·패딩', winterOuter),
-  ] },
-  { key: 'BALANCED', name: '균형 잡힌 옷장', tagline: '색도 종류도 골고루 갖춘 옷장', structural: true, requirements: [
-    { label: '옷 종류', count: (items) => distinct(items, 'type'), min: 4, unit: '종류' },
-    { label: '기타를 제외한 색', count: (items) => distinct(items, 'color', (c) => c.color !== 'OTHER'), min: 3, unit: '색' },
-    ratio('기타를 제외한 옷', (c) => c.color !== 'OTHER', 80, 4),
-    present('상의', (c) => categoryOfType[c.type] === 'TOP'), present('하의', bottom), present('겉옷', outer),
-    { label: '가장 많은 한 종류', count: (items) => largest(items, 'type'), maxPercent: 40 },
-    { label: '가장 많은 한 색', count: (items) => largest(items, 'color'), maxPercent: 50 },
   ] },
 ]
 
@@ -134,7 +113,7 @@ const describe = (r: Requirement) => `${r.label} ${[
 ].filter(Boolean).join('·')}`
 const def = (r: TitleRule): TitleDef => ({ key: r.key, name: r.name, tagline: r.tagline, rule: r.requirements.map(describe).join(' / ') })
 // 도감 순서는 기존 그대로 유지하고, 선정 우선순위는 RULES에서 별도로 관리한다.
-const DEX: TitleKey[] = ['DARK_CHILD', 'MINIMALIST', 'PATTERN_MASTER', 'PASTEL_FAIRY', 'HOODIE_ADDICT', 'WARM_BEAR', 'TEE_ONLY', 'OUTER_FAN', 'SHIRT_GENTLE', 'SKIRT_LOVER', 'EARTH_TONE', 'BLUE_SEA', 'VITAMIN', 'RAINBOW', 'COLOR_LOVER', 'ALL_SEASON', 'BALANCED']
+const DEX: TitleKey[] = ['DARK_CHILD', 'MINIMALIST', 'PATTERN_MASTER', 'PASTEL_FAIRY', 'HOODIE_ADDICT', 'WARM_BEAR', 'TEE_ONLY', 'OUTER_FAN', 'SHIRT_GENTLE', 'SKIRT_LOVER', 'EARTH_TONE', 'BLUE_SEA', 'VITAMIN', 'RAINBOW', 'COLOR_LOVER']
 export const TITLES = DEX.map((key) => def(RULES.find((r) => r.key === key)!))
 export const titleOf = (key: TitleKey) => TITLES.find((t) => t.key === key)!
 

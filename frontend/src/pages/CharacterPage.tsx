@@ -12,7 +12,7 @@ import { useAuth } from '../auth'
 import { errorMessage } from '../api'
 
 const pct = (s: number) => `${Math.floor(s * 1000 + 1e-9) / 10}%`
-const dexGuide = '비율은 내 옷 전체 기준이며, 적힌 조건을 모두 만족해야 해요. 주·부칭호는 특징의 실제 비중순으로, 동점은 정해진 순서로 골라요. 다양성·사계절·균형 칭호는 특징 칭호 다음이에요. 눌러보면 모습을 확인할 수 있어요.'
+const dexGuide = '비율은 내 옷 전체 기준이며, 적힌 조건을 모두 만족해야 해요. 주·부칭호는 특징의 실제 비중순으로, 동점은 정해진 순서로 골라요. 무지개 칭호는 특징 칭호 다음이에요. 눌러보면 모습을 확인할 수 있어요.'
 const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
 
 /** 비중 막대. 색 비중은 그 옷 색으로 칠한다. */
