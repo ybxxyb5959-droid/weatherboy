@@ -3754,6 +3754,25 @@ a.card {
   from { transform: rotate(-7deg) translateY(2px) scaleY(0.97); }
   to { transform: rotate(8deg) translateY(-3px); }
 }
+/* 뒤적이는 팔: 어깨를 축으로 두 팔이 엇갈려 위아래로 휘젓는다 */
+.dig-arm {
+  transform-origin: 68px 62px;
+  animation: dig-arm 0.34s ease-in-out infinite alternate;
+}
+.dig-arm.b {
+  animation-direction: alternate-reverse;
+}
+@keyframes dig-arm {
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(17deg); }
+}
+.stylist-hint {
+  margin: 2px 0 6px;
+  opacity: 0.7;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dig-arm { animation: none; }
+}
 .stage-scene {
   position: relative;
   flex: 1;

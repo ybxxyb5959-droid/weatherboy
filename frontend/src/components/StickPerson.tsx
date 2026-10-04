@@ -19,6 +19,8 @@ interface Props {
   wear?: { top?: WornItem; bottom?: WornItem; outer?: WornItem }
   /** mood='stand' 일 때 우산을 들고 서 있기 */
   umbrella?: boolean
+  /** mood='stand' 일 때 두 팔을 옆(옷장 쪽)으로 뻗어 번갈아 뒤적이기 */
+  digging?: boolean
   /** 내 캐릭터의 칭호(예: 'DARK_CHILD'). 칭호마다 상징 소품이 붙는다. mood='stand' 에서만 */
   persona?: string | null
   /** 내 캐릭터 꾸미기(모자·헤어핀·안경·목·기타). mood='stand' 에서만 */
@@ -75,7 +77,7 @@ export function Hands({ top, outer }: { top?: string; outer?: string }) {
   )
 }
 
-export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, persona = null, accessories = {} }: Props) {
+export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella = false, digging = false, persona = null, accessories = {} }: Props) {
   const clothed = !!(wear?.top || wear?.outer)
   const showUmbrella = mood === 'rain' || (mood === 'stand' && umbrella)
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
@@ -219,8 +221,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <g>
             {/* 팔은 내리고 가만히 서 있다. 우산이 필요하면 오른팔로 우산대를 잡는다. */}
             {/* 옷을 입으면 팔은 소매 안에 가려지므로 뼈대를 그리지 않는다(허리께로 삐져나오지 않게). 팔뚝/손은 아래 Hands 가 그린다 */}
-            {!clothed && <path d="M60 58 L45 92" />}
-            {(!clothed || umbrella) && <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />}
+            {!clothed && !digging && <path d="M60 58 L45 92" />}
+            {(!clothed || umbrella) && !digging && <path d={umbrella ? 'M60 58 L80 92' : 'M60 58 L75 92'} />}
             {/* 추천 옷 입히기: 하의 -> 상의 -> 겉옷 순으로 덧그린다 */}
             {wear?.bottom && (
               <g transform="translate(35 86) scale(0.5)" strokeWidth="3.6">
@@ -244,7 +246,21 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
               </g>
             )}
             {/* 소매 밖의 팔/손 */}
-            <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
+            {digging ? (
+              /* 뒤적이는 중: 두 팔을 옷장 쪽으로 뻗고, 어깨를 축으로 번갈아 위아래로 휘젓는다(손이 옷 더미를 헤집는 모양) */
+              <g className="dig-arms">
+                <g className="dig-arm a">
+                  <path d="M68 60 L92 74 L126 62" strokeWidth="3" />
+                  <circle cx="129" cy="61" r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
+                </g>
+                <g className="dig-arm b">
+                  <path d="M66 66 L90 80 L124 78" strokeWidth="3" />
+                  <circle cx="127" cy="78" r="4.2" fill="#fcfcfa" strokeWidth="2.2" />
+                </g>
+              </g>
+            ) : (
+              <Hands top={wear?.top?.type} outer={wear?.outer?.type} />
+            )}
             {/* 칭호 소품과 꾸미기: 옷 위에 얹는다 */}
             <FrontDecor persona={persona} acc={accessories} />
           </g>

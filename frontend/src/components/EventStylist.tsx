@@ -136,7 +136,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       return
     }
     setFrozen(shownRef.current)
-    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 76))
+    setRunPx(Math.max(90, (rowRef.current?.offsetWidth ?? 340) - 104 - 6 - 62))
     setPhase('run')
     await sleep(450)
     setPhase('dig')
@@ -165,16 +165,16 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       }
     })
 
-  // "날씨만 보고": 저장된 느낌이 있으면 풀고, 날씨와 옷장만으로 고른 코디를 보여준다
-  const pickWeatherOnly = () =>
+  // 고른 느낌을 풀고, 날씨와 옷장만으로 고른 기본 코디를 보여준다
+  const releaseStyle = () =>
     stage(async () => {
-      if (style) await api('DELETE', `/api/ai/event-stylist/${eventId}`)
+      await api('DELETE', `/api/ai/event-stylist/${eventId}`)
       const o = await api<EventOutfit>('GET', `/api/events/${eventId}/outfit`)
       const r = o.recommendation
       setChosen(r ? { items: r.items, alternatives: r.alternatives ?? [], headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask } : null)
       setWeatherOnly(true)
       setAltIdx(0)
-      setTalk({ reply: '날씨와 내 옷장만 보고 골라봤어요.', options: [] })
+      setTalk({ reply: '느낌은 풀고, 날씨와 내 옷장만 보고 골라봤어요.', options: [] })
       onChanged()
     })
 
@@ -206,7 +206,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           <div className="stylist-figure">
             <div className="stage-figure">
               <div key={staging ? 'stage' : comboKey} className={staging ? 'stage-body' : 'stylist-swap'}>
-                <StickPerson mood="stand" size={104} wear={wear} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+                <StickPerson mood="stand" size={104} wear={wear} digging={phase === 'dig'} persona={null} accessories={character?.unlocked ? character.config : undefined} />
               </div>
             </div>
           </div>
@@ -221,16 +221,13 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
 
         <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
           {chips.map((o, i) => (
-            <DoodleButton key={o.style} seed={i} selected={style === o.style} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>
+            // 이미 고른 느낌을 다시 누르면 풀려서, 느낌 없이 날씨와 옷장만 보고 고른 기본 코디로 돌아간다
+            <DoodleButton key={o.style} seed={i} selected={style === o.style} disabled={busy} onClick={() => void (style === o.style ? releaseStyle() : ask({ style: o.style }, talk?.reply))}>
               {o.label}
             </DoodleButton>
           ))}
-          {rec && (
-            <DoodleButton seed={chips.length} selected={weatherOnly && !style} disabled={busy} onClick={() => void pickWeatherOnly()}>
-              날씨만 보고
-            </DoodleButton>
-          )}
         </div>
+        {style && <p className="tiny stylist-hint">고른 느낌을 다시 누르면 풀려요</p>}
 
         <div className="stylist-say">
           <SayBox
