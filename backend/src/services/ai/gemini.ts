@@ -3,11 +3,9 @@
 // 옷차림 판단(무엇을 입을지)은 계속 Rule Engine 이 한다.
 import type { ZodType } from 'zod'
 import { env } from '../../config/env.js'
-import { prisma } from '../../db.js'
 import { AppError } from '../../utils/errors.js'
-import { logger } from '../../utils/logger.js'
 import { aiEnabled } from './explain.js'
-import { currentAiScope } from './aiScope.js'
+import { recordAiCall } from './aiLog.js'
 
 const TIMEOUT_MS = 20_000
 
@@ -17,14 +15,9 @@ export interface GeminiImage {
   base64: string
 }
 
-async function log(status: 'SUCCESS' | 'FAILED', started: number, model: string, message?: string) {
-  try {
-    const scope = currentAiScope() // 요청 안에서 불렀다면 누가 어떤 종류로 불렀는지 같이 남긴다
-    await prisma.aiCallLog.create({ data: { model: model || 'none', status, fallback: false, durationMs: Date.now() - started, message: message?.slice(0, 300), userId: scope?.userId, kind: scope?.kind } })
-  } catch (e) {
-    logger.warn({ err: String(e) }, 'ai log write failed')
-  }
-}
+// 요청 안에서 불렀다면 누가 어떤 종류로 불렀는지 같이 남는다(recordAiCall)
+const log = (status: 'SUCCESS' | 'FAILED', started: number, model: string, message?: string) =>
+  recordAiCall({ model: model || 'none', status, fallback: false, durationMs: Date.now() - started, message })
 
 export const aiDisabledError = () => new AppError(503, 'AI_DISABLED', 'AI 기능은 아직 준비 중이에요.')
 

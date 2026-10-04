@@ -74,6 +74,8 @@ export interface ApiRecommendation {
   comboWhy?: { sub: string; notes: string[] }[] | null
   insufficientWardrobe: boolean
   aiExplanation: string | null
+  /** 설명의 종류: ai=AI 문장, template=날씨가 바뀌었거나 한도·실패라 기본 문장으로 대신함. 화면은 aiExplanation 을 그대로 보여준다 */
+  aiExplanationSource?: 'ai' | 'template' | null
   /** AI 설명을 만드는 중: 잠시 뒤 다시 불러오면 들어 있다 */
   aiPending?: boolean
   forecastStage: 'WAITING' | 'MIDTERM' | 'SHORTTERM'

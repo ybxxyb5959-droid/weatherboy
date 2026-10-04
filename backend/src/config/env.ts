@@ -31,6 +31,8 @@ const schema = z.object({
   AI_PHOTO_NEWUSER: z.coerce.number().int().min(1).default(300),
   AI_TEXT_NEWUSER: z.coerce.number().int().min(1).default(200),
   AI_NEWUSER_HOURS: z.coerce.number().min(0).default(24),
+  // 추천 설명을 AI 로 만드는 횟수의 사용자당 하루(최근 24시간) 한도. 사진·말과 따로 센다. 넘으면 AI 를 부르지 않고 템플릿 문장을 쓴다. 임시값: 첫 주 호출 기록을 보고 조정한다.
+  AI_EXPLAIN_DAILY: z.coerce.number().int().min(1).default(20),
   // 서버 전체(모든 사용자 합계) 하루 AI 호출 상한. 넘으면 AI 기능을 잠시 닫는다(직접 등록·칩은 계속 열려 있다). 비용 폭주 안전장치라 예산에 맞게 조정한다.
   AI_GLOBAL_DAILY: z.coerce.number().int().min(1).default(3000),
   LOG_LEVEL: z.string().default('info'),

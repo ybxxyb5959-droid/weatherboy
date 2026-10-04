@@ -88,15 +88,16 @@ adminRouter.get(
     const rows: UsageRow[] = raw.map((r) => ({ d: r.d, kind: r.kind, status: r.status, c: r.c, avgMs: r.avg_ms }))
     const days = buildDays(rows, DAYS)
     // 최근 24시간 상위 사용자(고객번호만 보여준다: 사용자 ID 앞 8자리)
-    const perUser = new Map<string, { photo: number; text: number }>()
+    const perUser = new Map<string, { photo: number; text: number; explain: number }>()
     for (const t of top) {
-      const cur = perUser.get(t.userId!) ?? { photo: 0, text: 0 }
+      const cur = perUser.get(t.userId!) ?? { photo: 0, text: 0, explain: 0 }
       if (t.kind === 'photo') cur.photo += t._count
       else if (t.kind === 'text') cur.text += t._count
+      else if (t.kind === 'explain') cur.explain += t._count
       perUser.set(t.userId!, cur)
     }
     const topUsers = [...perUser.entries()]
-      .map(([id, v]) => ({ code: id.slice(0, 8).toUpperCase(), photo: v.photo, text: v.text, total: v.photo + v.text }))
+      .map(([id, v]) => ({ code: id.slice(0, 8).toUpperCase(), photo: v.photo, text: v.text, explain: v.explain, total: v.photo + v.text + v.explain }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10)
     res.json({
@@ -110,6 +111,7 @@ adminRouter.get(
         photoNewUser: env.AI_PHOTO_NEWUSER,
         textDaily: env.AI_TEXT_DAILY,
         textNewUser: env.AI_TEXT_NEWUSER,
+        explainDaily: env.AI_EXPLAIN_DAILY,
         newUserHours: env.AI_NEWUSER_HOURS,
         hourly: 60,
       },

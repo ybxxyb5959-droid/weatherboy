@@ -2,10 +2,9 @@
 // Gemini generateContent: POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
 //   헤더 x-goog-api-key, 본문 { contents: [{ parts: [{ text }] }] }, 응답 candidates[0].content.parts[0].text
 import { env } from '../../config/env.js'
-import { prisma } from '../../db.js'
 import { colorIssueTip } from '../../rules/colorHarmony.js'
 import type { EngineResult } from '../../rules/outfitEngine.js'
-import { logger } from '../../utils/logger.js'
+import { recordAiCall } from './aiLog.js'
 
 export const aiEnabled = () => env.AI_ENABLED && !!env.GEMINI_API_KEY && !!env.GEMINI_MODEL
 
@@ -28,16 +27,12 @@ export function aiInput(r: EngineResult) {
   }
 }
 
-async function log(status: 'SUCCESS' | 'FAILED', fallback: boolean, started: number, message?: string) {
-  try {
-    await prisma.aiCallLog.create({ data: { model: env.GEMINI_MODEL || 'none', status, fallback, durationMs: Date.now() - started, message: message?.slice(0, 300) } })
-  } catch (e) {
-    logger.warn({ err: String(e) }, 'ai log write failed')
-  }
-}
+// 자동 설명은 추천 요청의 뒤에서 돌아서, 호출하는 쪽이 사용자·종류(explain)를 aiScope 로 묶어 준다
+const log = (status: 'SUCCESS' | 'FAILED', fallback: boolean, started: number, message?: string) =>
+  recordAiCall({ model: env.GEMINI_MODEL || 'none', status, fallback, durationMs: Date.now() - started, message })
 
 /** AI 비활성: null. AI 실패: 결정론적 템플릿(fallback). */
-export async function explain(r: EngineResult, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+export async function explain(r: EngineResult, fetchImpl: typeof fetch = fetch): Promise<{ text: string; source: 'ai' | 'template' } | null> {
   if (!aiEnabled()) return null
   const started = Date.now()
   const prompt =
@@ -57,9 +52,9 @@ export async function explain(r: EngineResult, fetchImpl: typeof fetch = fetch):
     const text = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
     if (!text) throw new Error('gemini empty response')
     await log('SUCCESS', false, started)
-    return text.slice(0, 300)
+    return { text: text.slice(0, 300), source: 'ai' }
   } catch (e) {
     await log('FAILED', true, started, e instanceof Error ? e.message : String(e))
-    return templateExplanation(r)
+    return { text: templateExplanation(r), source: 'template' }
   }
 }

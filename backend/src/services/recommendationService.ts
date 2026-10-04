@@ -5,7 +5,10 @@ import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyl
 import { applySuit, applyWish, savedWish, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
-import { aiEnabled, explain } from './ai/explain.js'
+import { aiEnabled, explain, templateExplanation } from './ai/explain.js'
+import { explainBasisOf, shownExplanation, type ExplainMeta, type Outing, type StoredResult } from './ai/explainBasis.js'
+import { reserveExplain, type ExplainReservation } from './ai/aiQuota.js'
+import { runWithAiScope } from './ai/aiScope.js'
 import { bandsOf } from './feedbackBands.js'
 import { forecastForWindow, getAirQuality, type Region, type WindowForecast } from './weather/weatherService.js'
 
@@ -94,6 +97,8 @@ export interface RecommendationView {
   comboWhy: EngineResult['comboWhy'] | null
   insufficientWardrobe: boolean
   aiExplanation: string | null
+  /** 설명의 종류. ai=AI 문장, template=날씨 조건이 바뀌었거나 한도·실패라 템플릿으로 대신함, 설명이 아직 없으면 null */
+  aiExplanationSource: 'ai' | 'template' | null
   /** AI 설명을 만드는 중이다. 잠시 뒤 다시 불러오면 들어 있다 */
   aiPending: boolean
   forecastStage: string
@@ -103,11 +108,13 @@ export interface RecommendationView {
 }
 
 export function viewOf(rec: Recommendation, stage?: string): RecommendationView {
-  const r = rec.resultJson as unknown as EngineResult & { forecastStage?: string }
-  return viewFromResult(r, { id: rec.id, aiExplanation: rec.aiExplanation, version: rec.version, stage })
+  const r = rec.resultJson as unknown as StoredResult
+  // 설명은 만들 때의 조건이 지금과 같을 때만 AI 문장을 보여준다(아니면 템플릿). 늦게 도착한 설명도 여기서 같은 기준으로 걸러진다.
+  const shown = shownExplanation(r, rec.aiExplanation, rec.aiExplanationMeta)
+  return viewFromResult(r, { id: rec.id, aiExplanation: shown.text, aiSource: shown.source, version: rec.version, stage })
 }
 
-export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: { id: string | null; aiExplanation: string | null; version: number; stage?: string }): RecommendationView {
+export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: { id: string | null; aiExplanation: string | null; aiSource?: 'ai' | 'template' | null; version: number; stage?: string }): RecommendationView {
   return {
     id: o.id,
     items: r.items,
@@ -123,6 +130,7 @@ export function viewFromResult(r: EngineResult & { forecastStage?: string }, o: 
     comboWhy: r.comboWhy ?? null,
     insufficientWardrobe: r.insufficientWardrobe,
     aiExplanation: o.aiExplanation,
+    aiExplanationSource: o.aiSource ?? null,
     aiPending: o.id !== null && o.aiExplanation == null && aiEnabled(),
     forecastStage: o.stage ?? r.forecastStage ?? 'SHORTTERM',
     version: o.version,
@@ -136,6 +144,8 @@ export interface Computed {
   /** 날짜별 코디(dailyOutfits)를 다시 계산할 때 쓰는 엔진 입력 */
   wardrobe: WardrobeItem[]
   airGrade: number | null
+  /** 외출 구간 정보. 추천과 함께 저장해 두고, AI 설명이 같은 구간 기준인지 비교하는 데 쓴다(호출하는 쪽이 채운다) */
+  outing?: Outing
 }
 
 /** 순수 계산: 예보 + 옷장 -> 엔진 결과 (저장하지 않음) */
@@ -236,11 +246,15 @@ export function outfitFingerprint(r: Pick<EngineResult, 'items' | 'needOuter' | 
  * 저장된 최신 추천을 재사용할지 정한다. 조합이 같으면 같은 id(피드백 유지)를 쓰되 날씨 문구/수치는 최신으로 갱신하고,
  * 조합이 다르면 null 을 돌려줘 호출자가 새 버전을 만든다. 이전 버전은 피드백 기록으로 보존된다.
  */
-async function refreshIfSameOutfit(latest: Recommendation | null, result: EngineResult, stage: string): Promise<Recommendation | null> {
+/** 추천 행에 저장하는 JSON: 엔진 결과 + 예보 단계 + 외출 구간 */
+const storedOf = (c: Computed): StoredResult => ({ ...c.result, forecastStage: c.window.stage, ...(c.outing ? { outing: c.outing } : {}) })
+
+async function refreshIfSameOutfit(latest: Recommendation | null, c: Computed): Promise<Recommendation | null> {
   if (!latest) return null
+  const result = c.result
   const old = latest.resultJson as unknown as EngineResult
   if (outfitFingerprint(old) !== outfitFingerprint(result)) return null
-  const next = { ...result, forecastStage: stage }
+  const next = storedOf(c)
   if (JSON.stringify(old) === JSON.stringify(next)) return latest
   return prisma.recommendation.update({
     where: { id: latest.id },
@@ -254,16 +268,25 @@ const explaining = new Set<string>()
  * AI 설명은 추천 응답을 기다리게 하지 않는다. 추천을 먼저 저장해 돌려주고, 설명은 뒤에서 만들어 같은 행에 채운다.
  * 화면은 aiPending 이면 잠시 뒤 다시 불러온다. 실패해도 추천에는 영향이 없다.
  */
-function explainInBackground(rec: Pick<Recommendation, 'id' | 'aiExplanation'>, result: EngineResult): void {
+function explainInBackground(rec: Pick<Recommendation, 'id' | 'userId' | 'aiExplanation'>, result: StoredResult): void {
   if (rec.aiExplanation != null || !aiEnabled() || explaining.has(rec.id)) return
   explaining.add(rec.id)
   void (async () => {
+    let reservation: ExplainReservation | null = null
     try {
-      const text = await explain(result)
-      if (text) await prisma.recommendation.update({ where: { id: rec.id }, data: { aiExplanation: text } })
+      // 사진·말과 같은 하루 한도·서버 전체 상한을 따른다. 걸리면 AI 를 부르지 않고 템플릿 문장을 저장한다
+      // (저장해야 aiPending 이 풀려 화면이 계속 다시 불러오지 않는다).
+      reservation = await reserveExplain(rec.userId)
+      const made = reservation.ok ? await runWithAiScope({ userId: rec.userId, kind: 'explain' }, () => explain(result)) : { text: templateExplanation(result), source: 'template' as const }
+      if (made) {
+        // 만들 때 쓴 조건(result)을 같이 저장한다. 호출이 느려 그 사이 날씨가 바뀌었어도, 보여줄 때 현재 조건과 비교해 걸러진다.
+        const meta: ExplainMeta = { source: made.source, basis: explainBasisOf(result) }
+        await prisma.recommendation.update({ where: { id: rec.id }, data: { aiExplanation: made.text, aiExplanationMeta: meta as unknown as Prisma.InputJsonValue } })
+      }
     } catch {
       /* 설명 없이도 추천은 유효하다 */
     } finally {
+      if (reservation?.ok) reservation.release() // 호출 기록을 남긴 뒤에 놓는다
       explaining.delete(rec.id)
     }
   })()
@@ -294,9 +317,11 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
   const dayStart = kstStartOfDay(now)
   const latest = await prisma.recommendation.findFirst({ where: { userId: user.id, eventId: null, targetStartAt: dayStart }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
-  const reused = await refreshIfSameOutfit(latest, c.result, stage)
+  // 시작은 "지금"에 맞춰 밀리므로 비교에 쓰지 않는다(Outing 설명 참고)
+  c.outing = source === 'NOW' ? { source, startAt: null, endAt: null } : { source, startAt: null, endAt: end.toISOString() }
+  const reused = await refreshIfSameOutfit(latest, c)
   if (reused) {
-    explainInBackground(reused, c.result)
+    explainInBackground(reused, storedOf(c))
     return { ...viewOf(reused, stage), basis }
   }
   const rec = await prisma.recommendation.create({
@@ -304,13 +329,13 @@ export async function todayRecommendation(user: User, now = new Date(), regionOv
       userId: user.id,
       targetStartAt: dayStart,
       targetEndAt: end,
-      resultJson: { ...c.result, forecastStage: stage } as unknown as Prisma.InputJsonValue,
+      resultJson: storedOf(c) as unknown as Prisma.InputJsonValue,
       reasonCodes: c.result.reasonCodes,
       decisionKey: c.result.decisionKey,
       version: (latest?.version ?? 0) + 1,
     },
   })
-  explainInBackground(rec, c.result)
+  explainInBackground(rec, storedOf(c))
   return { ...viewOf(rec, stage), basis }
 }
 
@@ -322,7 +347,8 @@ export function eventWindow(e: Pick<Event, 'startAt' | 'endAt'>) {
 export async function saveEventRecommendation(event: Event, c: Computed): Promise<Recommendation> {
   const latest = await prisma.recommendation.findFirst({ where: { eventId: event.id }, orderBy: { version: 'desc' } })
   const stage = c.window.stage
-  let saved = await refreshIfSameOutfit(latest, c.result, stage)
+  c.outing = { source: 'EVENT', startAt: event.startAt.toISOString(), endAt: event.endAt.toISOString() }
+  let saved = await refreshIfSameOutfit(latest, c)
   if (!saved) {
     saved = await prisma.recommendation.create({
       data: {
@@ -330,14 +356,14 @@ export async function saveEventRecommendation(event: Event, c: Computed): Promis
         eventId: event.id,
         targetStartAt: event.startAt,
         targetEndAt: event.endAt,
-        resultJson: { ...c.result, forecastStage: stage } as unknown as Prisma.InputJsonValue,
+        resultJson: storedOf(c) as unknown as Prisma.InputJsonValue,
         reasonCodes: c.result.reasonCodes,
         decisionKey: c.result.decisionKey,
         version: (latest?.version ?? 0) + 1,
       },
     })
   }
-  explainInBackground(saved!, c.result)
+  explainInBackground(saved!, storedOf(c))
   await prisma.event.update({ where: { id: event.id }, data: { forecastStage: stage, recommendationVersion: saved!.version, lastCheckedAt: new Date() } })
   return saved!
 }

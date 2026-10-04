@@ -87,6 +87,58 @@ export async function getGlobalUsage(now = Date.now()): Promise<GlobalUsage> {
 export const busyMessage = (kind: AiKind) => (kind === 'photo' ? '오늘은 AI 사용이 많아서 잠시 쉬어요. 직접 등록해 주세요.' : '오늘은 AI 사용이 많아서 잠시 쉬어요.')
 export const BUSY_CODE = 'AI_BUSY'
 
+// ───── 자동 설명(AI 설명 문장) 한도 ─────
+// 설명은 사용자가 누르는 게 아니라 추천을 만들 때 서버가 알아서 부른다. 한도에 걸리면 막지 않고 템플릿 문장으로 대신한다.
+// 호출 기록은 응답이 끝난 뒤에 남으므로, 동시에 나가는 호출은 기록 수만으로는 셀 수 없다.
+// 그래서 "지금 진행 중인 설명 호출 수"를 프로세스 메모리에 두고 기록 수에 더해 판단한다(서버가 1대일 때 유효. 여러 대가 되면 DB 로 옮긴다).
+const explainInflight = new Map<string, number>()
+let explainInflightTotal = 0
+
+export type ExplainReservation = { ok: true; release: () => void } | { ok: false; reason: 'user_limit' | 'busy' }
+
+/** 순수 판단: 이미 쓴 수 + 진행 중인 수(자기 자신 포함)가 한도를 넘으면 안 된다. */
+export const withinCap = (used: number, inflight: number, cap: number) => used + inflight <= cap
+
+/**
+ * 설명 호출 한 건의 자리를 잡는다. ok 면 호출 뒤(호출 기록을 남긴 다음)에 release() 를 꼭 부른다.
+ * 자리를 먼저(동기로) 잡고 나서 기록을 읽기 때문에, 동시에 들어온 요청은 서로의 자리를 본다. 경계에서는 보수적으로 둘 다 막힐 수 있다.
+ * 기록을 읽지 못하면 진행 중인 수만으로 판단한다(기록 장애로 설명이 막히지 않게. 막혀도 템플릿이라 해는 작다).
+ */
+export async function reserveExplain(userId: string, now = new Date()): Promise<ExplainReservation> {
+  explainInflight.set(userId, (explainInflight.get(userId) ?? 0) + 1)
+  explainInflightTotal++
+  let released = false
+  const release = () => {
+    if (released) return
+    released = true
+    const left = (explainInflight.get(userId) ?? 1) - 1
+    if (left > 0) explainInflight.set(userId, left)
+    else explainInflight.delete(userId)
+    explainInflightTotal--
+  }
+  try {
+    const mine = explainInflight.get(userId) ?? 1
+    const total = explainInflightTotal
+    const since = new Date(now.getTime() - 24 * 3600_000)
+    const [g, used] = await Promise.all([
+      getGlobalUsage(now.getTime()),
+      prisma.aiCallLog.count({ where: { userId, kind: 'explain', createdAt: { gte: since } } }).catch(() => 0),
+    ])
+    if (!withinCap(g.used, total, g.cap)) {
+      release()
+      return { ok: false, reason: 'busy' }
+    }
+    if (!withinCap(used, mine, env.AI_EXPLAIN_DAILY)) {
+      release()
+      return { ok: false, reason: 'user_limit' }
+    }
+    return { ok: true, release }
+  } catch (e) {
+    release()
+    throw e
+  }
+}
+
 /** 화면에 보여줄 사용량(남은 비율). 한도를 넘었으면 0. */
 export interface UsageView {
   used: number

@@ -4,7 +4,7 @@ import { kstDate } from '../../utils/time.js'
 export interface UsageRow {
   /** KST 날짜(YYYY-MM-DD) */
   d: string
-  /** photo | text | null(요청 밖 호출, 예전 기록) */
+  /** photo | text | explain | null(요청 밖 호출, 예전 기록) */
   kind: string | null
   status: 'SUCCESS' | 'FAILED'
   c: number
@@ -15,6 +15,8 @@ export interface DayUsage {
   date: string
   photo: number
   text: number
+  /** 추천 설명을 AI 로 만든 호출(자동) */
+  explain: number
   other: number
   total: number
   failed: number
@@ -25,7 +27,7 @@ export function buildDays(rows: UsageRow[], days: number, now = new Date()): Day
   const out: DayUsage[] = []
   for (let i = days - 1; i >= 0; i--) {
     const date = kstDate(new Date(now.getTime() - i * 86400_000))
-    out.push({ date, photo: 0, text: 0, other: 0, total: 0, failed: 0 })
+    out.push({ date, photo: 0, text: 0, explain: 0, other: 0, total: 0, failed: 0 })
   }
   const byDate = new Map(out.map((d) => [d.date, d]))
   for (const r of rows) {
@@ -33,6 +35,7 @@ export function buildDays(rows: UsageRow[], days: number, now = new Date()): Day
     if (!day) continue
     if (r.kind === 'photo') day.photo += r.c
     else if (r.kind === 'text') day.text += r.c
+    else if (r.kind === 'explain') day.explain += r.c
     else day.other += r.c
     day.total += r.c
     if (r.status === 'FAILED') day.failed += r.c
