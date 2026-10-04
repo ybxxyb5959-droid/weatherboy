@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
+import { isAllowedPushEndpoint } from '../../services/push/endpoint.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
 export const pushRouter = Router()
@@ -9,7 +10,7 @@ pushRouter.use(requireAuth)
 
 // 브라우저 PushSubscription.toJSON() 형태
 const subscribeSchema = z.object({
-  endpoint: z.string().url().max(1000),
+  endpoint: z.string().url().max(1000).refine(isAllowedPushEndpoint, '지원하지 않는 알림 주소예요'),
   keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
 })
 

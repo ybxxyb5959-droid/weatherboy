@@ -65,7 +65,6 @@
 | P1 | 게스트 버튼 연타 시 게스트 중복 생성 가능, 게스트 정리 작업 없음 | `IntroPage.tsx`, `routes/auth.ts` | 버튼 잠금 + 미사용 게스트 정리 |
 | P1 | 캐릭터 모듈 캐시가 로그아웃·계정 전환 때 초기화되지 않음 | `lib/character.ts` | 로그아웃 시 초기화 |
 | P1 | 관리자 비밀번호 로그인 시 세션 재생성 없음 | `routes/admin.ts` | `regenerate` |
-| P1 | 푸시 구독 endpoint 를 임의 URL 로 받음(VAPID 설정 시 서버가 그 주소로 요청) | `routes/push.ts` | 푸시 서비스 도메인·https 검증 |
 | P1 | 첫 사용: 위치 건너뛰면 `서울 마포구` 고정, 빈 옷장이면 홈이 추천 대신 등록 안내 | `routes/user.ts:125`, `HomePage.tsx` `needCloset` | ❓ 빈 옷장일 때 일반 추천을 보여줄지(커밋 `ca2f28a` 에서 의도적으로 가린 것) / 기본 지역 표시 |
 | P1 | 둘러보기에서 "안 쓸래요" → 울음 → google.com 이동 | `TourPage.tsx` `BYE_URL` | ❓ 연출 유지 여부 |
 | P1 | 스토어: 공개 개인정보·계정삭제 URL, `assetlinks.json`, maskable 아이콘, 지표·오류 수집 없음 | `public/`, `vercel.json` | TWA 준비 묶음 |
@@ -109,6 +108,18 @@
 ```
 
 ## 7. 작업 기록 (최신이 위)
+
+### 2026-10-05 푸시 구독 주소 검증 + 알림 하루 상한 (작성: Claude Code)
+- 수정 목적: 푸시를 켜기 전 준비. 구독 endpoint 를 브라우저 푸시 서비스 도메인(https)만 받고(SSRF 방지, 알려진 문제 P1 해결), 알림이 많아 끄는 일을 막기 위해 하루 상한을 둔다.
+- 변경 파일:
+  - `backend/src/services/push/endpoint.ts` — 신규. fcm.googleapis.com / mozilla / apple / windows 도메인만 허용(테스트 환경은 push.example 허용)
+  - `backend/src/api/routes/push.ts` — 구독 스키마에 endpoint 검증 추가(실패 400)
+  - `backend/src/jobs/dailyPushJob.ts` — 하루 2개(DAILY_PUSH_CAP), 후기 요청 7일 3회(FEEDBACK_PER_WEEK) 상한. 일정 알림은 대상 아님
+  - `backend/tests/integration/daily-push.test.ts` — 상한 2건, 구독 주소 검증 테스트 추가
+- 프론트 연결 사항: 없음(허용 도메인 밖 주소는 400. 정상 브라우저는 해당 없음). `PUSH_ENABLED` 는 아직 false 그대로.
+- 검증 결과: backend typecheck/lint 통과, npm test 555 통과 / 1 실패. 실패는 "미세먼지 나쁨 + 켜짐이면 아침 알림에 마스크" 테스트로, 이번 변경 전(커밋 609f5c8)에도 동일하게 실패함(원인 미조사, 테스트 DB 의 대기질 캐시 의심).
+- 남은 일 / 상대에게 요청: 위 미세먼지 테스트 원인 조사. 푸시 재개(U-2): VAPID 키 생성·Render 입력, 서버 상시 가동, PUSH_ENABLED=true. 베타 초반엔 아침 알림만 켜는 스위치 검토. 커밋은 하지 않음.
+- 적용한 규칙 번호: B-8
 
 ### 2026-10-04 베타·플레이스토어 준비 점검 보고 (작성: Claude Code)
 - 수정 목적: 사용자 요청으로 타겟·보안·고도화·수익화·베타 방법을 점검해 보고. 서비스 코드 수정 없음.

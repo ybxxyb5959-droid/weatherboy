@@ -17,6 +17,12 @@ const kstMinutes = (d: Date) => {
 }
 const kstWeekday = (d: Date) => new Date(`${kstDate(d)}T00:00:00Z`).getUTCDay() // 0=일 ~ 6=토
 
+/** 하루에 한 사람에게 보내는 알림(일정 알림 제외) 상한 — 알림이 많아 끄는 일을 막는다 */
+export const DAILY_PUSH_CAP = 2
+/** 후기 요청은 7일에 이 횟수까지만 */
+export const FEEDBACK_PER_WEEK = 3
+const JOB_KINDS: PushKind[] = ['MORNING', 'RAIN', 'COLD_RETURN', 'DUST', 'FEEDBACK', 'CLOSET']
+
 /** 일요일 20:00~21:00 (옷장 리마인드) */
 export const isClosetSlot = (now: Date) => kstWeekday(now) === 0 && kstMinutes(now) >= 20 * 60 && kstMinutes(now) < 21 * 60
 
@@ -92,6 +98,13 @@ async function processUser(user: User, now: Date, sender: PushSender | undefined
   const plan = planFor(user, now)
   const day = kstDate(now)
   const send = async (kind: PushKind, key: string, title: string, body: string, url: string) => {
+    // 하루 상한과 후기 주간 상한을 넘기지 않는다(구독이 여러 개여도 dedupeKey 가 있는 기록은 알림당 한 건)
+    const sentToday = await prisma.notifyLog.count({ where: { userId: user.id, status: 'SENT', dedupeKey: { not: null }, kind: { in: JOB_KINDS }, createdAt: { gte: kstStartOfDay(now) } } })
+    if (sentToday >= DAILY_PUSH_CAP) return null
+    if (kind === 'FEEDBACK') {
+      const week = await prisma.notifyLog.count({ where: { userId: user.id, status: 'SENT', dedupeKey: { not: null }, kind: 'FEEDBACK', createdAt: { gte: new Date(now.getTime() - 7 * 86400_000) } } })
+      if (week >= FEEDBACK_PER_WEEK) return null
+    }
     const o = await sendToUser(user.id, null, { title, body, url, tag: key.split(':')[0]!.toLowerCase() }, { now, sender, kind, dedupeKey: `${key}:${day}` })
     count(kind, o)
     return o

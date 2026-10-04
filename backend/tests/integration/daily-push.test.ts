@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prisma } from '../../src/db.js'
-import { COLD_RETURN_DROP, coldReturnNote, dailyPushJob, isClosetSlot, morningBody, planFor } from '../../src/jobs/dailyPushJob.js'
+import { COLD_RETURN_DROP, DAILY_PUSH_CAP, FEEDBACK_PER_WEEK, coldReturnNote, dailyPushJob, isClosetSlot, morningBody, planFor } from '../../src/jobs/dailyPushJob.js'
 import { kstStartOfDay } from '../../src/utils/time.js'
 import { agent, installFakeProviders, mockKakaoFetch, pool } from './helpers.js'
 
@@ -169,6 +169,31 @@ describe('일일 알림 작업 (dailyPushJob)', () => {
     expect(sent[0]).toMatchObject({ title: '옷장을 채워볼까요?', url: '/wardrobe/add' })
   })
 
+  it('하루에 보내는 알림은 상한(DAILY_PUSH_CAP)까지', async () => {
+    installFakeProviders({ temp: 12, pop: 80, airGrade: 2 })
+    await setUser({ routineOutAt: '09:00', routineHomeAt: '11:00' })
+    const day = kst('2026-10-05', '09:05')
+    await prisma.recommendation.create({ data: { userId, targetStartAt: kstStartOfDay(day), targetEndAt: day, resultJson: {}, reasonCodes: [], decisionKey: 'cap', version: 1 } })
+    await run(kst('2026-10-05', '08:40')) // 아침 + 비
+    await run(kst('2026-10-05', '11:40')) // 후기 요청 시각이지만 상한
+    const kinds = await prisma.notifyLog.findMany({ where: { userId, status: 'SENT', dedupeKey: { not: null } }, select: { kind: true } })
+    expect(kinds.length).toBeLessThanOrEqual(DAILY_PUSH_CAP)
+    expect(kinds.map((k) => k.kind)).not.toContain('FEEDBACK')
+    await prisma.recommendation.deleteMany({ where: { userId, decisionKey: 'cap' } })
+  })
+
+  it('후기 요청은 7일에 FEEDBACK_PER_WEEK 번까지', async () => {
+    await setUser({ notifyMorning: false, notifyColdReturn: false, notifyRain: false, routineOutAt: '08:30', routineHomeAt: '18:00' })
+    for (const d of ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']) {
+      const t = kst(d, '19:00')
+      await prisma.recommendation.create({ data: { userId, targetStartAt: kstStartOfDay(t), targetEndAt: t, resultJson: {}, reasonCodes: [], decisionKey: 'fb-' + d, version: 1 } })
+      await run(t)
+      await prisma.notifyLog.updateMany({ where: { userId }, data: { createdAt: t } }) // 가짜 시각에 맞춰 기록 시각을 옮긴다
+    }
+    expect(await prisma.notifyLog.count({ where: { userId, kind: 'FEEDBACK', status: 'SENT', dedupeKey: { not: null } } })).toBe(FEEDBACK_PER_WEEK)
+    await prisma.recommendation.deleteMany({ where: { userId, decisionKey: { startsWith: 'fb-' } } })
+  })
+
   it('구독이 없는 사용자는 대상이 아니다', async () => {
     await prisma.pushSubscription.deleteMany({ where: { userId } })
     const r = await run(kst('2026-10-05', '08:05'))
@@ -183,6 +208,21 @@ describe('일일 알림 작업 (dailyPushJob)', () => {
     expect(await prisma.notifyLog.count({ where: { userId, kind: 'MORNING', status: 'SENT' } })).toBe(0)
     await run(kst('2026-10-05', '07:05'))
     expect(sent).toHaveLength(1)
+  })
+})
+
+describe('푸시 구독 주소 검증', () => {
+  const body = (endpoint: string) => ({ endpoint, keys: { p256dh: 'p', auth: 'a' } })
+  it('브라우저 푸시 서비스 도메인(https)만 받는다', async () => {
+    const a = agent()
+    await a.post('/api/auth/guest').expect(201)
+    for (const ok of ['https://fcm.googleapis.com/fcm/send/abc', 'https://updates.push.services.mozilla.com/wpush/v2/x', 'https://web.push.apple.com/x', 'https://wns2-par02p.notify.windows.com/w/?token=x']) {
+      await a.post('/api/push/subscribe').send(body(ok)).expect(201)
+      await a.delete('/api/push/subscribe').send({ endpoint: ok }).expect(204)
+    }
+    for (const bad of ['http://fcm.googleapis.com/x', 'https://evil.example/x', 'https://fcm.googleapis.com.evil.com/x', 'https://127.0.0.1/x', 'https://user:pw@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x']) {
+      expect((await a.post('/api/push/subscribe').send(body(bad))).status).toBe(400)
+    }
   })
 })
 
