@@ -12,6 +12,7 @@ import { defaultOptions, fallbackReply, stylistReply, type StyleOption } from '.
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
 import { badRequest, notFound } from '../../utils/errors.js'
+import { kstDate } from '../../utils/time.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
 export const aiRouter = Router()
@@ -98,8 +99,9 @@ aiRouter.get(
     const event = await prisma.event.findFirst({ where: { id: eventId, userId: (req as AuthedRequest).userId } })
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const ctx = { title: event.title, kind: eventKindMap.toUi(event.kind) }
-    // 여행·등산 같은 야외 일정은 날씨 엔진이 이미 반영하므로, 격식 있는 자리가 아니면 분위기를 묻지 않는다
-    res.json({ reply: fallbackReply(ctx), options: defaultOptions(ctx), applicable: stylistApplicable(ctx.kind, ctx.title) })
+    // 여행·등산 같은 야외 일정은 날씨 엔진이 이미 반영하므로, 격식 있는 자리가 아니면 분위기를 묻지 않는다. 다만 며칠짜리(연박) 일정은 날마다 코디가 다르니 도우미를 보여준다
+    const multiDay = kstDate(event.startAt) !== kstDate(event.endAt)
+    res.json({ reply: fallbackReply(ctx), options: defaultOptions(ctx), applicable: multiDay || stylistApplicable(ctx.kind, ctx.title) })
   }),
 )
 

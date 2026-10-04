@@ -108,6 +108,12 @@ describe('AI 경로', () => {
     expect(await applicable(await mk('제주 결혼식 하객', '여행'))).toBe(true)
   })
 
+  it('코디 상담: 연박(며칠짜리) 일정은 별 조건 없는 여행이어도 도우미를 보여준다', async () => {
+    const d = (n: number) => new Date(Date.now() + n * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+    const ev = (await a.post('/api/events').send({ title: '제주 여행', startDate: d(3), endDate: d(5), kind: '여행' })).body as { id: string }
+    expect((await a.get(`/api/ai/event-stylist/${ev.id}/start`)).body.applicable).toBe(true)
+  })
+
   it('일정 코디: 옷장에 격식 있는 옷이 부족하면 무엇이 있으면 좋은지 알려준다', async () => {
     const ev = (await prisma.event.findFirstOrThrow({ where: { title: '면접' }, orderBy: { createdAt: 'desc' } }))
     const r = await a.post('/api/ai/event-stylist').send({ eventId: ev.id, style: 'FORMAL' })

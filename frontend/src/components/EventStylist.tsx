@@ -9,7 +9,7 @@ import SayBox from './SayBox'
 import StickPerson from './StickPerson'
 import UmbrellaDoodle from './UmbrellaDoodle'
 import WardrobeScene from './WardrobeScene'
-import type { ApiOutfitItem, ApiRecommendation, EventOutfit } from '../types'
+import type { ApiOutfitItem, ApiRecommendation } from '../types'
 
 export type StyleId = 'FORMAL' | 'SMART' | 'CASUAL' | 'COMFORT'
 interface StyleOption {
@@ -72,7 +72,6 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말과 기본 칩
   const [talk, setTalk] = useState<Talk | null>(null)
   const [chosen, setChosen] = useState<Look | null>(null) // 방금 고른 느낌의 코디
-  const [weatherOnly, setWeatherOnly] = useState(false)
   const [altIdx, setAltIdx] = useState(0) // 0=추천, 1..=다른 조합(구경만)
   const touched = useRef(false) // 사용자가 직접 고르거나 바꾸기 시작했는가
   const [applicable, setApplicable] = useState<boolean | null>(null)
@@ -86,7 +85,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const shownRef = useRef<ApiOutfitItem[]>([])
   const changedRef = useRef(false) // 연출이 끝난 뒤에 일정 데이터를 다시 불러온다(날짜별 코디 카드가 갈아입은 뒤에 갱신되도록)
 
-  const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 다른 느낌도 눌러볼 수 있어요.` : null
+  const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 마음에 안 들면 아래에 원하는 스타일을 말해주세요.` : null
 
   // 처음 열면 캐릭터가 먼저 말을 건다. 이미 고른 분위기가 있으면 그걸 알려준다.
   useEffect(() => {
@@ -169,29 +168,15 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
       setTalk({ reply: r.reply, options: r.options })
       setText('')
       if (r.style) {
-        setWeatherOnly(false)
         setAltIdx(0)
         setChosen(r.outfit ?? null)
         changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
       }
     })
 
-  // 고른 느낌을 풀고, 날씨와 옷장만으로 고른 기본 코디를 보여준다
-  const releaseStyle = () =>
-    stage(async () => {
-      await api('DELETE', `/api/ai/event-stylist/${eventId}`)
-      const o = await api<EventOutfit>('GET', `/api/events/${eventId}/outfit`)
-      const r = o.recommendation
-      setChosen(r ? { items: r.items, alternatives: r.alternatives ?? [], headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask } : null)
-      setWeatherOnly(true)
-      setAltIdx(0)
-      setTalk({ reply: '느낌은 풀고, 날씨와 내 옷장만 보고 골라봤어요.', options: [] })
-      changedRef.current = true
-    })
-
   // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디
   const base: Look | null =
-    chosen ?? (rec && (style || weatherOnly) ? { items: rec.items, alternatives: rec.alternatives ?? [], headline: rec.headline, sub: rec.sub, needUmbrella: rec.needUmbrella, needMask: rec.needMask } : null)
+    chosen ?? (rec && style ? { items: rec.items, alternatives: rec.alternatives ?? [], headline: rec.headline, sub: rec.sub, needUmbrella: rec.needUmbrella, needMask: rec.needMask } : null)
   const combos = base ? [base.items, ...base.alternatives] : []
   const idx = base ? altIdx % combos.length : 0
   const rawItems = base ? combos[idx]! : (rec?.items ?? [])
@@ -260,12 +245,6 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
             submitOnVoice
           />
         </div>
-
-        {style && !busy && phase === 'idle' && (
-          <button type="button" className="linklike tiny" onClick={() => void releaseStyle()}>
-            고른 느낌 풀고 날씨와 옷장만 보고 고르기
-          </button>
-        )}
 
         {error && (
           <p className="tiny" role="alert">
