@@ -6,6 +6,7 @@ import { kstDate, toKstParts } from '../utils/time.js'
 import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
 import { colorIssueOf, colorIssueTip, comboColorScore, type ColorIssue } from './colorHarmony.js'
 import { comboStyleScore, comboTaboo, type OutfitStyle, type Situation } from './outfitStyle.js'
+import { wishFit, type EngineWish } from './outfitWish.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -60,6 +61,8 @@ export interface EngineInput {
   style?: OutfitStyle
   /** 일정 제목에서 알아낸 자리(면접·결혼식·장례식·데이트). 그 자리에 어색한 옷은 강하게 감점한다(완전히 빼지는 않는다) */
   situation?: Situation
+  /** 사용자가 말한 원하는 색/톤/종류("상의는 어둡고 하의는 밝게"). 보온 조건을 만족하는 조합 중 가까운 옷장 조합을 먼저 고른다 */
+  wish?: EngineWish
 }
 
 export interface OutfitItem {
@@ -272,9 +275,10 @@ export function recommend(input: EngineInput): EngineResult {
   // 분위기 취향: 바람/비 대응이 같고 보온이 가장 가벼운 조합과 slack 이내인 조합 중 분위기 점수가 높은 순으로 앞에 둔다.
   const styleOf = (c: Candidate) => (input.style ? comboStyleScore(input.style, c.top, c.bottom, c.outer) : 0)
   const tabooOf = (c: Candidate) => (input.situation ? comboTaboo(input.situation, c.top, c.bottom, c.outer).score : 0)
-  const fitOf = (c: Candidate) => styleOf(c) + tabooOf(c)
+  const wishOf = (c: Candidate) => (input.wish ? wishFit(input.wish, c) : 0)
+  const fitOf = (c: Candidate) => styleOf(c) + tabooOf(c) + wishOf(c)
   const styled = (list: Candidate[]): Candidate[] => {
-    if ((!input.style && !input.situation) || list.length === 0) return list
+    if ((!input.style && !input.situation && !input.wish) || list.length === 0) return list
     const [wp, rp] = rank(list[0]!)
     const near = list.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && c.total <= list[0]!.total + ruleConfig.varietyWarmthSlack)
     const rest = list.filter((c) => !near.includes(c))
@@ -292,7 +296,7 @@ export function recommend(input: EngineInput): EngineResult {
     const outerOk = !!first.outer || required >= ruleConfig.varietyOuterMinRequired
     let group = valid.filter((c) => rank(c)[0] === wp && rank(c)[1] === rp && (outerOk || !c.outer) && c.total <= first.total + ruleConfig.varietyWarmthSlack)
     // 분위기를 골랐으면 분위기 점수가 가장 높은 조합만 남긴다(여러 날 일정에서 날마다 돌려 고를 때도 분위기는 지킨다)
-    if ((input.style || input.situation) && group.length > 1) {
+    if ((input.style || input.situation || input.wish) && group.length > 1) {
       const bestFit = Math.max(...group.map(fitOf))
       group = group.filter((c) => fitOf(c) === bestFit)
     }

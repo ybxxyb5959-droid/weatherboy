@@ -74,3 +74,40 @@ describe('applySuit: 정장 세트(셔츠 + 자켓 + 바지)', () => {
     expect(r.filled).toEqual([])
   })
 })
+
+describe('parseWish: 톤(어둡다/밝다)과 상의/하의 구분', () => {
+  it('"상의는 어둡고 하의는 밝게" -> 상의 dark, 하의 light', () => {
+    const w = parseWish('상의는 어둡고 하의는 밝게 입고 싶어')!
+    expect(w.pieces).toEqual(expect.arrayContaining([expect.objectContaining({ role: 'top', tone: 'dark' }), expect.objectContaining({ role: 'bottom', tone: 'light' })]))
+    expect(w.pieces).toHaveLength(2)
+  })
+  it('"어두운 상의에 밝은 바지"도 같은 뜻', () => {
+    const w = parseWish('어두운 상의에 밝은 바지')!
+    expect(w.pieces).toEqual(expect.arrayContaining([expect.objectContaining({ role: 'top', tone: 'dark' }), expect.objectContaining({ role: 'bottom', tone: 'light' })]))
+  })
+  it('색을 콕 집어 말하면 톤보다 색이 우선(뒤에 오는 말도 이 옷의 것)', () => {
+    const w = parseWish('상의는 검정색으로 하의는 밝게')!
+    expect(w.pieces.find((p) => p.role === 'top')).toMatchObject({ color: '검정' })
+    expect(w.pieces.find((p) => p.role === 'top')?.tone).toBeUndefined()
+    expect(w.pieces.find((p) => p.role === 'bottom')).toMatchObject({ tone: 'light' })
+  })
+  it('옷 낱말 없이 톤만 말하면 상의와 하의 모두', () => {
+    const w = parseWish('전체적으로 어둡게 입고 싶어')!
+    expect(w.pieces.map((p) => `${p.role}:${p.tone}`).sort()).toEqual(['bottom:dark', 'top:dark'])
+  })
+})
+
+describe('톤 원하기: 옷장에서 먼저 찾고 없으면 예시', () => {
+  const wish = parseWish('상의는 어둡고 하의는 밝게')!
+  it('이미 맞는 옷이면 그대로 둔다', () => {
+    const items = [own('긴팔', '검정'), own('바지', '베이지')]
+    const r = applyWish(items, wish)
+    expect(r.items).toEqual(items)
+    expect(r.applied).toEqual([])
+  })
+  it('안 맞는 자리만 톤에 맞는 색 예시로 바꾼다', () => {
+    const r = applyWish([own('긴팔', '하늘색'), own('바지', '베이지')], wish)
+    expect(r.items[0]).toMatchObject({ type: '긴팔', color: '검정', example: true })
+    expect(r.items[1]).toMatchObject({ owned: true, color: '베이지' })
+  })
+})

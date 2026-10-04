@@ -2,6 +2,7 @@ import type { Clothing, Event, Prisma, Recommendation, User } from '@prisma/clie
 import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
+import type { EngineWish } from '../rules/outfitWish.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
 import { aiEnabled, explain } from './ai/explain.js'
@@ -138,7 +139,7 @@ export interface Computed {
 }
 
 /** 순수 계산: 예보 + 옷장 -> 엔진 결과 (저장하지 않음) */
-export async function compute(user: User, event: Event | null, start: Date, end: Date, now = new Date(), regionOverride?: Region, style?: OutfitStyle): Promise<Computed | null> {
+export async function compute(user: User, event: Event | null, start: Date, end: Date, now = new Date(), regionOverride?: Region, style?: OutfitStyle, wish?: EngineWish): Promise<Computed | null> {
   const region = regionOverride ?? regionOf(user, event)
   if (!region) throw new AppError(409, 'LOCATION_UNRESOLVED', '위치를 확인하지 못했어요. 설정에서 위치를 다시 선택해주세요.')
   const situation = (event && situationOf(event.title)) || undefined // 제목으로 알아낸 자리(면접·결혼식 등)
@@ -161,8 +162,9 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     feelsMethod: window.feelsMethod,
     // 오늘 추천은 날짜마다, 일정 추천은 일정마다 같은 조합이 계속 나오지 않게 돌려 고른다(같은 날/일정 안에서는 고정)
     now,
-    varietySeed: outfitStyle ? undefined : `${user.id}:${event?.id ?? kstDate(start)}`,
+    varietySeed: outfitStyle || wish ? undefined : `${user.id}:${event?.id ?? kstDate(start)}`,
     style: outfitStyle,
+    wish,
     situation, // 그 자리에 어색한 옷은 피한다
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')

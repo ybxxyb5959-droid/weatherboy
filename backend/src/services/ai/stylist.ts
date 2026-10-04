@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { OUTFIT_STYLES, styleLabel, type OutfitStyle } from '../../rules/outfitStyle.js'
 import { AppError } from '../../utils/errors.js'
 import { geminiJson } from './gemini.js'
+import { BOTTOM_TYPES, OUTER_TYPES, TOP_TYPES, type Wish } from '../../rules/outfitWish.js'
+import { colorMap } from '../../config/mappings.js'
 
 export interface StyleOption {
   style: OutfitStyle
@@ -15,6 +17,8 @@ export interface StylistTurn {
   /** 분위기가 정해졌으면 그 값(바로 코디를 뽑는다). 아니면 null 이고 options 로 되묻는다 */
   style: OutfitStyle | null
   options: StyleOption[]
+  /** 사용자가 원하는 색/톤/종류를 말했으면 그 내용(AI 가 말을 구조로 바꾼 것). 없으면 null */
+  wish?: Wish | null
 }
 export interface StylistContext {
   title: string
@@ -52,10 +56,18 @@ export function defaultOptions(ctx: Pick<StylistContext, 'title' | 'kind'>): Sty
 /** 대화의 첫 인사. AI 를 부르지 않고 바로 보여준다 */
 export const fallbackReply = (ctx: Pick<StylistContext, 'title'>) => `"${ctx.title}" 일정이네요. 어떤 느낌으로 입고 싶으세요?`
 
+const ALL_TYPES = [...TOP_TYPES, ...BOTTOM_TYPES, ...OUTER_TYPES]
+const COLORS = colorMap.uiValues.filter((c) => c !== '기타') as string[]
+const ROLES = ['top', 'bottom', 'outer'] as const
+const TONES = ['dark', 'light', 'NONE'] as const
+
 const validate = z.object({
   reply: z.string().min(1).max(300),
   style: z.enum([...OUTFIT_STYLES, 'NONE']),
   options: z.array(z.object({ style: z.enum(OUTFIT_STYLES), label: z.string().min(1).max(40) })).max(4),
+  // 원하는 옷: 정해진 목록 밖의 값이면 검증에서 걸러진다(AI 가 엉뚱한 옷/색을 지어내지 못하게)
+  suit: z.boolean().optional(),
+  pieces: z.array(z.object({ role: z.enum(ROLES), type: z.enum(['NONE', ...ALL_TYPES] as [string, ...string[]]).optional(), color: z.enum(['NONE', ...COLORS] as [string, ...string[]]).optional(), tone: z.enum(TONES).optional() })).max(3).optional(),
 })
 
 const schema = {
@@ -64,6 +76,8 @@ const schema = {
     reply: { type: 'STRING' },
     style: { type: 'STRING', enum: [...OUTFIT_STYLES, 'NONE'] },
     options: { type: 'ARRAY', items: { type: 'OBJECT', properties: { style: { type: 'STRING', enum: [...OUTFIT_STYLES] }, label: { type: 'STRING' } }, required: ['style', 'label'] } },
+    suit: { type: 'BOOLEAN' },
+    pieces: { type: 'ARRAY', items: { type: 'OBJECT', properties: { role: { type: 'STRING', enum: [...ROLES] }, type: { type: 'STRING', enum: [...ALL_TYPES, 'NONE'] }, color: { type: 'STRING', enum: [...COLORS, 'NONE'] }, tone: { type: 'STRING', enum: [...TONES] } }, required: ['role'] } },
   },
   required: ['reply', 'style', 'options'],
 }
@@ -77,7 +91,8 @@ function buildPrompt(ctx: StylistContext, history: ChatTurn[], text: string): st
     '규칙:',
     '- 사용자가 입고 싶은 분위기를 분명히 말했으면 style 에 그 값을 넣고 options 는 빈 배열로 둔다.',
     '- 아직 모르면 style 은 NONE, options 에 이 일정에 어울리는 선택지를 2~3개 넣는다. label 은 일정에 맞게 구체적으로 쓴다 (예: 면접이면 "포멀한 정장", "자유복장이면 단정한 비즈니스 캐주얼").',
-    '- 구체적인 옷 이름(예: 검정 셔츠)은 말하지 마라. 옷은 사용자의 옷장에서 앱이 고른다.',
+    '- 사용자가 색이나 밝기, 옷 종류를 말했으면(예: "상의는 어둡게 하의는 밝게", "검은 셔츠") pieces 에 자리(role: top 상의/bottom 하의/outer 겉옷)별로 담는다. 밝기는 tone(dark/light), 색은 color, 옷 종류는 type. 말하지 않은 항목은 NONE 이다. 정장을 원하면 suit=true.',
+    '- 구체적인 옷 이름(예: 검정 셔츠)을 reply 에서 말하지 마라. 옷은 사용자의 옷장에서 앱이 고르고, 없으면 예시로 보여준다.',
     '- 날씨 숫자는 위에 적힌 것만 말하고 새로 지어내지 마라.',
     `대화: ${JSON.stringify(history.slice(-6))}`,
     `사용자 말: ${JSON.stringify(text)}`,
@@ -92,7 +107,11 @@ export async function stylistReply(ctx: StylistContext, history: ChatTurn[], tex
     const seen = new Set<OutfitStyle>()
     const options = r.options.filter((o) => !seen.has(o.style) && !!seen.add(o.style))
     const style = r.style === 'NONE' ? direct : r.style
-    if (style) return { reply: r.reply, style, options: [] }
+    const wish: Wish | null = (r.pieces?.length || r.suit)
+      ? { suit: !!r.suit, pieces: (r.pieces ?? []).map((p) => ({ role: p.role, type: p.type && p.type !== 'NONE' ? p.type : undefined, color: p.color && p.color !== 'NONE' ? p.color : undefined, tone: p.color && p.color !== 'NONE' ? undefined : p.tone && p.tone !== 'NONE' ? p.tone : undefined })) }
+      : null
+    if (style) return { reply: r.reply, style, options: [], wish }
+    if (wish) return { reply: r.reply, style: null, options: [], wish }
     return { reply: r.reply, style: null, options: options.length >= 2 ? options : defaultOptions(ctx) }
   } catch (e) {
     // AI 꺼짐/실패: 키워드로 알아듣거나 기본 선택지로 되묻는다

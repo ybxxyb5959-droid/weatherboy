@@ -120,7 +120,7 @@ aiRouter.post(
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
     // "검정색 상의를 입고 싶어"처럼 원하는 옷을 말하면 옷장에 없어도 그 옷을 예시로 입혀 보여준다(AI 없이 규칙으로 알아듣는다)
-    const wish = !b.style && b.text ? parseWish(b.text) : null
+    let wish = !b.style && b.text ? parseWish(b.text) : null
     let reply = ''
     let style = b.style ?? null
     let options: StyleOption[] = []
@@ -131,6 +131,7 @@ aiRouter.post(
       reply = turn.reply
       style = turn.style
       options = turn.options
+      wish = turn.wish ?? null // 규칙으로 못 알아들은 말을 AI 가 원하는 옷으로 바꿔줬다면 그대로 쓴다
     }
     if (!style && !wish) return res.json({ reply, options, outfit: null })
     // 고른 분위기는 일정에 저장한다. 원하는 옷만 말했다면 느낌은 그대로 두고(저장하지 않고) 일정에 저장돼 있던 느낌으로 보여준다.
