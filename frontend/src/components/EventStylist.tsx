@@ -188,6 +188,21 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
           </div>
         )}
 
+        {(canConfirm || (style && !preview)) && (
+          <div className="stylist-options">
+            {canConfirm && (
+              <DoodleButton seed={4} selected disabled={busy} onClick={() => void confirm()}>
+                이걸로 할래요
+              </DoodleButton>
+            )}
+            {style && (
+              <button type="button" className="linklike tiny" disabled={busy} onClick={() => void clear()}>
+                날씨만 보고 고르기
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="stylist-say">
           <SayBox
             id="stylist-say"
@@ -205,21 +220,6 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
             submitOnVoice
           />
         </div>
-
-        {(canConfirm || (style && !preview)) && (
-          <div className="stylist-options">
-            {canConfirm && (
-              <DoodleButton seed={4} selected disabled={busy} onClick={() => void confirm()}>
-                이걸로 할래요
-              </DoodleButton>
-            )}
-            {style && (
-              <button type="button" className="linklike tiny" disabled={busy} onClick={() => void clear()}>
-                날씨만 보고 고르기
-              </button>
-            )}
-          </div>
-        )}
 
         {error && (
           <p className="tiny" role="alert">
