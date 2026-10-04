@@ -7,8 +7,10 @@ import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
 import { eventMood } from '../lib/eventMood'
 import StickPerson from '../components/StickPerson'
+import UmbrellaDoodle from '../components/UmbrellaDoodle'
 import { dDay, formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
+import { useState } from 'react'
 import { api, ApiError } from '../api'
 import { useAsync } from '../hooks'
 import { genericColor } from '../lib/genericColor'
@@ -113,14 +115,7 @@ function DayOutfits({ days }: { days: EventDayOutfit[] }) {
   )
 }
 
-function Umbrella({ size = 86 }: { size?: number }) {
-  return (
-    <svg className="doodle" width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" aria-label="우산" role="img">
-      <path d="M10 52 Q50 -10 90 52 Q80 45 70 52 Q60 45 50 52 Q40 45 30 52 Q20 45 10 52Z" fill="#cfe6e2" />
-      <path d="M50 52 V84 Q50 92 42 90" />
-    </svg>
-  )
-}
+const Umbrella = UmbrellaDoodle
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -136,6 +131,7 @@ function EventDetail({ id }: { id: string }) {
     throw e
   }))
   const e = ev.data
+  const [stylistOn, setStylistOn] = useState<boolean | null>(null) // 코디 도우미가 이 일정에 나오는가(모르면 null)
 
   if (ev.loading) return <main><p>불러오는 중…</p></main>
   if (!e) {
@@ -226,9 +222,7 @@ function EventDetail({ id }: { id: string }) {
 
       {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
-      {!waiting && days.length >= 2 && <DayOutfits days={days} />}
-
-      {(waiting || days.length < 2) && (
+      {stylistOn === false && (waiting || days.length < 2) && (
       <section className="section">
         <h2>{waiting ? '예보가 열리면 이렇게 보여드려요' : '이렇게 입어요'}</h2>
         <div className="box w3 outfit">
@@ -275,7 +269,9 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} items={stylistItems} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} fillItems={(its) => its.map((it) => (it.owned ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+
+      {!waiting && days.length >= 2 && <DayOutfits days={days} />}
     </main>
   )
 }

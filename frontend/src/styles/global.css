@@ -3714,6 +3714,34 @@ a.card {
 @media (prefers-reduced-motion: reduce) {
   .stylist-swap { animation: none; }
 }
+/* 졸라맨 아래로 코디 카드가 차례로 촤라락 떨어진다 */
+.look-wrap {
+  margin-top: 10px;
+}
+.look-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  padding: 12px;
+  overflow: hidden;
+}
+.look-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: look-drop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: calc(var(--i, 0) * 130ms);
+}
+@keyframes look-drop {
+  0% { opacity: 0; transform: translateY(-34px) rotate(-8deg) scale(0.8); }
+  70% { opacity: 1; transform: translateY(4px) rotate(2deg) scale(1.03); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .look-card { animation: none; }
+}
 .stylist-wear {
   display: flex;
   flex-wrap: wrap;

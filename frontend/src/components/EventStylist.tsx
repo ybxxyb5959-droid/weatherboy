@@ -3,10 +3,12 @@ import { api, errorMessage } from '../api'
 import { BASIC_WEAR, useCharacter } from '../lib/character'
 import { feel } from '../lib/styleText'
 import { categories } from '../mocks/clothes'
+import ClothingDoodle from './ClothingDoodle'
 import DoodleButton from './DoodleButton'
 import SayBox from './SayBox'
 import StickPerson from './StickPerson'
-import type { ApiOutfitItem } from '../types'
+import UmbrellaDoodle from './UmbrellaDoodle'
+import type { ApiOutfitItem, ApiRecommendation } from '../types'
 
 export type StyleId = 'FORMAL' | 'SMART' | 'CASUAL' | 'COMFORT'
 interface StyleOption {
@@ -19,51 +21,58 @@ interface Talk {
   /** false 면 이 일정에는 도우미를 보여주지 않는다(별 조건 없는 여행·등산 등) */
   applicable?: boolean
 }
-interface PreviewOutfit {
+/** 고른 분위기로 뽑은 코디 */
+interface Look {
   items: ApiOutfitItem[]
-  styleMatched: boolean
+  alternatives: ApiOutfitItem[][]
+  headline: string
+  sub: string
+  needUmbrella: boolean
+  needMask: boolean
 }
 interface StylistResponse extends Talk {
   style?: StyleId
-  outfit?: PreviewOutfit | null
-}
-/** 눌러본 분위기. outfit 이 null 이면 아직 예보가 없어서 옷은 못 보여주고 분위기만 정해 둔 상태 */
-interface Preview {
-  style: StyleId
-  outfit: PreviewOutfit | null
+  outfit?: Look | null
 }
 
 interface Props {
   eventId: string
-  /** 지금 일정에 보이는 코디(위의 "이렇게 입어요"). 캐릭터는 처음에 이걸 입고 있다 */
-  items: ApiOutfitItem[]
+  /** 일정에 지금 저장된 코디(분위기를 골랐거나 "날씨만 보고"일 때 보여준다). 예보가 없으면 null */
+  rec: ApiRecommendation | null
   /** 일정에 저장된 분위기와 그 이름. 없으면 날씨만 보고 고른 코디 */
   style: StyleId | null
   styleLabel: string | null
-  /** 미리보기에서 받은 옷을 화면용으로 다듬는다(옷장에 없는 옷의 일반 색 등) */
+  /** 이 일정의 코디 근거 한 줄들(어색한 점 등) */
+  notes?: string[]
+  /** 옷장에 없는 옷의 일반 색 등 화면용으로 다듬는다 */
   fillItems?: (items: ApiOutfitItem[]) => ApiOutfitItem[]
-  /** 분위기를 확정하거나 해제해서 일정 코디가 바뀌었을 때(위쪽을 다시 불러온다) */
+  /** 이 도우미가 화면에 나오는지 알린다(안 나오면 위쪽이 코디 카드를 대신 보여준다) */
+  onApplicable?: (on: boolean) => void
+  /** 분위기가 저장/해제되어 일정 코디가 바뀌었을 때(위쪽 데이터를 다시 불러온다) */
   onChanged: () => void
 }
 
 const itemsKey = (its: ApiOutfitItem[]) => its.map((i) => `${i.type}:${i.clothingId ?? i.label}`).join('|')
 
 /**
- * 일정 상세의 코디 도우미: 칩을 누르거나 직접 말하면 캐릭터가 그 느낌의 옷으로 갈아입어 보여준다(저장 전 미리보기).
- * "이걸로 할래요"를 눌러야 일정에 저장되고 위의 "이렇게 입어요"가 바뀐다. 옷은 Rule Engine 이 고르고 AI 는 말만 거든다.
+ * 일정 상세의 코디 도우미: 캐릭터가 "어떤 느낌으로 입을까요?" 하고 묻고, 칩을 누르거나 직접 말하면
+ * 갈아입은 모습과 함께 코디 카드가 졸라맨 아래로 차례로 펼쳐진다. 옷은 Rule Engine 이 고르고 AI 는 말만 거든다.
+ * 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산), 다른 조합은 저장하지 않고 구경만 한다.
  */
-export default function EventStylist({ eventId, items, style, styleLabel, fillItems, onChanged }: Props) {
+export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, onChanged }: Props) {
   const character = useCharacter().data
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말과 기본 칩
   const [talk, setTalk] = useState<Talk | null>(null)
-  const [preview, setPreview] = useState<Preview | null>(null)
+  const [chosen, setChosen] = useState<Look | null>(null) // 방금 고른 느낌의 코디
+  const [weatherOnly, setWeatherOnly] = useState(false)
+  const [altIdx, setAltIdx] = useState(0) // 0=추천, 1..=다른 조합(구경만)
   const touched = useRef(false) // 사용자가 직접 고르거나 바꾸기 시작했는가
   const [applicable, setApplicable] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [text, setText] = useState('')
 
-  const savedReply = style ? `${feel(styleLabel ?? '')}으로 골랐어요. 다른 느낌도 눌러서 입어볼 수 있어요.` : null
+  const savedReply = style ? `${feel(styleLabel ?? '')}으로 골라봤어요. 다른 느낌도 눌러볼 수 있어요.` : null
 
   // 처음 열면 캐릭터가 먼저 말을 건다. 이미 고른 분위기가 있으면 그걸 알려준다.
   useEffect(() => {
@@ -83,6 +92,11 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
+  const visible = applicable !== false || !!style
+  useEffect(() => {
+    if (applicable !== null) onApplicable?.(visible)
+  }, [applicable, visible, onApplicable])
+
   // 저장된 분위기는 일정 코디와 같이 늦게 도착할 수 있다: 아직 아무것도 건드리지 않았다면 그 상태로 말을 바꿔준다
   useEffect(() => {
     if (style && !touched.current && savedReply) setTalk({ reply: savedReply, options: [] })
@@ -95,29 +109,35 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
       setBusy(true)
       setError('')
       try {
-        const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, preview: true, history: lastReply ? [{ role: 'ai', text: lastReply }] : [], ...body })
+        const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, history: lastReply ? [{ role: 'ai', text: lastReply }] : [], ...body })
         setTalk({ reply: r.reply, options: r.options })
         setText('')
-        if (r.style) setPreview({ style: r.style, outfit: r.outfit ?? null })
+        if (r.style) {
+          setWeatherOnly(false)
+          setAltIdx(0)
+          setChosen(r.outfit ?? null)
+          onChanged() // 느낌이 저장됐다: 일정 데이터를 다시 불러온다
+        }
       } catch (e) {
         setError(errorMessage(e))
       } finally {
         setBusy(false)
       }
     },
-    [eventId],
+    [eventId, onChanged],
   )
 
-  // 미리보기로 본 느낌을 일정에 저장한다: 위의 코디가 이걸로 바뀐다
-  const confirm = async () => {
-    if (!preview) return
+  // "날씨만 보고": 저장된 느낌이 있으면 풀고, 날씨와 옷장만으로 고른 코디를 보여준다
+  const pickWeatherOnly = async () => {
     touched.current = true
     setBusy(true)
     setError('')
     try {
-      const r = await api<StylistResponse>('POST', '/api/ai/event-stylist', { eventId, style: preview.style })
-      setTalk({ reply: `${r.reply}`, options: [] })
-      setPreview(null)
+      if (style) await api('DELETE', `/api/ai/event-stylist/${eventId}`)
+      setChosen(null)
+      setWeatherOnly(true)
+      setAltIdx(0)
+      setTalk({ reply: '날씨와 내 옷장만 보고 골라봤어요.', options: [] })
       onChanged()
     } catch (e) {
       setError(errorMessage(e))
@@ -126,34 +146,21 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
     }
   }
 
-  const clear = async () => {
-    touched.current = true
-    setBusy(true)
-    setError('')
-    try {
-      await api('DELETE', `/api/ai/event-stylist/${eventId}`)
-      setTalk(opening)
-      setPreview(null)
-      onChanged()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const shown = preview?.outfit ? (fillItems ? fillItems(preview.outfit.items) : preview.outfit.items) : items
+  // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디
+  const base: Look | null =
+    chosen ?? (rec && (style || weatherOnly) ? { items: rec.items, alternatives: rec.alternatives ?? [], headline: rec.headline, sub: rec.sub, needUmbrella: rec.needUmbrella, needMask: rec.needMask } : null)
+  const combos = base ? [base.items, ...base.alternatives] : []
+  const idx = base ? altIdx % combos.length : 0
+  const rawItems = base ? combos[idx]! : (rec?.items ?? [])
+  const shown = fillItems ? fillItems(rawItems) : rawItems
   const pick = (types: string[]) => shown.find((it) => types.includes(it.type))
   const wear = shown.length > 0 ? { top: pick(categories[0]!.types), bottom: pick(categories[1]!.types), outer: pick(categories[2]!.types) } : BASIC_WEAR
 
   // 별 조건 없는 여행·등산 같은 일정은 날씨 엔진이 이미 반영하므로 보여주지 않는다(이미 분위기를 골라 둔 일정은 바꿀 수 있게 계속 보여준다)
-  if (applicable === false && !style) return null
+  if (!visible) return null
 
-  // 칩: 말로 되물어 온 선택지가 있으면 그걸, 없으면 처음 칩 중 2개
   const chips = ((talk?.options.length ? talk.options : opening?.options) ?? []).slice(0, 2)
-  const activeStyle = preview?.style ?? style
-  const sameAsTop = !!preview?.outfit && items.length > 0 && itemsKey(preview.outfit.items) === itemsKey(items)
-  const canConfirm = !!preview && preview.style !== style
+  const comboKey = `${idx}:${itemsKey(shown)}`
 
   return (
     <>
@@ -161,47 +168,27 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
       <section className="section stylist">
         <div className="stylist-talk">
           <div className="stylist-figure">
-            <div key={itemsKey(shown)} className="stylist-swap">
+            <div key={comboKey} className="stylist-swap">
               <StickPerson mood="stand" size={104} wear={wear} persona={null} accessories={character?.unlocked ? character.config : undefined} />
             </div>
           </div>
           <div className="box w2 stylist-bubble" role="status" aria-live="polite">
             <p>{busy ? '잠깐만요, 옷장을 뒤져볼게요…' : (talk?.reply ?? '…')}</p>
-            {!busy && preview?.outfit && (
-              <ul className="stylist-wear tiny" aria-label="이 느낌으로 입으면">
-                {shown.map((it) => (
-                  <li key={`${it.type}-${it.clothingId ?? it.label}`}>{it.label}</li>
-                ))}
-              </ul>
-            )}
-            {!busy && sameAsTop && <p className="tiny">지금 위에 있는 코디와 같은 옷이에요.</p>}
           </div>
         </div>
 
-        {chips.length > 0 && (
-          <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
-            {chips.map((o, i) => (
-              <DoodleButton key={o.style} seed={i} selected={activeStyle === o.style} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>
-                {o.label}
-              </DoodleButton>
-            ))}
-          </div>
-        )}
-
-        {(canConfirm || (style && !preview)) && (
-          <div className="stylist-options">
-            {canConfirm && (
-              <DoodleButton seed={4} selected disabled={busy} onClick={() => void confirm()}>
-                이걸로 할래요
-              </DoodleButton>
-            )}
-            {style && (
-              <button type="button" className="linklike tiny" disabled={busy} onClick={() => void clear()}>
-                날씨만 보고 고르기
-              </button>
-            )}
-          </div>
-        )}
+        <div className="stylist-options" role="group" aria-label="입고 싶은 느낌">
+          {chips.map((o, i) => (
+            <DoodleButton key={o.style} seed={i} selected={style === o.style} disabled={busy} onClick={() => void ask({ style: o.style }, talk?.reply)}>
+              {o.label}
+            </DoodleButton>
+          ))}
+          {rec && (
+            <DoodleButton seed={chips.length} selected={weatherOnly && !style} disabled={busy} onClick={() => void pickWeatherOnly()}>
+              날씨만 보고
+            </DoodleButton>
+          )}
+        </div>
 
         <div className="stylist-say">
           <SayBox
@@ -225,6 +212,41 @@ export default function EventStylist({ eventId, items, style, styleLabel, fillIt
           <p className="tiny" role="alert">
             {error}
           </p>
+        )}
+
+        {base && !busy && (
+          <div className="look-wrap" aria-live="polite">
+            <div key={comboKey} className="box w3 look-cards">
+              {shown.map((it, i) => (
+                <div key={`${it.type}-${it.clothingId ?? it.label}`} className="look-card" style={{ ['--i' as string]: i }}>
+                  <ClothingDoodle type={it.type} color={it.color} pattern={it.pattern} size={64} />
+                  <div className="tiny">{it.label}</div>
+                </div>
+              ))}
+              {base.needUmbrella && (
+                <div className="look-card" style={{ ['--i' as string]: shown.length }}>
+                  <UmbrellaDoodle size={64} />
+                  <div className="tiny">우산</div>
+                </div>
+              )}
+            </div>
+            <p className="tiny">
+              {idx === 0 ? `${base.headline} · ${base.sub}` : '구경용 다른 조합이에요. 저장되지 않아요.'}
+              {base.needMask ? ' · 마스크도 챙겨요' : ''}
+            </p>
+            {notes.map((n) => (
+              <p key={n} className="tiny">
+                {n}
+              </p>
+            ))}
+            {combos.length > 1 && (
+              <div className="stylist-options">
+                <DoodleButton seed={3} className="small" onClick={() => setAltIdx((n) => (n + 1) % combos.length)}>
+                  다른 조합 보기 ({idx + 1}/{combos.length})
+                </DoodleButton>
+              </div>
+            )}
+          </div>
         )}
       </section>
     </>
