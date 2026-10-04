@@ -3702,6 +3702,17 @@ a.card {
   gap: 8px;
   margin: 8px 0;
 }
+/* 칩과 졸라맨 말풍선은 홈 화면과 같은 Poor Story 손글씨체 */
+.stylist-options .dbtn,
+.stylist-bubble,
+.stylist-bubble p,
+.stylist-say .dbtn,
+.look-wrap .dbtn {
+  font-family: 'Poor Story', var(--font);
+  font-weight: 400;
+  -webkit-text-stroke: 0.5px var(--ink);
+}
+
 /* 옷이 바뀌면 캐릭터가 살짝 튀어 올랐다 내려오며 새 옷을 보여준다 */
 .stylist-swap {
   animation: stylist-pop 0.45s ease-out;
