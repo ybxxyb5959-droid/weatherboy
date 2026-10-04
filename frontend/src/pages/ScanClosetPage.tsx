@@ -81,13 +81,15 @@ export default function ScanClosetPage() {
     if (saving || chosen.length === 0) return
     setSaving(true)
     setError('')
+    const ids: string[] = []
     try {
       for (const it of chosen) {
         // 두께·방풍·방수는 보내지 않는다. 서버가 옷 종류로 정한다.
-        await api('POST', '/api/clothes', { type: it.type, color: it.color, pattern: it.pattern })
+        const row = await api<{ id: string }>('POST', '/api/clothes', { type: it.type, color: it.color, pattern: it.pattern })
+        ids.push(row.id)
         setItems((prev) => prev.filter((x) => x.key !== it.key)) // 등록한 건 목록에서 지운다 (중간에 실패해도 중복 등록 방지)
       }
-      nav('/wardrobe')
+      nav('/wardrobe', { state: { hung: ids } }) // 저장한 옷이 빨랫줄에 걸리는 모습을 보여준다
     } catch (e) {
       setError(errorMessage(e))
       setSaving(false)

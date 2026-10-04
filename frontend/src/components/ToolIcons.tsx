@@ -46,3 +46,12 @@ export function LockIcon({ size = 22 }: { size?: number }) {
     </svg>
   )
 }
+
+/** 닫기: 손으로 쓱쓱 그은 X */
+export function CloseIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} {...common} aria-hidden="true">
+      <path d="M7 7.4 Q16 16 25 25.2 M25.2 7 Q15.8 16.4 6.8 25" strokeWidth="2.8" />
+    </svg>
+  )
+}

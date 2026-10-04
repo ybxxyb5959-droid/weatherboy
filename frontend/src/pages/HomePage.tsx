@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import StickPerson from '../components/StickPerson'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
+import AddClothesSheet from '../components/AddClothesSheet'
 import { blockLabels, useHomeLayout, type BlockId } from '../lib/homeLayout'
 import CommuteLine from '../components/CommuteLine'
 import GearDoodles, { type GearKind } from '../components/GearDoodles'
@@ -374,9 +375,7 @@ export default function HomePage() {
             <br />
             내 옷을 등록하면 진짜 내 옷으로 코디해 드려요.
           </p>
-          <Link to="/wardrobe/add" className="dbtn w1 small">
-            + 옷 등록하러 가기
-          </Link>
+          <AddClothesSheet />
         </div>
       </section>
     ) : !rec ? (

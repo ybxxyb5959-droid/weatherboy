@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import AddClothesSheet from '../components/AddClothesSheet'
 import StickPerson from '../components/StickPerson'
 import { ShareIcon } from '../components/icons'
 import { LockIcon } from '../components/ToolIcons'
@@ -115,9 +115,7 @@ export default function CharacterPage() {
             </span>
             <span />
           </div>
-          <Link to="/wardrobe/add" className="dbtn w1 block">
-            + 옷 등록하러 가기
-          </Link>
+          <AddClothesSheet className="dbtn w1 block" />
         </div>
 
         <hr className="scribble" />

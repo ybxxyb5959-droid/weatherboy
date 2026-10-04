@@ -109,6 +109,18 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 옷 등록 진입을 아래 시트로, 사진 스캔 저장 후 빨랫줄 애니메이션 (작성: Claude Code)
+- 수정 목적: "옷 등록하러 가기"를 누르면 아래에서 시트가 올라와 옷장 사진 / 한 벌씩을 고르게 함. 사진 스캔으로 저장한 뒤 옷이 빨랫줄에 걸리는 애니메이션이 안 나오던 문제 수정.
+- 변경 파일:
+  - `frontend/src/components/AddClothesSheet.tsx` — 신규(포털로 body 에 그림: 회전된 .box 안에서는 fixed 가 어긋남)
+  - `frontend/src/pages/HomePage.tsx`, `CharacterPage.tsx` — 링크를 시트 버튼으로 교체
+  - `frontend/src/pages/ScanClosetPage.tsx` — 저장한 옷 id 를 /wardrobe 로 state.hung 으로 전달(원인: state 없이 이동)
+  - `frontend/src/styles/global.css` — .sheet-back/.sheet
+- 프론트 연결 사항: 없음
+- 검증 결과: frontend tsc/build 통과. 모바일 크기 브라우저에서 시트 표시·이동 확인. 스캔 저장 후 애니메이션은 AI 호출이 필요해 실제로 못 돌려 봄(코드상 한 벌씩 추가와 같은 경로).
+- 남은 일 / 상대에게 요청: 커밋 안 함. 빈 옷장일 때 옷장 탭 화면은 기존대로 두 버튼이 바로 보임.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 웹푸시 켜기 (작성: Claude Code)
 - 수정 목적: 베타 알림 테스트. VAPID 3개 환경변수는 사용자가 Render 에 입력함.
 - 변경 파일:
