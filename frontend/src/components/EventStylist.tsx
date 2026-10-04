@@ -53,6 +53,8 @@ interface Props {
   fillItems?: (items: ApiOutfitItem[]) => ApiOutfitItem[]
   /** 이 도우미가 화면에 나오는지 알린다(안 나오면 위쪽이 코디 카드를 대신 보여준다) */
   onApplicable?: (on: boolean) => void
+  /** 위에 구분 줄을 그릴지(위에 날씨 섹션이 없어서 이미 줄이 있으면 false: 줄이 두 줄로 겹치지 않게). 기본 true */
+  topRule?: boolean
   /** 며칠짜리 일정: 코디는 날짜별 카드(아래쪽)가 보여주므로 여기서는 카드를 펼치지 않고 캐릭터만 갈아입는다 */
   multiDay?: boolean
   /** 분위기가 저장/해제되어 일정 코디가 바뀌었을 때(위쪽 데이터를 다시 불러온다) */
@@ -69,7 +71,7 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
  * 옷은 Rule Engine 이 고르고 AI 는 말만 거든다. 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산),
  * 다른 조합은 저장하지 않고 구경만 한다.
  */
-export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, multiDay = false, onChanged }: Props) {
+export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, topRule = true, multiDay = false, onChanged }: Props) {
   const character = useCharacter().data
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말과 기본 칩
   const [talk, setTalk] = useState<Talk | null>(null)
@@ -205,7 +207,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
 
   return (
     <>
-      <hr className="scribble" />
+      {topRule && <hr className="scribble" />}
       <section className="section stylist">
         <div ref={rowRef} className="stylist-talk" data-phase={phase} style={{ ['--run' as string]: `${runPx}px` }}>
           <div className="stylist-figure">

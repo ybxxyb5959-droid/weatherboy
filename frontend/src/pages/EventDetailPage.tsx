@@ -74,7 +74,7 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
                 ))}
               </div>
             ) : (
-              <p className="tiny">아직 먼 날짜라 하루 최저·최고만 알 수 있어요.</p>
+              <p className="tiny">변동될 수 있어요.</p>
             )}
           </div>
         ))}
@@ -277,7 +277,7 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
 
       {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} />}
     </main>
