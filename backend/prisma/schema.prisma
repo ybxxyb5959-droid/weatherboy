@@ -306,6 +306,8 @@ model Event {
 
   // 코디 도우미에서 고른 분위기. 일정 추천이 보온 조건을 만족하는 조합 중 이 분위기에 가까운 옷을 고른다
   outfitStyle           EventOutfitStyle?
+  // 며칠짜리 일정에서 말로 정한 원하는 옷(색/톤/종류, 겉옷 없이 등). 날짜별 코디가 날마다 다르게 이 조건을 따른다. 없으면 null
+  outfitWish            Json?
   forecastStage         ForecastStage @default(WAITING)
   recommendationVersion Int           @default(0)
   lastDecisionKey       String?

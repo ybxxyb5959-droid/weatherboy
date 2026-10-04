@@ -2,7 +2,7 @@ import type { Clothing, Event, Prisma, Recommendation, User } from '@prisma/clie
 import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
-import type { EngineWish } from '../rules/outfitWish.js'
+import { applySuit, applyWish, savedWish, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
 import { aiEnabled, explain } from './ai/explain.js'
@@ -194,14 +194,17 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
   }
   if (byDay.size < 2) return []
   const used: string[] = []
-  return [...byDay.entries()].map(([date, points]) => {
+  const wish = savedWish(event.outfitWish) // 말로 정한 원하는 옷("3일 모두 검정옷"): 날마다 이 조건을 따르되 옷은 겹치지 않게
+  const style = event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined
+  return [...byDay.entries()].map(([date, points], dayIndex) => {
     const r = recommend({
       points,
       sensitivity: user.sensitivity,
       feedbackOffset: user.feedbackOffset,
       feedbackBands: bandsOf(user),
       eventKind: event.kind,
-      style: event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined,
+      style,
+      wish: wish ? toEngineWish(wish) : undefined,
       situation: situationOf(event.title) ?? undefined,
       clothes: c.wardrobe,
       airGrade: c.airGrade,
@@ -211,7 +214,10 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
       avoidIds: used,
     })
     for (const it of r.items) if (it.clothingId) used.push(it.clothingId)
-    return { date, items: r.items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes: r.comboWhy[0]?.notes ?? [] }
+    let items = r.items
+    if (style === 'FORMAL') items = applySuit(items).items // 정장이면 날마다 정장 세트(없는 부분은 예시)
+    if (wish) items = applyWish(items, wish, dayIndex).items
+    return { date, items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes: r.comboWhy[0]?.notes ?? [] }
   })
 }
 

@@ -34,6 +34,8 @@ interface Look {
 interface StylistResponse extends Talk {
   style?: StyleId
   outfit?: Look | null
+  /** 원하는 옷이 일정에 저장돼 날짜별 코디가 바뀌었다(연박 일정) */
+  changed?: boolean
 }
 /** 갈아입는 연출 단계: 옷장으로 달려가기 → 뒤적이기 → 옷장 뒤에서 갈아입기 → 돌아오기 */
 export type StagePhase = 'idle' | 'run' | 'dig' | 'change' | 'back'
@@ -172,7 +174,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
         setAltIdx(0)
         setChosen(r.outfit ?? null)
       }
-      if (r.style) changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
+      if (r.style || r.changed) changedRef.current = true // 느낌이 저장됐다: 연출이 끝나면 일정 데이터를 다시 불러온다
     })
 
   // 지금 보여줄 코디: 방금 고른 것 > 저장돼 있거나 "날씨만 보고"를 고른 일정 코디

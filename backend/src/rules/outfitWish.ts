@@ -134,8 +134,8 @@ export function parseWish(text: string): Wish | null {
   // "겉옷 없이", "자켓 빼고", "코트는 안 입고": 겉옷을 원하지 않는다는 말(겉옷 낱말이 있어도 원하는 옷이 아니다)
   const noOuter = /(겉옷|외투|자켓|재킷|가디건|코트|패딩|점퍼|바람막이)\s*(은|는|도)?\s*(없이|빼고|말고|안\s*입|필요\s*없|싫)/.test(t)
   if (noOuter) for (let i = pieces.length - 1; i >= 0; i--) if (pieces[i]!.role === 'outer') pieces.splice(i, 1)
-  // 옷 낱말 없이 색만 말했다면 상의의 색으로 본다("검정색으로 입고 싶어")
-  if (pieces.length === 0 && !suit && !noOuter && orphanColors.length > 0) pieces.push({ role: 'top', color: orphanColors[0] })
+  // 옷 낱말 없이 색만 말했다면("검정옷으로", "올블랙") 상의와 하의를 모두 그 색으로 본다
+  if (pieces.length === 0 && !suit && !noOuter && orphanColors.length > 0) pieces.push({ role: 'top', color: orphanColors[0] }, { role: 'bottom', color: orphanColors[0] })
   // 옷 낱말 없이 톤만 말했다면("전체적으로 어둡게") 상의와 하의에 같은 톤을 준다
   else if (pieces.length === 0 && !suit && !noOuter && orphanTones.length > 0) pieces.push({ role: 'top', tone: orphanTones[0] }, { role: 'bottom', tone: orphanTones[0] })
   if (pieces.length === 0 && !suit && !noOuter) return null
@@ -197,8 +197,18 @@ function satisfies(item: OutfitItem | null, p: WishPiece): boolean {
   return true
 }
 
-/** 원하는 옷을 코디에 반영한다. 옷장에서 고른 옷이 이미 조건에 맞으면 그대로 두고, 안 맞는 자리만 예시로 바꾼다. */
-export function applyWish(items: OutfitItem[], wish: Wish): { items: OutfitItem[]; applied: string[] } {
+// 보온이 비슷한 옷끼리 묶음: 며칠짜리 일정에서 예시 옷이 날마다 다른 종류가 되도록 돌려 고른다
+const SIMILAR_GROUPS = [['맨투맨', '후드티', '니트'], ['긴팔', '셔츠'], ['반팔', '반팔셔츠'], ['가디건', '자켓'], ['코트', '패딩']]
+const rotateType = (type: string, variant: number): string => {
+  const g = SIMILAR_GROUPS.find((grp) => grp.includes(type))
+  return g ? g[variant % g.length]! : type
+}
+
+/**
+ * 원하는 옷을 코디에 반영한다. 옷장에서 고른 옷이 이미 조건에 맞으면 그대로 두고, 안 맞는 자리만 예시로 바꾼다.
+ * variant(며칠짜리 일정의 몇째 날)가 있으면, 종류를 말하지 않은 예시 옷은 날마다 비슷한 보온의 다른 종류로 바뀐다.
+ */
+export function applyWish(items: OutfitItem[], wish: Wish, variant?: number): { items: OutfitItem[]; applied: string[] } {
   let out = [...items]
   const applied: string[] = []
   if (wish.noOuter) out = out.filter((it) => roleOf(it.type) !== 'outer') // 겉옷 없이: 날씨 때문에 골랐어도 입히지 않는다
@@ -211,7 +221,7 @@ export function applyWish(items: OutfitItem[], wish: Wish): { items: OutfitItem[
     const i = out.findIndex((it) => roleOf(it.type) === p.role)
     const base = i >= 0 ? out[i]! : null
     if (satisfies(base, p)) continue // 옷장에서 이미 맞는 옷을 골랐다
-    const type = p.type ?? base?.type ?? DEFAULT_TYPE[p.role]
+    const type = p.type ?? (base ? (variant === undefined ? base.type : rotateType(base.type, variant)) : DEFAULT_TYPE[p.role])
     const color = p.color ?? (p.tone ? TONE_DEFAULT[p.tone][p.role] : (base?.color ?? '검정'))
     const item = example(type, color)
     if (i >= 0) out[i] = item
@@ -279,4 +289,29 @@ export function wishFit(w: EngineWish, c: { top: { type: string; color: string }
   const outerHarmony = !w.outer && c.outer && topColorWished(w) ? (NEUTRAL_DB.has(c.outer.color) ? 3 : -3) : 0
   const noOuterFit = w.noOuter ? (c.outer ? -6 : 3) : 0
   return pieceFit(w.top, c.top) + pieceFit(w.bottom, c.bottom) + pieceFit(w.outer, c.outer) + outerHarmony + noOuterFit
+}
+
+const ROLE_SET = new Set<string>(['top', 'bottom', 'outer'])
+const ALL_TYPE_SET = new Set<string>([...TOP_TYPES, ...BOTTOM_TYPES, ...OUTER_TYPES])
+const COLOR_NAME_SET = new Set<string>(COLOR_WORDS.map(([, name]) => name))
+
+/** DB 에 저장된 값을 믿지 않고 다시 검사해서 Wish 로 돌려준다(모양이 다르면 null) */
+export function savedWish(json: unknown): Wish | null {
+  if (!json || typeof json !== 'object') return null
+  const j = json as { suit?: unknown; noOuter?: unknown; pieces?: unknown }
+  if (!Array.isArray(j.pieces)) return null
+  const pieces: WishPiece[] = []
+  for (const p of j.pieces.slice(0, 3)) {
+    if (!p || typeof p !== 'object') continue
+    const q = p as { role?: unknown; type?: unknown; color?: unknown; tone?: unknown }
+    if (typeof q.role !== 'string' || !ROLE_SET.has(q.role)) continue
+    pieces.push({
+      role: q.role as Role,
+      type: typeof q.type === 'string' && ALL_TYPE_SET.has(q.type) ? q.type : undefined,
+      color: typeof q.color === 'string' && COLOR_NAME_SET.has(q.color) ? q.color : undefined,
+      tone: q.tone === 'dark' || q.tone === 'light' ? q.tone : undefined,
+    })
+  }
+  const wish: Wish = { suit: j.suit === true, noOuter: j.noOuter === true || undefined, pieces }
+  return wish.suit || wish.noOuter || pieces.length ? wish : null
 }

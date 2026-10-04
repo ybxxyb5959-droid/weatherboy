@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OutfitItem } from '../../src/rules/outfitEngine.js'
-import { applySuit, applyWish, parseWish } from '../../src/rules/outfitWish.js'
+import { applySuit, applyWish, parseWish, savedWish } from '../../src/rules/outfitWish.js'
 
 const own = (type: string, color: string): OutfitItem => ({ clothingId: `id-${type}`, type, color, pattern: '무지', label: `${color} ${type}`, owned: true })
 
@@ -20,8 +20,11 @@ describe('parseWish: 말에서 원하는 옷 찾기', () => {
     expect(parseWish('남색 자켓')!.pieces[0]).toMatchObject({ role: 'outer', type: '자켓', color: '네이비' })
     expect(parseWish('하늘색 셔츠')!.pieces[0]).toMatchObject({ role: 'top', color: '하늘색' })
   })
-  it('옷 낱말 없이 색만 말하면 상의의 색', () => {
-    expect(parseWish('검정색으로 입고 싶어')).toEqual({ suit: false, pieces: [{ role: 'top', color: '검정' }] })
+  it('옷 낱말 없이 색만 말하면("검정옷", "올블랙") 상의와 하의 모두 그 색', () => {
+    for (const text of ['검정색으로 입고 싶어', '3일 모두 검정옷을 입고싶어', '올블랙으로 입을래']) {
+      const w = parseWish(text)!
+      expect(w.pieces.map((p) => `${p.role}:${p.color}`).sort()).toEqual(['bottom:검정', 'top:검정'])
+    }
   })
   it('정장은 정장 세트', () => expect(parseWish('검정 정장 입을래')?.suit).toBe(true))
   it('모르는 말이면 null', () => {
@@ -146,5 +149,26 @@ describe('정장 바지는 청바지처럼 보이는 바지를 쓰지 않는다'
       const pants = own('바지', color)
       expect(applySuit([own('셔츠', '흰색'), pants, own('자켓', '검정')]).items[1]).toBe(pants)
     }
+  })
+})
+
+describe('연박: 날짜마다 다른 예시 옷(variant)', () => {
+  const wish = parseWish('3일 모두 검정옷을 입고싶어. 하지만 옷은 달라야해')!
+  it('같은 후드티 바탕이어도 날마다 보온이 비슷한 다른 종류로 바뀐다', () => {
+    const types = [0, 1, 2].map((day) => applyWish([own('후드티', '초록'), own('바지', '파랑')], wish, day).items[0]!.type)
+    expect(new Set(types).size).toBe(3)
+    expect(types.every((tp) => ['맨투맨', '후드티', '니트'].includes(tp))).toBe(true)
+  })
+  it('variant 를 안 주면(하루짜리) 종류는 그대로', () => {
+    expect(applyWish([own('후드티', '초록'), own('바지', '파랑')], wish).items[0]).toMatchObject({ type: '후드티', color: '검정', example: true })
+  })
+})
+
+describe('savedWish: 저장된 값을 믿지 않고 다시 검사한다', () => {
+  it('정상 값은 그대로, 이상한 값은 걸러낸다', () => {
+    expect(savedWish({ suit: false, pieces: [{ role: 'top', color: '검정' }] })).toEqual({ suit: false, noOuter: undefined, pieces: [{ role: 'top', type: undefined, color: '검정', tone: undefined }] })
+    expect(savedWish({ pieces: [{ role: 'head', color: '무지개' }] })).toBeNull()
+    expect(savedWish(null)).toBeNull()
+    expect(savedWish('x')).toBeNull()
   })
 })

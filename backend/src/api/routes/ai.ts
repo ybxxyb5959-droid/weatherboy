@@ -10,6 +10,7 @@ import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
 import { stylistApplicable } from '../../rules/outfitStyle.js'
 import { defaultOptions, detectStyle, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
 import { parseWish } from '../../rules/outfitWish.js'
+import { Prisma } from '@prisma/client'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
 import { badRequest, notFound } from '../../utils/errors.js'
@@ -120,11 +121,16 @@ aiRouter.post(
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
     // "검정색 상의를 입고 싶어"처럼 원하는 옷을 말하면 옷장에 없어도 그 옷을 예시로 입혀 보여준다(AI 없이 규칙으로 알아듣는다)
-    let wish = !b.style && b.text ? parseWish(b.text) : null
+    const multiDay = kstDate(event.startAt) !== kstDate(event.endAt)
+    // "원래대로"처럼 원하는 옷을 되돌리는 말: 저장해 둔 원하는 옷을 지우고 기본 코디로 돌아간다
+    const clearing = !b.style && !!b.text && /원래대로|처음으로|초기화|취소/.test(b.text)
+    let wish = !b.style && b.text && !clearing ? parseWish(b.text) : null
     let reply = ''
     let style = b.style ?? null
     let options: StyleOption[] = []
-    if (!style && wish) {
+    if (clearing) {
+      // 위에서 처리
+    } else if (!style && wish) {
       style = detectStyle(b.text!) // "검정 정장"처럼 느낌까지 말했으면 그 느낌도 같이
     } else if (!style) {
       const turn = await stylistReply(await stylistContext(user, event), b.history, b.text!)
@@ -133,7 +139,13 @@ aiRouter.post(
       options = turn.options
       wish = turn.wish ?? null // 규칙으로 못 알아들은 말을 AI 가 원하는 옷으로 바꿔줬다면 그대로 쓴다
     }
-    if (!style && !wish) return res.json({ reply, options, outfit: null })
+    if (!style && !wish && !clearing) return res.json({ reply, options, outfit: null })
+    // 며칠짜리 일정은 원하는 옷을 일정에 저장해서 날짜별 코디가 날마다 이 조건을 따르게 한다. 하루짜리는 저장하지 않고 입혀서 보여주기만 한다.
+    let wishChanged = false
+    if (multiDay && (wish || clearing)) {
+      await prisma.event.update({ where: { id: event.id }, data: { outfitWish: clearing ? Prisma.DbNull : (wish as unknown as Prisma.InputJsonValue) } })
+      wishChanged = true
+    }
     // 고른 분위기는 일정에 저장한다. 원하는 옷만 말했다면 느낌은 그대로 두고(저장하지 않고) 일정에 저장돼 있던 느낌으로 보여준다.
     const saved = b.preview || !style ? event : await setEventStyle(user, event, style)
     const outfit = await stylistOutfit(user, saved, style ?? event.outfitStyle ?? null, wish)
@@ -144,13 +156,15 @@ aiRouter.post(
     const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
     const sample = outfit.examples.length ? `옷장에 없는 ${outfit.examples.map((l) => l.replace(/\(예시\)/, '').trim()).join(', ')}은 예시로 입혀봤어요.` : ''
     let lead: string
-    if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
+    if (clearing) lead = '원하는 옷은 지우고 원래 코디로 돌아왔어요.'
+    else if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
     else if (sample) lead = `${reply || `${styleLabel[style!]} 스타일로 입혀봤어요.`} ${sample}`
     // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다
     else lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style!]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style!]} 스타일로 골라보고 싶었지만, ${lack}`
     // 옷이 부족하면 무엇이 있으면 좋은지, 피하지 못한 어색한 점이 있으면 솔직하게 알린다
-    const extra = [outfit.warn, !outfit.styleMatched ? outfit.gap : null, ...outfit.tabooReasons.slice(0, 2)].filter((t): t is string => !!t)
-    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style: style ?? undefined })
+    const multiNote = multiDay && wish ? '연박 일정은 날짜마다 다른 옷으로 맞춰서 보여드려요.' : null
+    const extra = [multiNote, outfit.warn, !outfit.styleMatched ? outfit.gap : null, ...outfit.tabooReasons.slice(0, 2)].filter((t): t is string => !!t)
+    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style: style ?? undefined, changed: wishChanged || undefined })
   }),
 )
 

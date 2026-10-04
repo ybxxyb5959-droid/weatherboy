@@ -92,7 +92,7 @@ function DayOutfits({ days }: { days: EventDayOutfit[] }) {
             <div className="day-pieces">
               {d.items.map((it) => (
                 <div key={`${it.type}-${it.clothingId ?? it.label}`} className="piece">
-                  <ClothingDoodle type={it.type} color={it.owned ? it.color : genericColor(it.type, d.date)} pattern={it.pattern} size={58} />
+                  <ClothingDoodle type={it.type} color={it.owned || it.example ? it.color : genericColor(it.type, d.date)} pattern={it.pattern} size={58} />
                   <div className="tiny">{it.label}</div>
                 </div>
               ))}
