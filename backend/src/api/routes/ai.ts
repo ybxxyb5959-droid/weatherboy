@@ -9,7 +9,7 @@ import { prisma } from '../../db.js'
 import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
 import { stylistApplicable } from '../../rules/outfitStyle.js'
 import { defaultOptions, detectStyle, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
-import { parseWish } from '../../rules/outfitWish.js'
+import { exampleNote, parseWish } from '../../rules/outfitWish.js'
 import { Prisma } from '@prisma/client'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
@@ -154,7 +154,7 @@ aiRouter.post(
       return res.json({ reply: style ? `${styleLabel[style]} 느낌으로 기억해 둘게요. ${noForecast}` : `말씀하신 옷은 기억해 두기 어려워요. ${noForecast}`, options: [], outfit: null, style: style ?? undefined })
     }
     const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
-    const sample = outfit.examples.length ? `옷장에 없는 ${outfit.examples.map((l) => l.replace(/\(예시\)/, '').trim()).join(', ')}은 예시로 입혀봤어요.` : ''
+    const sample = exampleNote(outfit.examples)
     let lead: string
     if (clearing) lead = '원하는 옷은 지우고 원래 코디로 돌아왔어요.'
     else if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'

@@ -7,6 +7,7 @@ import { NOT_WINDPROOF_OUTER, deriveClothing } from './clothing.js'
 import { colorIssueOf, colorIssueTip, comboColorScore, type ColorIssue } from './colorHarmony.js'
 import { comboStyleScore, comboTaboo, type OutfitStyle, type Situation } from './outfitStyle.js'
 import { wishFit, type EngineWish } from './outfitWish.js'
+import { josa } from '../utils/josa.js'
 
 export type PrecipType = 'none' | 'rain' | 'snow' | 'sleet' | 'shower'
 
@@ -434,12 +435,6 @@ interface WhyContext {
   situation?: Situation
 }
 
-/** 받침이 있으면 a, 없으면 b (예: 을/를). 한글이 아니면 b */
-function josa(word: string, a: string, b: string): string {
-  const code = word.charCodeAt(word.length - 1) - 0xac00
-  if (code < 0 || code > 11171) return b
-  return code % 28 === 0 ? b : a
-}
 const nameOf = (c: WardrobeItem) => itemOf(c).label
 
 /** 이 조합을 고른 이유: 보온이 얼마나 맞는지, 겉옷이 무슨 역할인지, 옷 두께, 새로 담은 옷. 날씨 이유(reasons)와 겹치지 않게 옷 얘기만 한다. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OutfitItem } from '../../src/rules/outfitEngine.js'
-import { applySuit, applyWish, parseWish, savedWish } from '../../src/rules/outfitWish.js'
+import { applySuit, applyWish, exampleNote, parseWish, savedWish } from '../../src/rules/outfitWish.js'
 
 const own = (type: string, color: string): OutfitItem => ({ clothingId: `id-${type}`, type, color, pattern: '무지', label: `${color} ${type}`, owned: true })
 
@@ -171,4 +171,14 @@ describe('savedWish: 저장된 값을 믿지 않고 다시 검사한다', () => 
     expect(savedWish(null)).toBeNull()
     expect(savedWish('x')).toBeNull()
   })
+})
+
+describe('exampleNote: 예시 옷 안내 문장의 조사', () => {
+  it('받침이 없으면 는, 있으면 은 (마지막 옷 이름 기준)', () => {
+    expect(exampleNote(['검정 후드티(예시)'])).toBe('옷장에 없는 검정 후드티는 예시로 입혀봤어요.')
+    expect(exampleNote(['검정 맨투맨(예시)'])).toBe('옷장에 없는 검정 맨투맨은 예시로 입혀봤어요.')
+    expect(exampleNote(['검정 후드티(예시)', '베이지 바지(예시)'])).toBe('옷장에 없는 검정 후드티, 베이지 바지는 예시로 입혀봤어요.')
+    expect(exampleNote(['흰색 셔츠(예시)', '검정 정장 자켓(예시)'])).toBe('옷장에 없는 흰색 셔츠, 검정 정장 자켓은 예시로 입혀봤어요.')
+  })
+  it('예시가 없으면 빈 문자열', () => expect(exampleNote([])).toBe(''))
 })

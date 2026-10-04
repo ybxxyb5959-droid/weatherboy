@@ -2,6 +2,7 @@
 // 포멀한 정장은 정장 세트(셔츠 + 자켓 + 바지)가 보이도록 옷장에 없는 부분을 예시로 채운다.
 // 예시 옷은 옷장에 담긴 옷이 아니라서 owned=false, example=true 로 표시한다. (결정론적 규칙이다: AI 를 쓰지 않는다)
 import { clothingTypeMap, colorMap } from '../config/mappings.js'
+import { withJosa } from '../utils/josa.js'
 import type { OutfitItem } from './outfitEngine.js'
 
 export type Role = 'top' | 'bottom' | 'outer'
@@ -314,4 +315,11 @@ export function savedWish(json: unknown): Wish | null {
   }
   const wish: Wish = { suit: j.suit === true, noOuter: j.noOuter === true || undefined, pieces }
   return wish.suit || wish.noOuter || pieces.length ? wish : null
+}
+
+/** 옷장에 없어서 예시로 입힌 옷을 알리는 문장(없으면 빈 문자열). 조사는 마지막 옷 이름에 맞춘다. */
+export function exampleNote(examples: string[]): string {
+  if (examples.length === 0) return ''
+  const names = examples.map((l) => l.replace(/\(예시\)/, '').trim()).join(', ')
+  return `옷장에 없는 ${withJosa(names, '은', '는')} 예시로 입혀봤어요.`
 }
