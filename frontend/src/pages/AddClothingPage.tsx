@@ -7,6 +7,8 @@ import Fields from '../components/ClothingFields'
 import SayBox from '../components/SayBox'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
+import AiUsageBar from '../components/AiUsageBar'
+import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
 import { clothingLabel, parseClothing, type ParsedClothing } from '../lib/clothingParse'
 
@@ -33,6 +35,8 @@ export default function AddClothingPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [aiNote, setAiNote] = useState('')
   const [aiMenu, setAiMenu] = useState(false) // 사진: 한 벌씩 / 여러 벌씩 선택 펼침
+  const usage = useAiUsage(aiMenu, analyzing) // "사진으로"를 누르면 오늘 남은 양을 막대로 보여준다(사진을 한 번 올린 뒤에는 다시 읽는다)
+  const blocked = photoBlocked(usage)
 
   // 문장을 옷 목록으로 바꾼다 (AI 없이 즉시). 제안일 뿐이라 사용자가 확인하고 저장한다.
   const fillFromText = (spoken?: string) => {
@@ -127,11 +131,12 @@ export default function AddClothingPage() {
 
       {aiMenu && !analyzing && (
         <div className="ai-choice">
-          <button type="button" className="ai-opt" onClick={() => fileRef.current?.click()}>
+          <AiUsageBar usage={usage} />
+          <button type="button" className="ai-opt" disabled={blocked} onClick={() => fileRef.current?.click()}>
             <strong>한 벌씩</strong>
             <span className="tiny">옷 한 벌이 잘 보이게 찍어요</span>
           </button>
-          <button type="button" className="ai-opt" onClick={() => nav('/wardrobe/scan')}>
+          <button type="button" className="ai-opt" disabled={blocked} onClick={() => nav('/wardrobe/scan')}>
             <strong>여러 벌씩</strong>
             <span className="tiny">행거·옷장 사진으로 한꺼번에</span>
           </button>

@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit'
 import { env } from '../../config/env.js'
 import type { RequestHandler } from 'express'
-import { checkQuota, quotaCode, quotaMessage } from '../../services/ai/aiQuota.js'
+import { BUSY_CODE, busyMessage, checkQuota, getGlobalUsage, quotaCode, quotaMessage } from '../../services/ai/aiQuota.js'
 import { aiScope } from '../../services/ai/aiScope.js'
 import type { AuthedRequest } from './common.js'
 
@@ -46,6 +46,9 @@ export const textLimiter = createAiLimiter('text')
 export const dailyQuota =
   (kind: AiLimitKind): RequestHandler =>
   async (req, res, next) => {
+    // 서버 전체가 하루 상한을 넘었으면 모두에게 AI 를 잠시 닫는다(직접 등록·칩은 이 길을 지나지 않아 계속 열려 있다)
+    const g = await getGlobalUsage()
+    if (!g.open) return void res.status(503).json({ code: BUSY_CODE, message: busyMessage(kind) })
     const d = await checkQuota((req as AuthedRequest).userId, kind)
     if (d && !d.ok) return void res.status(429).json({ code: quotaCode(kind), message: quotaMessage(kind) })
     next()

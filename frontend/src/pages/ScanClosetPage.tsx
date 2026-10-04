@@ -6,6 +6,8 @@ import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import { clothingTypes, colorNames, patternNames } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
+import AiUsageBar from '../components/AiUsageBar'
+import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
@@ -22,6 +24,8 @@ export default function ScanClosetPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [limited, setLimited] = useState(false) // 사진 인식 한도에 걸림: 직접 등록으로 안내한다
+  const usage = useAiUsage(true, busy) // 오늘 남은 양(스캔이 끝날 때마다 다시 읽는다)
+  const blocked = photoBlocked(usage)
 
   const analyze = async (files: FileList | null) => {
     if (!files || files.length === 0 || busy) return
@@ -92,7 +96,8 @@ export default function ScanClosetPage() {
 
       <div className="field ai-box" style={{ marginTop: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void analyze(e.target.files)} />
-        <DoodleButton seed={2} className="block sketchy" onClick={() => fileRef.current?.click()} disabled={busy || saving}>
+        <AiUsageBar usage={usage} />
+        <DoodleButton seed={2} className="block sketchy" onClick={() => fileRef.current?.click()} disabled={busy || saving || blocked}>
           {busy ? progress || '살펴보는 중…' : '📸 옷장·행거 사진 고르기'}
         </DoodleButton>
         <p className="tiny ai-warn">⚠ 여러 벌 인식은 가려지거나 겹친 옷을 놓치거나 잘못 알아볼 수 있어서 <b>정확도가 떨어질 수 있어요.</b> 목록을 꼭 확인하고, 틀린 옷은 수정하거나 체크를 풀어주세요.</p>

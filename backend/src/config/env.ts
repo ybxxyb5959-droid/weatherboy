@@ -29,6 +29,8 @@ const schema = z.object({
   AI_PHOTO_NEWUSER: z.coerce.number().int().min(1).default(300),
   AI_TEXT_NEWUSER: z.coerce.number().int().min(1).default(200),
   AI_NEWUSER_HOURS: z.coerce.number().min(0).default(24),
+  // 서버 전체(모든 사용자 합계) 하루 AI 호출 상한. 넘으면 AI 기능을 잠시 닫는다(직접 등록·칩은 계속 열려 있다). 비용 폭주 안전장치라 예산에 맞게 조정한다.
+  AI_GLOBAL_DAILY: z.coerce.number().int().min(1).default(3000),
   LOG_LEVEL: z.string().default('info'),
   // 설정하면 이 폴더(예: ../frontend/dist)의 화면 파일을 서버가 직접 내준다. Nginx 없이 한 곳에서 화면+API 를 서비스할 때(개인/베타 배포용).
   SERVE_FRONTEND_DIR: z.string().default(''),

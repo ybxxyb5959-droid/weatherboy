@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
 import { photoGuard, textGuard } from '../middleware/aiLimits.js'
+import { checkQuota, getGlobalUsage, usageView } from '../../services/ai/aiQuota.js'
 import { aiEnabled } from '../../services/ai/explain.js'
 import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingVision.js'
 import { parseEventText } from '../../services/ai/eventParse.js'
@@ -22,6 +23,16 @@ aiRouter.use(requireAuth)
 aiRouter.get('/status', (_req, res) => {
   res.json({ enabled: aiEnabled() })
 })
+
+// 오늘 AI 사용량(남은 비율): 옷 등록 화면의 막대그래프가 쓴다. 서버 전체가 닫혀 있으면 open=false.
+aiRouter.get(
+  '/usage',
+  wrap(async (req, res) => {
+    const userId = (req as AuthedRequest).userId
+    const [photo, text, g] = await Promise.all([checkQuota(userId, 'photo'), checkQuota(userId, 'text'), getGlobalUsage()])
+    res.json({ open: g.open, photo: photo ? usageView(photo) : null, text: text ? usageView(text) : null })
+  }),
+)
 
 const MAX_IMAGE_BYTES = 700 * 1024
 const photoSchema = z.object({

@@ -4043,3 +4043,50 @@ a.card {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* 오늘 AI 사진 인식 사용량 막대(남은 양) */
+.usage {
+  grid-column: 1 / -1; /* 사진 메뉴(2칸 격자)에서는 두 칸을 모두 차지한다 */
+  margin: 4px 0 6px;
+}
+.usage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.usage-pct {
+  font-weight: 700;
+}
+.usage-bar {
+  height: 16px;
+  border: 2.4px solid #222;
+  border-radius: 9px;
+  background: #fcfcfa;
+  overflow: hidden;
+}
+.usage-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.5s ease;
+}
+.usage-fill.ok {
+  background: #7cc58a;
+}
+.usage-fill.mid {
+  background: #f2cf4a;
+}
+.usage-fill.low {
+  background: #e56b5a;
+}
+.usage-closed {
+  grid-column: 1 / -1;
+  margin: 4px 0 6px;
+}
+.ai-opt:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .usage-fill { transition: none; }
+}

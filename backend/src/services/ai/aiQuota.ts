@@ -53,3 +53,45 @@ export async function checkQuota(userId: string, kind: AiKind, now = new Date())
 /** 하루 한도에 걸렸을 때 사용자에게 보여줄 한 문장 */
 export const quotaMessage = (kind: AiKind) => (kind === 'photo' ? '오늘 사진 인식은 다 썼어요. 내일 다시 쓸 수 있어요.' : '오늘 말로 입력은 다 썼어요. 내일 다시 쓸 수 있어요.')
 export const quotaCode = (kind: AiKind) => (kind === 'photo' ? 'PHOTO_DAILY_LIMIT' : 'AI_DAILY_LIMIT')
+
+// ───── 서버 전체 하루 상한 ─────
+export interface GlobalUsage {
+  open: boolean
+  used: number
+  cap: number
+}
+/** 순수 판단: 서버 전체 호출 수가 상한 미만이면 열려 있다 */
+export const globalUsageOf = (used: number, cap: number): GlobalUsage => ({ open: used < cap, used, cap })
+
+let globalCache: { at: number; value: GlobalUsage } | null = null
+const GLOBAL_TTL_MS = 30_000 // 요청마다 전체를 세지 않게 잠깐 기억한다
+
+export const resetGlobalCache = () => {
+  globalCache = null
+}
+
+/** 최근 24시간 전체 AI 호출 수. 읽지 못하면 열려 있는 것으로 본다(기록 장애로 기능이 막히지 않게). */
+export async function getGlobalUsage(now = Date.now()): Promise<GlobalUsage> {
+  if (globalCache && now - globalCache.at < GLOBAL_TTL_MS) return globalCache.value
+  const cap = env.AI_GLOBAL_DAILY
+  try {
+    const used = await prisma.aiCallLog.count({ where: { createdAt: { gte: new Date(now - 24 * 3600_000) } } })
+    const value = globalUsageOf(used, cap)
+    globalCache = { at: now, value }
+    return value
+  } catch {
+    return { open: true, used: 0, cap }
+  }
+}
+
+export const busyMessage = (kind: AiKind) => (kind === 'photo' ? '오늘은 AI 사용이 많아서 잠시 쉬어요. 직접 등록해 주세요.' : '오늘은 AI 사용이 많아서 잠시 쉬어요.')
+export const BUSY_CODE = 'AI_BUSY'
+
+/** 화면에 보여줄 사용량(남은 비율). 한도를 넘었으면 0. */
+export interface UsageView {
+  used: number
+  limit: number
+  remainingPct: number
+  isNewUser: boolean
+}
+export const usageView = (d: QuotaDecision): UsageView => ({ used: d.used, limit: d.limit, remainingPct: Math.max(0, Math.min(100, Math.round(((d.limit - d.used) / d.limit) * 100))), isNewUser: d.isNewUser })
