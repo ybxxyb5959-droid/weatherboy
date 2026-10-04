@@ -6,7 +6,7 @@ import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import { clothingTypes, colorNames, patternNames } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
-import { splitForScan, type ClothingSuggestion } from '../lib/ai'
+import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
 let nextKey = 1
@@ -49,7 +49,7 @@ export default function ScanClosetPage() {
             prevTile = found
           }
         } catch (e) {
-          if (e instanceof ApiError && e.code === 'PHOTO_RATE_LIMITED') {
+          if (e instanceof ApiError && isPhotoLimit(e)) {
             setLimited(true)
             stop = true
           }

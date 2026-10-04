@@ -7,6 +7,7 @@ import { prisma } from '../../db.js'
 import { AppError } from '../../utils/errors.js'
 import { logger } from '../../utils/logger.js'
 import { aiEnabled } from './explain.js'
+import { currentAiScope } from './aiScope.js'
 
 const TIMEOUT_MS = 20_000
 
@@ -18,7 +19,8 @@ export interface GeminiImage {
 
 async function log(status: 'SUCCESS' | 'FAILED', started: number, message?: string) {
   try {
-    await prisma.aiCallLog.create({ data: { model: env.GEMINI_MODEL || 'none', status, fallback: false, durationMs: Date.now() - started, message: message?.slice(0, 300) } })
+    const scope = currentAiScope() // 요청 안에서 불렀다면 누가 어떤 종류로 불렀는지 같이 남긴다
+    await prisma.aiCallLog.create({ data: { model: env.GEMINI_MODEL || 'none', status, fallback: false, durationMs: Date.now() - started, message: message?.slice(0, 300), userId: scope?.userId, kind: scope?.kind } })
   } catch (e) {
     logger.warn({ err: String(e) }, 'ai log write failed')
   }

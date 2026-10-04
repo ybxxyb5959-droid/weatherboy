@@ -1,5 +1,8 @@
 import rateLimit from 'express-rate-limit'
 import { env } from '../../config/env.js'
+import type { RequestHandler } from 'express'
+import { checkQuota, quotaCode, quotaMessage } from '../../services/ai/aiQuota.js'
+import { aiScope } from '../../services/ai/aiScope.js'
 import type { AuthedRequest } from './common.js'
 
 // AI 호출은 비용이 들어서 사용자당 시간당 횟수를 제한한다.
@@ -38,3 +41,17 @@ export function createAiLimiter(kind: AiLimitKind, opts: { limit?: number } = {}
 export const photoLimiter = createAiLimiter('photo')
 /** 말 입력(일정 문장, 코디 도우미) */
 export const textLimiter = createAiLimiter('text')
+
+/** 하루 사용량 한도: 최근 24시간 호출 수가 넘으면 막는다(가입 직후에는 더 넉넉하게). 기록을 못 읽으면 막지 않는다. */
+export const dailyQuota =
+  (kind: AiLimitKind): RequestHandler =>
+  async (req, res, next) => {
+    const d = await checkQuota((req as AuthedRequest).userId, kind)
+    if (d && !d.ok) return void res.status(429).json({ code: quotaCode(kind), message: quotaMessage(kind) })
+    next()
+  }
+
+/** 사진 인식 라우트의 앞단: 호출을 사용자에 묶고, 시간당 한도와 하루 한도를 차례로 본다 */
+export const photoGuard: RequestHandler[] = [aiScope('photo'), photoLimiter, dailyQuota('photo')]
+/** 말 입력 라우트의 앞단 */
+export const textGuard: RequestHandler[] = [aiScope('text'), textLimiter, dailyQuota('text')]

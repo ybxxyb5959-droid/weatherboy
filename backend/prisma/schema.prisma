@@ -476,9 +476,13 @@ model AiCallLog {
   fallback   Boolean   @default(false)
   durationMs Int?
   message    String?
+  // 누가 어떤 종류(photo/text)로 불렀는지. 하루 사용량 한도를 세는 데 쓴다. 예전 기록과 요청 밖 호출은 비어 있다.
+  userId     String?   @db.Uuid
+  kind       String?
   createdAt  DateTime  @default(now())
 
   @@index([createdAt])
+  @@index([userId, kind, createdAt])
 }
 
 // connect-pg-simple 세션 저장소 (테이블명 'session' 고정)

@@ -7,7 +7,7 @@ import Fields from '../components/ClothingFields'
 import SayBox from '../components/SayBox'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
-import { resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
+import { isPhotoLimit, resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
 import { clothingLabel, parseClothing, type ParsedClothing } from '../lib/clothingParse'
 
 type Draft = ParsedClothing
@@ -62,7 +62,7 @@ export default function AddClothingPage() {
       setAiNote('AI가 종류·색·무늬를 채워 목록에 담았어요. 맞는지 확인하고 저장해주세요.')
       setAiMenu(false)
     } catch (e) {
-      setLimited(e instanceof ApiError && e.code === 'PHOTO_RATE_LIMITED')
+      setLimited(e instanceof ApiError && isPhotoLimit(e))
       setError(e instanceof Error && !('status' in e) ? e.message : errorMessage(e))
     } finally {
       setAnalyzing(false)

@@ -1,6 +1,6 @@
 import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
-import { photoLimiter, textLimiter } from '../middleware/aiLimits.js'
+import { photoGuard, textGuard } from '../middleware/aiLimits.js'
 import { aiEnabled } from '../../services/ai/explain.js'
 import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingVision.js'
 import { parseEventText } from '../../services/ai/eventParse.js'
@@ -41,7 +41,7 @@ function readImage(body: unknown) {
 
 aiRouter.post(
   '/clothing-from-photo',
-  photoLimiter,
+  photoGuard,
   wrap(async (req, res) => {
     res.json(await clothingFromPhoto(readImage(req.body)))
   }),
@@ -50,7 +50,7 @@ aiRouter.post(
 // 옷장/행거 사진 한 장에서 옷 여러 벌을 찾는다 (사용자가 목록에서 골라 등록)
 aiRouter.post(
   '/clothes-from-photo',
-  photoLimiter,
+  photoGuard,
   wrap(async (req, res) => {
     res.json({ items: await clothesFromPhoto(readImage(req.body)) })
   }),
@@ -60,7 +60,7 @@ const eventSchema = z.object({ text: z.string().trim().min(2).max(200) })
 
 aiRouter.post(
   '/parse-event',
-  textLimiter,
+  textGuard,
   wrap(async (req, res) => {
     const { text } = parse(eventSchema, req.body)
     res.json(await parseEventText(text))
@@ -69,7 +69,16 @@ aiRouter.post(
 
 // AI 를 실제로 부르는 요청만 호출 한도에 센다. 칩(느낌을 직접 지정)과, 원하는 옷을 규칙으로 알아듣는 말("검정색 상의")은 AI 가 필요 없다.
 const usesAi = (body: { text?: unknown; style?: unknown } | undefined) => typeof body?.text === 'string' && !body.style && !parseWish(body.text)
-const stylistLimit: RequestHandler = (req, res, next) => (usesAi(req.body) ? textLimiter(req, res, next) : next())
+// AI 를 쓰는 요청만 호출 기록에 묶고 한도(시간당, 하루)를 본다
+const stylistLimit: RequestHandler = (req, res, next) => {
+  if (!usesAi(req.body)) return next()
+  const run = (i: number): void => {
+    const h = textGuard[i]
+    if (!h) return next()
+    h(req, res, (err?: unknown) => (err ? next(err) : run(i + 1)))
+  }
+  run(0)
+}
 
 // 일정 상세의 코디 상담. text 로 말하면 분위기를 묻거나(options) 바로 코디(outfit)를 주고, style 을 골랐으면 AI 없이 바로 코디를 준다.
 const stylistSchema = z

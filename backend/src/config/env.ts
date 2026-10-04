@@ -22,6 +22,13 @@ const schema = z.object({
   AI_ENABLED: bool,
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default(''),
+  // AI 하루 사용량 한도(최근 24시간 호출 수). 시간당 60회 한도와 별개로, 하루 총량을 막는다. 숫자는 호출 기록(aiCallLog)을 보고 조정한다.
+  AI_PHOTO_DAILY: z.coerce.number().int().min(1).default(120),
+  AI_TEXT_DAILY: z.coerce.number().int().min(1).default(150),
+  // 가입 직후(AI_NEWUSER_HOURS 시간)에는 옷장을 처음 채우느라 더 쓰므로 넉넉하게 허용한다.
+  AI_PHOTO_NEWUSER: z.coerce.number().int().min(1).default(300),
+  AI_TEXT_NEWUSER: z.coerce.number().int().min(1).default(200),
+  AI_NEWUSER_HOURS: z.coerce.number().min(0).default(24),
   LOG_LEVEL: z.string().default('info'),
   // 설정하면 이 폴더(예: ../frontend/dist)의 화면 파일을 서버가 직접 내준다. Nginx 없이 한 곳에서 화면+API 를 서비스할 때(개인/베타 배포용).
   SERVE_FRONTEND_DIR: z.string().default(''),

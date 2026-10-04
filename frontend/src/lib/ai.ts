@@ -61,3 +61,6 @@ export async function splitForScan(file: File, maxSide = 1280, quality = 0.8): P
   bmp.close()
   return out
 }
+
+/** 사진 인식 한도(시간당 또는 하루)에 걸린 오류인가: 직접 등록으로 안내한다 */
+export const isPhotoLimit = (e: unknown): boolean => typeof e === 'object' && e !== null && 'code' in e && ((e as { code: string }).code === 'PHOTO_RATE_LIMITED' || (e as { code: string }).code === 'PHOTO_DAILY_LIMIT')
