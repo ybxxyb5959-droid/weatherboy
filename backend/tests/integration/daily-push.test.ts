@@ -226,6 +226,17 @@ describe('푸시 구독 주소 검증', () => {
   })
 })
 
+describe('시험 알림', () => {
+  it('내 기기로 시험 알림을 보내고(방해금지 무시), 30초 안에 또 누르면 429', async () => {
+    const a = agent()
+    await a.post('/api/auth/guest').expect(201)
+    const first = await a.post('/api/push/test')
+    expect(first.status).toBe(200)
+    expect(['NOT_CONFIGURED', 'NO_SUBSCRIPTION', 'SENT']).toContain(first.body.outcome)
+    expect((await a.post('/api/push/test')).status).toBe(429)
+  })
+})
+
 describe('설정 API: 알림 종류', () => {
   it('종류별 알림 설정을 저장하고 다시 읽을 수 있다', async () => {
     const a = agent()

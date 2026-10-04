@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { env } from '../../config/env.js'
 import { prisma } from '../../db.js'
 import { isAllowedPushEndpoint } from '../../services/push/endpoint.js'
+import { sendToUser } from '../../services/push/push.js'
+import { AppError } from '../../utils/errors.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 
 export const pushRouter = Router()
@@ -39,5 +41,17 @@ pushRouter.delete(
     const b = parse(z.object({ endpoint: z.string().url() }), req.body)
     await prisma.pushSubscription.deleteMany({ where: { endpoint: b.endpoint, userId: (req as AuthedRequest).userId } })
     res.status(204).end()
+  }),
+)
+
+// 내 기기로 시험 알림 1건을 보낸다(설정 화면의 "알림 시험"). 방해금지 시간은 무시하고, 30초에 한 번만.
+pushRouter.post(
+  '/test',
+  wrap(async (req, res) => {
+    const userId = (req as AuthedRequest).userId
+    const recent = await prisma.notifyLog.findFirst({ where: { userId, kind: 'TEST', createdAt: { gte: new Date(Date.now() - 30_000) } }, select: { id: true } })
+    if (recent) throw new AppError(429, 'TOO_MANY', '잠시 뒤에 다시 눌러주세요.')
+    const outcome = await sendToUser(userId, null, { title: '알림 시험', body: '이 알림이 보이면 휴대폰 알림이 잘 켜진 거예요.', url: '/home', tag: 'test' }, { kind: 'TEST', ignoreQuiet: true })
+    res.json({ outcome })
   }),
 )

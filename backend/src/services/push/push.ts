@@ -22,7 +22,7 @@ export interface PushPayload {
 }
 
 /** 푸시 종류. NotifyLog.kind 에 그대로 기록된다. */
-export type PushKind = 'EVENT_FIRST' | 'EVENT_CHANGE' | 'MORNING' | 'RAIN' | 'COLD_RETURN' | 'DUST' | 'FEEDBACK' | 'CLOSET' | 'NOTICE'
+export type PushKind = 'EVENT_FIRST' | 'EVENT_CHANGE' | 'MORNING' | 'RAIN' | 'COLD_RETURN' | 'DUST' | 'FEEDBACK' | 'CLOSET' | 'NOTICE' | 'TEST'
 
 // DUPLICATE: 같은 dedupeKey 로 이미 보냈다(하루에 한 번만 보내는 알림)
 export type PushOutcome = 'SENT' | 'FAILED' | 'QUIET' | 'NO_SUBSCRIPTION' | 'NOT_CONFIGURED' | 'DUPLICATE'
@@ -47,7 +47,7 @@ export async function sendToUser(
   userId: string,
   eventId: string | null,
   payload: PushPayload,
-  opts: { now?: Date; sender?: PushSender; kind?: PushKind; dedupeKey?: string } = {},
+  opts: { now?: Date; sender?: PushSender; kind?: PushKind; dedupeKey?: string; ignoreQuiet?: boolean } = {},
 ): Promise<PushOutcome> {
   const now = opts.now ?? new Date()
   const sender = opts.sender ?? defaultSender
@@ -55,7 +55,7 @@ export async function sendToUser(
   // 같은 키로 이미 보냈으면 다시 보내지 않는다(일정 알림이 아닌 하루 한 번짜리 알림용). 보류된(QUIET 등) 건은 키가 남지 않아 다시 시도된다.
   if (opts.dedupeKey && (await prisma.notifyLog.findFirst({ where: { userId, dedupeKey: opts.dedupeKey }, select: { id: true } }))) return 'DUPLICATE'
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { quietEnabled: true, quietStart: true, quietEnd: true } })
-  if (u && isQuietNow(now, { enabled: u.quietEnabled, start: u.quietStart, end: u.quietEnd })) {
+  if (!opts.ignoreQuiet && u && isQuietNow(now, { enabled: u.quietEnabled, start: u.quietStart, end: u.quietEnd })) {
     await prisma.notifyLog.create({ data: { userId, eventId, kind, status: 'SKIPPED', message: 'quiet hours' } })
     return 'QUIET'
   }

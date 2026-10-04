@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api, errorMessage } from '../api'
 import { disablePush, enablePush, getPushState } from '../lib/push'
 import type { PushState } from '../lib/push'
 import DoodleButton from './DoodleButton'
@@ -45,6 +46,22 @@ export default function PushToggle({ onChange }: { onChange?: (s: PushState) => 
     setBusy(false)
   }
 
+  // 내 기기로 시험 알림 1건을 바로 보낸다
+  const sendTest = async () => {
+    setBusy(true)
+    setNote('')
+    try {
+      const r = await api<{ outcome: string }>('POST', '/api/push/test')
+      if (r.outcome === 'SENT') setNote('시험 알림을 보냈어요. 잠시 뒤 알림이 오는지 확인해주세요.')
+      else if (r.outcome === 'NOT_CONFIGURED') setNote('서버에 알림 설정이 아직 없어요.')
+      else if (r.outcome === 'NO_SUBSCRIPTION') setNote('이 계정에 등록된 기기가 없어요. 알림을 껐다가 다시 허용해주세요.')
+      else setNote('알림을 보내지 못했어요. 잠시 뒤 다시 시도해주세요.')
+    } catch (e) {
+      setNote(errorMessage(e))
+    }
+    setBusy(false)
+  }
+
   if (!state) return null
   return (
     <div className="push-toggle">
@@ -55,9 +72,14 @@ export default function PushToggle({ onChange }: { onChange?: (s: PushState) => 
         </DoodleButton>
       )}
       {state === 'on' && (
-        <DoodleButton seed={0} className="small" disabled={busy} onClick={() => void turnOff()}>
-          {busy ? '잠시만요…' : '휴대폰 알림 끄기'}
-        </DoodleButton>
+        <div className="row wrap">
+          <DoodleButton seed={1} className="small" disabled={busy} onClick={() => void sendTest()}>
+            {busy ? '잠시만요…' : '알림 시험 보내기'}
+          </DoodleButton>
+          <DoodleButton seed={0} className="small" disabled={busy} onClick={() => void turnOff()}>
+            휴대폰 알림 끄기
+          </DoodleButton>
+        </div>
       )}
       {note && <p className="tiny" role="alert">{note}</p>}
     </div>
