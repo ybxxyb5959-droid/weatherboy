@@ -122,10 +122,10 @@ export default function AddClothingPage() {
       <p className="tiny add-or">또는</p>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void fromPhoto(e.target.files?.[0])} />
       <div className="row stretch add-alt">
-        <DoodleButton seed={2} className="sketchy" icon={<CameraIcon />} aria-expanded={aiMenu} onClick={() => setAiMenu((v) => !v)} disabled={analyzing}>
+        <DoodleButton seed={2} className="sketchy" icon={<CameraIcon />} aria-expanded={aiMenu} onClick={() => { setAiMenu((v) => !v); setShowManual(false) }} disabled={analyzing}>
           {analyzing ? '살펴보는 중…' : '사진으로'}
         </DoodleButton>
-        <DoodleButton seed={3} className="sketchy" icon={<HandIcon />} aria-expanded={showManual} onClick={() => setShowManual((v) => !v)}>
+        <DoodleButton seed={3} className="sketchy" icon={<HandIcon />} aria-expanded={showManual} onClick={() => { setShowManual((v) => !v); setAiMenu(false) }}>
           직접 고르기
         </DoodleButton>
       </div>
