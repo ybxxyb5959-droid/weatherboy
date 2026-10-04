@@ -39,6 +39,7 @@ export default function CharacterPage() {
   const { me } = useAuth()
   const [local, setLocal] = useState<Accessories | null>(null) // 고르는 즉시 보이는 값 (서버에는 잠깐 뒤 자동 저장)
   const [slot, setSlot] = useState<Slot>('hat')
+  const [why, setWhy] = useState(false) // '왜 이 칭호예요?' 근거 펼침
   const [preview, setPreview] = useState<string | null>(null) // 칭호 도감에서 눌러 본 다른 칭호의 모습 (내 칭호는 그대로)
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [note, setNote] = useState('')
@@ -230,8 +231,15 @@ export default function CharacterPage() {
         ) : title ? (
           <>
             <h2 className="char-title">{title.name}</h2>
-            <p className="char-tag">{title.tagline}{title.reason ? ` · ${title.reason}` : ''}</p>
-            {a.subTitle && <p className="tiny char-sub">부칭호 · {a.subTitle.name}</p>}
+            <p className="char-tag">{title.tagline}</p>
+            {title.reason && (
+              <>
+                <button type="button" className="tiny" aria-expanded={why} onClick={() => setWhy((v) => !v)} style={{ background: 'none', border: 0, padding: 0, textDecoration: 'underline dotted', cursor: 'pointer', font: 'inherit' }}>
+                  {why ? '접기' : '왜 이 칭호예요?'}
+                </button>
+                {why && <p className="tiny">{title.reason}</p>}
+              </>
+            )}
           </>
         ) : (
           <>

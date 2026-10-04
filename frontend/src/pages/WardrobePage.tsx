@@ -115,9 +115,14 @@ export default function WardrobePage() {
         <div className="empty">
           <ClosetScene empty />
           <p>옷장이 텅 비어있어</p>
-          <Link to="/wardrobe/add" className="dbtn w1">
-            <HandText>옷 추가하기</HandText>
-          </Link>
+          <div className="col" style={{ alignItems: 'center' }}>
+            <Link to="/wardrobe/scan" className="dbtn w1">
+              <HandText>옷장 사진으로 한꺼번에</HandText>
+            </Link>
+            <Link to="/wardrobe/add" className="dbtn w2 small">
+              <HandText>한 벌씩 추가</HandText>
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="lines">

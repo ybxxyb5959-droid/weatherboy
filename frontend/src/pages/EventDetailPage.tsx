@@ -156,6 +156,8 @@ function EventDetail({ id }: { id: string }) {
 
   const rec = outfit.data?.status === 'ready' ? outfit.data.recommendation : null
   const waiting = !rec
+  // 예보가 아직 없다고 확정된 상태(불러오는 중에는 아님): 코디 도우미(캐릭터·칩·입력창)는 숨기고 예보가 열린 뒤에 보여준다
+  const forecastWaiting = waiting && !outfit.loading
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
   const days = outfit.data?.days ?? []
@@ -195,7 +197,7 @@ function EventDetail({ id }: { id: string }) {
             {waiting ? (
               <>
                 <p>{outfit.data?.message ?? '아직 정확한 예보가 없어요.'}</p>
-                <p>예보가 열리면 알려드릴게요.</p>
+                <p>예보가 열리면 옷을 골라드릴게요. 그때 다시 열어 보세요.</p>
               </>
             ) : (
               <>
@@ -230,7 +232,7 @@ function EventDetail({ id }: { id: string }) {
 
       {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
-      {stylistOn === false && (waiting || days.length < 2) && (
+      {(forecastWaiting || (stylistOn === false && days.length < 2)) && (
       <section className="section">
         <h2>{waiting ? '예보가 열리면 이렇게 보여드려요' : '이렇게 입어요'}</h2>
         <div className="box w3 outfit">
@@ -277,7 +279,7 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />
+      {!waiting && <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />}
 
       {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} />}
     </main>

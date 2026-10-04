@@ -141,7 +141,7 @@ export default function AddClothingPage() {
             <strong>여러 벌씩</strong>
             <span className="tiny">행거·옷장 사진으로 한꺼번에</span>
           </button>
-          <p className="tiny ai-warn">여러 벌은 가려지거나 겹친 옷을 놓치거나 잘못 알아볼 수 있어서 정확도가 떨어질 수 있어요. 목록을 꼭 확인해주세요.</p>
+          <p className="tiny ai-warn">여러 벌은 겹친 옷을 놓칠 수 있어요. 결과 목록에서 틀린 건 바로 고칠 수 있어요.</p>
         </div>
       )}
       {aiNote && <p className="tiny ai-note">{aiNote}</p>}
