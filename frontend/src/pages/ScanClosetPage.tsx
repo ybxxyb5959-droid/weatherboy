@@ -7,6 +7,7 @@ import { clothingTypes, colorNames, patternNames } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
+import { CameraIcon } from '../components/ToolIcons'
 import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 
@@ -97,8 +98,8 @@ export default function ScanClosetPage() {
       <div className="field ai-box" style={{ marginTop: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void analyze(e.target.files)} />
         <AiUsageBar usage={usage} />
-        <DoodleButton seed={2} className="block sketchy" onClick={() => fileRef.current?.click()} disabled={busy || saving || blocked}>
-          {busy ? progress || '살펴보는 중…' : '📸 옷장·행거 사진 고르기'}
+        <DoodleButton seed={2} className="block sketchy" icon={<CameraIcon />} onClick={() => fileRef.current?.click()} disabled={busy || saving || blocked}>
+          {busy ? progress || '살펴보는 중…' : '옷장·행거 사진 고르기'}
         </DoodleButton>
         <p className="tiny ai-warn">⚠ 여러 벌 인식은 가려지거나 겹친 옷을 놓치거나 잘못 알아볼 수 있어서 <b>정확도가 떨어질 수 있어요.</b> 목록을 꼭 확인하고, 틀린 옷은 수정하거나 체크를 풀어주세요.</p>
         <p className="tiny ai-note">행거 사진은 가로로 길면 자동으로 3구간으로 나눠 찾아요(최대 4장). 종류·색·무늬만 찾아요.</p>

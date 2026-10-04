@@ -2431,6 +2431,7 @@ a.card {
 
 /* 사진 자동 입력: 한 벌씩 / 여러 벌씩 선택 */
 .ai-choice {
+  word-break: keep-all; /* 띄어쓰는 곳에서만 줄바꿈: "찍/어요"처럼 낱말 중간에서 끊기지 않게 */
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -2449,6 +2450,13 @@ a.card {
   border: 2.4px solid var(--ink);
   border-radius: 10px 15px 9px 13px / 13px 9px 15px 10px;
   cursor: pointer;
+}
+.ai-opt .tiny,
+.ai-opt strong {
+  text-wrap: balance;
+}
+.btn-icon {
+  flex: none;
 }
 .ai-opt:active {
   background: var(--pick);

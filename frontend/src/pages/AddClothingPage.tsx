@@ -8,6 +8,7 @@ import SayBox from '../components/SayBox'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
+import { CameraIcon, HandIcon } from '../components/ToolIcons'
 import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
 import { clothingLabel, parseClothing, type ParsedClothing } from '../lib/clothingParse'
@@ -121,11 +122,11 @@ export default function AddClothingPage() {
       <p className="tiny add-or">또는</p>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void fromPhoto(e.target.files?.[0])} />
       <div className="row stretch add-alt">
-        <DoodleButton seed={2} className="sketchy" aria-expanded={aiMenu} onClick={() => setAiMenu((v) => !v)} disabled={analyzing}>
-          {analyzing ? '살펴보는 중…' : '📸 사진으로'}
+        <DoodleButton seed={2} className="sketchy" icon={<CameraIcon />} aria-expanded={aiMenu} onClick={() => setAiMenu((v) => !v)} disabled={analyzing}>
+          {analyzing ? '살펴보는 중…' : '사진으로'}
         </DoodleButton>
-        <DoodleButton seed={3} className="sketchy" aria-expanded={showManual} onClick={() => setShowManual((v) => !v)}>
-          ✋ 직접 고르기
+        <DoodleButton seed={3} className="sketchy" icon={<HandIcon />} aria-expanded={showManual} onClick={() => setShowManual((v) => !v)}>
+          직접 고르기
         </DoodleButton>
       </div>
 

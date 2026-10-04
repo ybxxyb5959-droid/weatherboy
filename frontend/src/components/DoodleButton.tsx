@@ -1,16 +1,18 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import HandText from './HandText'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean
   seed?: number
+  /** 글자 앞에 놓는 손그림 아이콘 */
+  icon?: ReactNode
 }
 
 export function doodleClass(seed = 0, selected = false, extra = '') {
   return `dbtn w${seed % 4} ${selected ? 'on' : ''} ${extra}`.trim()
 }
 
-export default function DoodleButton({ selected, seed = 0, className = '', children, ...rest }: Props) {
+export default function DoodleButton({ selected, seed = 0, className = '', icon, children, ...rest }: Props) {
   return (
     <button
       type="button"
@@ -18,6 +20,7 @@ export default function DoodleButton({ selected, seed = 0, className = '', child
       className={doodleClass(seed, !!selected, className)}
       {...rest}
     >
+      {icon}
       <HandText>{children}</HandText>
     </button>
   )
