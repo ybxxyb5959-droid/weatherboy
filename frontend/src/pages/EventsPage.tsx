@@ -56,7 +56,7 @@ export default function EventsPage() {
     afterChange()
   }
   return (
-    <main className="events-page">
+    <main className="events-page sticky-head">
       <div className="page-head">
         <h1>내 일정</h1>
         <div className="row head-actions">

@@ -4288,8 +4288,8 @@ a.card {
   height: 64px;
 }
 
-/* ---------- 위쪽 제목·버튼 줄 고정 (스크롤해도 [옷 추가]·[일정 추가] 같은 버튼이 항상 보인다) ---------- */
-.page-head {
+/* ---------- 위쪽 제목·버튼 줄 고정: 옷장·일정 화면만(main 에 sticky-head). 스크롤해도 [옷 추가]·[일정 추가] 같은 버튼이 항상 보인다 ---------- */
+.sticky-head > .page-head {
   position: sticky;
   top: 0;
   z-index: 30;
@@ -4298,7 +4298,7 @@ a.card {
   margin-bottom: 6px;
 }
 /* 상태바(안전 영역) 뒤로 내용이 비치지 않게, 첫 줄은 그 여백까지 덮는다(제자리 위치는 그대로) */
-.page-head:first-child {
+.sticky-head > .page-head:first-child {
   margin-top: calc(-1 * env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -4310,4 +4310,78 @@ a.card {
   margin: 0 0 8px;
   padding: 2px 0 6px;
   background-color: var(--paper);
+}
+
+/* ---------- 줄바꿈 ---------- */
+/* 한글은 띄어쓰기에서만 줄을 바꾼다("카/카오"처럼 낱말 중간에서 끊기지 않게). 아주 긴 낱말만 어쩔 수 없이 자른다. */
+body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+/* 제목·이름은 줄이 고르게(끝줄에 한두 글자만 남지 않게), 문단은 끝줄 외톨이를 줄인다. 지원하는 브라우저에서만 적용된다. */
+h1,
+h2,
+h3,
+.title,
+.label,
+.nm {
+  text-wrap: balance;
+}
+p,
+li,
+dd,
+.tiny {
+  text-wrap: pretty;
+}
+/* 이 덩어리는 중간에서 끊지 않는다(예: "외출 08:30", "4벌 이상") */
+.nb {
+  display: inline-block;
+  white-space: nowrap;
+}
+/* 홈 외출 카드: 첫 줄은 기온, 그 아래 줄마다 한마디 */
+.commute-temps {
+  margin: 0;
+}
+.commute-temps .nb + .nb {
+  margin-left: 0.35em;
+}
+.commute-note {
+  margin: 2px 0 0;
+  font-size: 0.88em;
+  font-weight: 400;
+}
+/* 캐릭터 분석 막대의 % 는 숫자와 떨어지지 않게 */
+.char-bar .val {
+  white-space: nowrap;
+}
+.char-bar {
+  grid-template-columns: 56px 1fr 48px;
+}
+/* 칭호 조건: 조건마다 한 줄씩 */
+.rule-line {
+  display: block;
+}
+/* 후기 별점 라벨(5칸)이 좁은 폰에서 낱말 중간에서 끊기지 않게 */
+.review-faces {
+  gap: 4px;
+}
+.review-face {
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 13px;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+@media (max-width: 340px) {
+  .review-face {
+    font-size: 11.5px;
+  }
+}
+
+/* 설정 목록: 이름은 한 줄로, 값은 줄마다 끊기지 않게 */
+.set-label {
+  white-space: nowrap;
+}
+.set-value .set-line {
+  display: block;
 }

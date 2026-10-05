@@ -21,35 +21,42 @@ function slotAt(hourly: ApiHourly[], time: string | null, ymd: string): ApiHourl
   return best && gap(best.hour, target) <= 1.5 ? best : null
 }
 
-function lineFor(hourly: ApiHourly[], routine: Routine, day: Date): string | null {
+/** 홈 외출 카드의 내용: 첫 줄은 외출·귀가 기온, 그 아래 줄마다 한마디씩 */
+interface Commute {
+  temps: string[]
+  notes: string[]
+  prefix: string
+}
+
+function lineFor(hourly: ApiHourly[], routine: Routine, day: Date): Commute | null {
   if (!routine.days.includes(day.getDay())) return null
   const ymd = day.toLocaleDateString('sv-SE')
   const out = slotAt(hourly, routine.outAt, ymd)
   const home = slotAt(hourly, routine.homeAt, ymd)
   if (!out && !home) return null
 
-  const parts: string[] = []
-  if (out) parts.push(`외출 ${out.temp}°`)
-  if (home) parts.push(`귀가 ${home.temp}°`)
-  let line = parts.join(' → ')
+  const temps: string[] = []
+  if (out) temps.push(`외출 ${out.temp}°`)
+  if (home) temps.push(`귀가 ${home.temp}°`)
+  const notes: string[] = []
 
   if (out && home) {
     const d = Math.abs(home.temp - out.temp)
-    if (d >= 7) line += home.temp < out.temp ? ' · 들어올 때 더 추워요, 겉옷 챙기세요' : ' · 낮엔 더워져요, 벗기 쉬운 겉옷이 좋아요'
-    else if (d <= 3) line += ' · 나갈 때와 들어올 때 기온이 비슷해요'
-    else line += ` · 일교차 ${d}°`
+    if (d >= 7) notes.push(home.temp < out.temp ? '들어올 때 더 추워요, 겉옷 챙기세요' : '낮엔 더워져요, 벗기 쉬운 겉옷이 좋아요')
+    else if (d <= 3) notes.push('나갈 때와 들어올 때 기온이 비슷해요')
+    else notes.push(`일교차 ${d}°`)
   }
-  if (isWet(out) || isWet(home)) line += ' · 우산도 챙겨요'
-  return line
+  if (isWet(out) || isWet(home)) notes.push('우산도 챙겨요')
+  return { temps, notes, prefix: '' }
 }
 
 /** 오늘 남은 외출이 있으면 오늘 것을, 오늘 건 모두 지났으면 내일 것을 보여준다 */
-export function commuteSummary(hourly: ApiHourly[], routine: Routine, now = new Date()): string | null {
+export function commuteSummary(hourly: ApiHourly[], routine: Routine, now = new Date()): Commute | null {
   const today = lineFor(hourly, routine, now)
   if (today) return today
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   const next = lineFor(hourly, routine, tomorrow)
-  return next ? `내일 ${next}` : null
+  return next ? { ...next, prefix: '내일 ' } : null
 }
 
 /** 홈의 외출 카드: 왼쪽 졸라맨 + 오른쪽 한 줄. 하루 패턴이 없으면 안내만 보여준다. */
@@ -71,9 +78,21 @@ export default function CommuteLine({ hourly, routine }: { hourly: ApiHourly[]; 
       <div className="commute-people">
         <StickPerson mood="trip" size={62} />
       </div>
-      <p className="commute-text">
-        <HandText>{line}</HandText>
-      </p>
+      <div className="commute-text">
+        {/* 첫 줄: 외출·귀가 기온(→로 이어서, 중간에 끊기지 않게). 그 아래: 한마디씩 줄을 바꿔서 */}
+        <p className="commute-temps">
+          {line.temps.map((t, i) => (
+            <span key={t} className="nb">
+              <HandText>{`${i === 0 ? line.prefix : '→ '}${t}`}</HandText>
+            </span>
+          ))}
+        </p>
+        {line.notes.map((n) => (
+          <p key={n} className="commute-note">
+            <HandText>{n}</HandText>
+          </p>
+        ))}
+      </div>
     </div>
   )
 }

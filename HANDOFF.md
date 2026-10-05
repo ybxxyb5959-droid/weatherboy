@@ -109,6 +109,21 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 폰 화면 줄바꿈 정리 + 위쪽 고정을 옷장·일정으로 한정 (작성: Claude Code)
+- 수정 목적: 폰(360·320px)에서 한글이 낱말 중간에서 끊기고, 마지막 줄에 1~2글자만 남던 곳 정리. 홈 외출 카드와 설정의 외출·귀가 표시 개선. 위쪽 제목·버튼 줄 고정은 옷장·일정만 하고 홈·캐릭터·설정은 해제.
+- 원인: 앱 전체에 `word-break: keep-all` 이 없어 한글이 글자 단위로 끊김(전수 측정 65곳, 12개 화면).
+- 변경 파일:
+  - `frontend/src/styles/global.css` — body `word-break: keep-all; overflow-wrap: anywhere`, 제목류 `text-wrap: balance`, 문단 `text-wrap: pretty`, `.nb`(끊지 않는 덩어리), 후기 별점 라벨, 캐릭터 % 막대, 설정 이름 한 줄, 고정은 `.sticky-head > .page-head` 로 한정
+  - `frontend/src/components/CommuteLine.tsx` — 홈 외출 카드: 첫 줄 "외출 N° → 귀가 N°", 그 아래 줄마다 한마디(`commuteSummary` 반환이 문자열에서 {temps, notes, prefix} 로 바뀜, 호출처는 이 파일뿐)
+  - `frontend/src/pages/SettingsPage.tsx` — 개인맞춤 값을 "보통 / 외출 / 귀가" 한 줄씩(`Row` value 가 ReactNode 허용)
+  - `frontend/src/components/RuleText.tsx` — 신규. 칭호 조건을 조건마다 한 줄, "N% 이상·N벌 이상"은 끊지 않음. `CharacterPage.tsx` 3곳에서 사용
+  - `frontend/src/pages/LandingPage.tsx`, `AddClothingPage.tsx` — 문구/끊김 정리
+  - `frontend/src/pages/WardrobePage.tsx`, `EventsPage.tsx` — `main` 에 `sticky-head`
+- 프론트 연결 사항: 없음
+- 검증 결과: frontend tsc/lint/build 통과. 360px 측정 낱말 끊김 65→7곳(남은 건 `·`·`(` 앞의 자연스러운 끊김), 320px 2건(홈 옷 이름 "검정/반팔"). 옷장·일정만 스크롤 시 제목줄 고정, 설정·캐릭터는 고정 안 됨 확인. 실제 폰·시스템 글자 크기 확대는 못 봄.
+- 남은 일 / 상대에게 요청: 캐릭터 잠금 화면·위치/알림 첫 화면·오류 상태의 줄바꿈은 아직 안 봄. 개발 서버가 편집 중간 버전을 캐시해 "Fragment is not defined" 가 뜰 수 있으니 이상하면 서버 재시작.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 옷장·일정 위쪽 제목·버튼 줄 고정 (작성: Claude Code)
 - 수정 목적: 스크롤하면 [옷 추가]·[옷 삭제]·[일정 추가] 같은 위쪽 버튼 줄이 사라지던 문제.
 - 원인: 폰에서는 상태바 여백(safe-area) 때문에 페이지가 조금 길어져 화면 전체가 스크롤되고 제목 줄이 밀려남. 또 `.app` 의 `overflow-x: hidden` 이 스크롤 영역을 만들어 sticky 가 동작하지 않음.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import AddClothesSheet from '../components/AddClothesSheet'
+import RuleText from '../components/RuleText'
 import StickPerson from '../components/StickPerson'
 import { ShareIcon } from '../components/icons'
 import { LockIcon } from '../components/ToolIcons'
@@ -87,7 +88,7 @@ export default function CharacterPage() {
             <>
               <h2 className="char-title">{shownLocked.name}</h2>
               <p className="char-tag">{shownLocked.tagline}</p>
-              <p className="tiny">미리보기예요 · {shownLocked.rule}</p>
+              <p className="tiny">미리보기예요 · <RuleText rule={shownLocked.rule} /></p>
               <button type="button" className="dbtn small" onClick={() => setPreview(null)}>
                 닫기
               </button>
@@ -138,7 +139,7 @@ export default function CharacterPage() {
                   }}
                 >
                   <b>{t.name}</b>
-                  <div className="tiny">{t.rule}</div>
+                  <div className="tiny"><RuleText rule={t.rule} /></div>
                 </button>
               </li>
             ))}
@@ -224,7 +225,7 @@ export default function CharacterPage() {
           <>
             <h2 className="char-title">{shown.name}</h2>
             <p className="char-tag">{shown.tagline}</p>
-            <p className="tiny">미리보기예요 · {shown.rule}</p>
+            <p className="tiny">미리보기예요 · <RuleText rule={shown.rule} /></p>
             <button type="button" className="dbtn small" onClick={() => setPreview(null)}>
               내 칭호로 돌아가기
             </button>
@@ -331,7 +332,7 @@ export default function CharacterPage() {
               >
                 <b>{t.name}</b>
                 {(title?.key === t.key || a.matchedTitles?.some((m) => m.key === t.key)) && <span className="tiny"> · {title?.key === t.key ? '내 칭호' : a.subTitle?.key === t.key ? '부칭호' : '조건 충족'}</span>}
-                <div className="tiny">{t.rule}</div>
+                <div className="tiny"><RuleText rule={t.rule} /></div>
               </button>
             </li>
           ))}

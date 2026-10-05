@@ -78,7 +78,7 @@ export default function WardrobePage() {
   const isEmpty = !loading && !error && groups.length === 0
 
   return (
-    <main className={deleteMode ? 'deleting' : undefined}>
+    <main className={deleteMode ? 'sticky-head deleting' : 'sticky-head'}>
       <div className="page-head">
         <h1>내 옷장</h1>
         {!isEmpty && (

@@ -33,9 +33,19 @@ function feelText(v: number) {
 
 const APP_VERSION = '0.1.0'
 
-function routineLabel(r?: Routine) {
-  if (!r || (!r.outAt && !r.homeAt)) return '정하지 않음'
-  return [r.outAt && `외출 ${r.outAt}`, r.homeAt && `귀가 ${r.homeAt}`].filter(Boolean).join(' · ')
+/** 설정 메인의 개인맞춤 값: 추위 정도, 외출, 귀가를 한 줄씩(시간이 낱말 중간에서 끊기지 않게) */
+function personalValue(sensitivity: string, r?: Routine) {
+  const lines = [sensitivity, r?.outAt && `외출 ${r.outAt}`, r?.homeAt && `귀가 ${r.homeAt}`].filter(Boolean) as string[]
+  if (lines.length === 1) lines.push('외출·귀가 정하지 않음')
+  return (
+    <>
+      {lines.map((l) => (
+        <span key={l} className="set-line">
+          {l}
+        </span>
+      ))}
+    </>
+  )
 }
 
 export function OnOff({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -62,7 +72,7 @@ function Chevron() {
 }
 
 /** 메뉴 한 줄: 왼쪽 이름, 오른쪽 현재 값과 화살표 */
-function Row({ label, value, onClick, danger }: { label: string; value?: string; onClick?: () => void; danger?: boolean }) {
+function Row({ label, value, onClick, danger }: { label: string; value?: ReactNode; onClick?: () => void; danger?: boolean }) {
   const inner = (
     <>
       <span className={`set-label ${danger ? 'danger' : ''}`}>
@@ -421,7 +431,7 @@ export default function SettingsPage() {
 
       <Group seed={1}>
         <Row label="내 위치 설정" value={s.location} onClick={go('location')} />
-        <Row label="개인맞춤 설정" value={`${s.sensitivity} · ${routineLabel(s.routine)}`} onClick={go('personal')} />
+        <Row label="개인맞춤 설정" value={personalValue(s.sensitivity, s.routine)} onClick={go('personal')} />
         {/* 베타 동안 알림은 준비 중: 눌러도 들어가지 않는다 */}
         {PUSH_ENABLED ? <Row label="알림 설정" value={notifyLabel} onClick={go('notify')} /> : <Row label="알림 설정" value="준비 중" />}
       </Group>

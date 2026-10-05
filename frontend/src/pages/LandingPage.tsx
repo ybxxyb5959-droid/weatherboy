@@ -128,7 +128,9 @@ export default function LandingPage() {
         </h2>
         <ol className="steps">
           <li>위의 "앱으로 설치하고 테스트해주기"를 눌러요.</li>
-          <li>나오는 창에서 "설치"(또는 "추가")를 눌러요.</li>
+          <li>
+            나오는 창에서 "설치"<span className="nb">(또는 "추가")를</span> 눌러요.
+          </li>
           <li>홈 화면에 생긴 뭐입을옷? 아이콘으로 열어요.</li>
         </ol>
         <p className="tiny">앱스토어 없이도 설치되고, 용량도 거의 차지하지 않아요.</p>

@@ -130,11 +130,11 @@ export default function AddClothingPage() {
           <AiUsageBar usage={usage} />
           <button type="button" className="ai-opt" disabled={blocked} onClick={() => fileRef.current?.click()}>
             <strong>한 벌씩</strong>
-            <span className="tiny">옷 한 벌이 잘 보이게 찍어요</span>
+            <span className="tiny">한 벌이 잘 보이게 찍어요</span>
           </button>
           <button type="button" className="ai-opt" disabled={blocked} onClick={() => nav('/wardrobe/scan')}>
             <strong>여러 벌씩</strong>
-            <span className="tiny">행거·옷장 사진으로 한꺼번에</span>
+            <span className="tiny">행거·옷장을 한꺼번에</span>
           </button>
           <p className="tiny ai-warn">여러 벌은 겹친 옷을 놓칠 수 있어요. 결과 목록에서 틀린 건 바로 고칠 수 있어요.</p>
         </div>
