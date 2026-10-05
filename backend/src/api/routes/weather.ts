@@ -4,7 +4,9 @@ import { prisma } from '../../db.js'
 import { feelsLike } from '../../rules/feelsLike.js'
 import { regionOf, todayRecommendation } from '../../services/recommendationService.js'
 import { resolveTarget } from '../../services/placeTarget.js'
-import { deriveCondition } from '../../services/weather/conditions.js'
+import { deriveCondition, hourlyKind } from '../../services/weather/conditions.js'
+import { isNightAt } from '../../services/weather/sun.js'
+import { gridToLatLng } from '../../utils/grid.js'
 import { ensureMidTerm, ensureShortTerm, getAirQuality, getNowcast } from '../../services/weather/weatherService.js'
 import { AppError } from '../../utils/errors.js'
 import { kstDate, toKstParts } from '../../utils/time.js'
@@ -58,16 +60,16 @@ weatherRouter.get(
     const today = kstDate(now)
     const tempMin = short.dailyMin[today] ?? null
     const tempMax = short.dailyMax[today] ?? null
-    const { condition, flags } = deriveCondition({ now, current, feels: f.feels, tempMin, tempMax, dustGrade })
+    // 해가 졌는지는 이 지역(격자 중심 좌표)과 날짜로 계산한 일몰·일출을 쓴다
+    const { lat, lng } = gridToLatLng(region.nx, region.ny)
+    const { condition, flags } = deriveCondition({ now, current, feels: f.feels, tempMin, tempMax, dustGrade, night: isNightAt(now, lat, lng) })
     // 시간대별 예보: 3시간 간격(0,3,6..시)으로 앞으로 8칸(약 24시간)
     const hourly = short.hourly
       .filter((h) => h.targetAt.getTime() >= now.getTime() - 60 * 60 * 1000 && toKstParts(h.targetAt).hour % 3 === 0)
       .slice(0, 8)
       .map((h) => {
         const hour = toKstParts(h.targetAt).hour
-        const night = hour >= 20 || hour < 5
-        const kind =
-          h.precip !== 'none' ? h.precip : h.sky === 'clear' ? (night ? 'night' : 'clear') : (h.sky ?? 'cloudy')
+        const kind = hourlyKind(h, isNightAt(h.targetAt, lat, lng))
         return { time: h.targetAt.toISOString(), hour, temp: Math.round(h.temp), pop: h.pop, condition: kind }
       })
     // 앞으로 며칠: 단기예보로 채울 수 있는 날은 시간별 데이터로, 그 뒤는 중기예보로 이어 붙인다

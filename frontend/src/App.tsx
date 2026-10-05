@@ -87,6 +87,8 @@ export default function App() {
         </filter>
       </svg>
       <GuestDataNotice />
+      {/* 화면이 바뀔 때 살짝 올라오며 나타난다(같은 영역 안의 이동, 예: 설정의 하위 화면은 다시 만들지 않는다) */}
+      <div key={pathname.split('/')[1] ?? ''} className="page-in">
       <Routes>
         <Route path="/" element={<Front />} />
         <Route path="/start" element={<Root />} />
@@ -112,6 +114,7 @@ export default function App() {
         <Route path="/settings/:section" element={<Protected><SettingsPage /></Protected>} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+      </div>
       {showNav && <BottomNav />}
     </div>
   )

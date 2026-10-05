@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './styles/global.css'
+import './styles/motion.css' // 움직임(날씨·화면 등장·옷장·캐릭터). 움직임 줄이기 설정이면 멈춘다
 import './lib/install.ts' // 설치 이벤트를 React 가 뜨기 전부터 붙잡는다
 import App from './App.tsx'
 import { AuthProvider } from './auth.tsx'

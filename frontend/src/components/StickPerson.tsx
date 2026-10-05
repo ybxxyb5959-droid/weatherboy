@@ -4,7 +4,7 @@ import { BackDecor, FrontDecor, type Accessories } from './CharacterDecor'
 export type Mood =
   | 'wave' | 'cold' | 'rain' | 'trip' | 'empty' | 'wait' | 'stand' | 'travel' | 'camp' | 'hike' | 'outdoor'
   // 기타 일정의 제목에 맞춘 장면
-  | 'birthday' | 'date' | 'meal' | 'drink' | 'gift' | 'show' | 'sport' | 'work'
+  | 'birthday' | 'date' | 'meal' | 'drink' | 'gift' | 'show' | 'sport' | 'run' | 'work'
 
 export interface WornItem {
   type: string
@@ -119,7 +119,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <path d="M116 6 V10 M116 34 V38 M100 22 H104 M128 22 H132 M104 10 L107 13 M128 10 L125 13" strokeWidth="1.8" />
         </g>
       )}
-      <g transform={shift}>
+      <g transform={mood === 'run' ? `${shift} rotate(7 60 138)` : shift}>
         {mood === 'stand' && <BackDecor persona={persona} acc={accessories} />}
         {/* 몸 */}
         <path d="M60 47 L61 100" />
@@ -130,6 +130,9 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         ) : mood === 'outdoor' ? (
           // 돗자리에 앉아 무릎을 세운다
           <path d="M61 100 L80 86 L92 100" />
+        ) : mood === 'run' ? (
+          // 성큼성큼 달리는 다리
+          <path d="M61 100 L86 114 L88 138 M61 100 L44 122 L24 114" />
         ) : mood === 'camp' ? (
           // 통나무에 걸터앉아 무릎을 접고 불 쪽으로 발을 뻗는다
           <path d="M61 100 L84 102 L84 130" />
@@ -401,6 +404,18 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           </g>
         )}
 
+        {mood === 'run' && (
+          <g>
+            {/* 머리띠와 힘차게 접어 흔드는 팔 */}
+            <path d="M44 22 Q60 16 77 22" stroke="#4a8bd4" strokeWidth="4" />
+            <path d="M44 22 L35 26 M44 22 L36 17" stroke="#4a8bd4" strokeWidth="2.2" />
+            <path d="M60 58 L84 66 L92 50" />
+            <path d="M60 58 L38 64 L30 80" />
+            {/* 땀방울 */}
+            <path d="M86 18 q-3 6 0 8 q3 -2 0 -8 M92 30 q-2 4 0 6 q2 -2 0 -6" stroke="#4aa6a0" fill="#cfe6e2" strokeWidth="1.4" />
+          </g>
+        )}
+
         {mood === 'work' && (
           <g>
             {/* 넥타이와 서류 가방 */}
@@ -420,6 +435,16 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           </g>
         )}
       </g>
+      {mood === 'run' && (
+        <g>
+          {/* 뒤로 흩날리는 바람 줄과 땅 위의 먼지 */}
+          <g className="run-lines" strokeWidth="2">
+            <path d="M12 62 h14 M6 78 h18 M14 94 h12" />
+          </g>
+          <path d="M14 142 h16 M38 142 h8 M96 142 h18" strokeWidth="2.2" />
+          <path d="M34 136 l.1 0 M42 132 l.1 0" strokeWidth="3" />
+        </g>
+      )}
       {mood === 'outdoor' && (
         <g>
           {/* 돗자리(체크무늬)와 도시락 바구니 */}

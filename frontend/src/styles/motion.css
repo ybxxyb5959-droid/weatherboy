@@ -1,0 +1,627 @@
+/* ---------- 움직임(애니메이션) ----------
+   낙서 디자인에 어울리게 천천히, 살랑살랑. 모두 transform/opacity 위주라 가볍고,
+   폰의 "움직임 줄이기" 설정이면 전부 멈춘다(아래 한 블록 안에만 있다). */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ───── 날씨 그림(WeatherDoodle animate): 그림 안의 부분이 움직인다 ───── */
+  .wx .wx-rays {
+    transform-origin: 25px 25px; /* Sun 기준. 그 밖의 그림은 style 로 중심을 직접 준다 */
+    animation: wx-spin 26s linear infinite;
+  }
+  .wx .wx-sunbody {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: wx-breathe 3.4s ease-in-out infinite;
+  }
+  .wx .wx-pulse {
+    animation: wx-breathe 1.8s ease-in-out infinite;
+  }
+  .wx .wx-spin-slow {
+    animation: wx-spin 38s linear infinite;
+  }
+  .wx .wx-bob {
+    animation: wx-bob 3.2s ease-in-out infinite;
+  }
+  .wx .wx-drift {
+    animation: wx-drift 7s ease-in-out infinite alternate;
+  }
+  .wx .wx-drift.wx-rev {
+    animation-direction: alternate-reverse;
+    animation-duration: 9s;
+  }
+  .wx .wx-drift.wx-slow {
+    animation-duration: 11s;
+  }
+  .wx .wx-fall {
+    animation: wx-fall 1.15s linear infinite;
+  }
+  .wx .wx-snowfall {
+    animation: wx-snowfall 3.8s ease-in infinite;
+  }
+  .wx .wx-d1 {
+    animation-delay: -0.3s;
+  }
+  .wx .wx-d2 {
+    animation-delay: -0.6s;
+  }
+  .wx .wx-d3 {
+    animation-delay: -0.9s;
+  }
+  .wx .wx-snowfall.wx-d1 {
+    animation-delay: -1.2s;
+  }
+  .wx .wx-snowfall.wx-d2 {
+    animation-delay: -2.4s;
+  }
+  .wx .wx-snowfall.wx-d3 {
+    animation-delay: -3.3s;
+  }
+  .wx .wx-twinkle {
+    animation: wx-twinkle 2.2s ease-in-out infinite;
+  }
+  .wx .wx-twinkle.wx-d1 {
+    animation-delay: -0.7s;
+  }
+  .wx .wx-twinkle.wx-d2 {
+    animation-delay: -1.4s;
+  }
+  .wx .wx-bolt {
+    animation: wx-bolt 4.2s steps(1, end) infinite;
+  }
+  /* 바람 줄: 선은 이어진 채로 바람에 밀리듯 오간다 */
+  .wx .wx-wind {
+    animation: wx-gust 2.4s ease-in-out infinite;
+  }
+  .wx .wx-wind.wx-d1 {
+    animation-duration: 3s;
+    animation-delay: -0.8s;
+  }
+  .wx .wx-wind.wx-d2 {
+    animation-duration: 2s;
+    animation-delay: -1.2s;
+  }
+  .wx .wx-float-a {
+    animation: wx-float 6s ease-in-out infinite;
+  }
+  .wx .wx-float-b {
+    animation: wx-float 8s ease-in-out -3s infinite reverse;
+  }
+  .wx .wx-drop {
+    animation: wx-fall 2.4s ease-in infinite;
+  }
+
+  @keyframes wx-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes wx-breathe {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.06);
+    }
+  }
+  @keyframes wx-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-2px);
+    }
+  }
+  @keyframes wx-drift {
+    from {
+      transform: translateX(-2.5px);
+    }
+    to {
+      transform: translateX(2.5px);
+    }
+  }
+  @keyframes wx-fall {
+    0% {
+      transform: translateY(-4px);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+  }
+  @keyframes wx-snowfall {
+    0% {
+      transform: translate(0, -3px);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    50% {
+      transform: translate(2px, 6px);
+    }
+    100% {
+      transform: translate(-1px, 14px);
+      opacity: 0;
+    }
+  }
+  @keyframes wx-twinkle {
+    0%, 100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes wx-bolt {
+    0%, 62%, 70%, 100% {
+      opacity: 1;
+    }
+    64%, 68% {
+      opacity: 0.15;
+    }
+  }
+  @keyframes wx-gust {
+    0%, 100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(5px);
+    }
+  }
+  @keyframes wx-float {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    33% {
+      transform: translate(2px, -2px);
+    }
+    66% {
+      transform: translate(-2px, 1.5px);
+    }
+  }
+
+  /* ───── 홈 날씨 카드 뒤의 배경 효과(WeatherAmbience) ───── */
+  .has-amb {
+    position: relative;
+    isolation: isolate;
+  }
+  .has-amb > :not(.wx-amb) {
+    position: relative;
+    z-index: 1;
+  }
+  .wx-amb {
+    position: absolute;
+    inset: -10px -16px -6px;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    /* 위아래는 서서히 사라지고, 글자가 있는 왼쪽은 흐리게(글씨가 안 가려지게) */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%), linear-gradient(to right, rgba(0, 0, 0, 0.3) 0, #000 55%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%), linear-gradient(to right, rgba(0, 0, 0, 0.3) 0, #000 55%);
+    mask-composite: intersect;
+  }
+  .wx-amb i,
+  .wx-amb b,
+  .wx-amb svg {
+    position: absolute;
+  }
+  /* 햇살: 둥글게 번지는 빛 + 천천히 도는 햇살 선 */
+  .wx-amb .sun-glow {
+    top: -60px;
+    right: -50px;
+    width: 230px;
+    height: 230px;
+    background: radial-gradient(circle, rgba(242, 207, 74, 0.38) 0%, rgba(242, 207, 74, 0) 66%);
+    border-radius: 50%;
+    animation: amb-glow 4.6s ease-in-out infinite;
+  }
+  .wx-amb .sun-burst {
+    top: -70px;
+    right: -60px;
+    width: 250px;
+    height: 250px;
+    opacity: 0.34;
+    animation: wx-spin 70s linear infinite;
+  }
+  .wx-amb.k-heat .sun-glow {
+    background: radial-gradient(circle, rgba(232, 120, 60, 0.4) 0%, rgba(232, 120, 60, 0) 66%);
+  }
+  /* 구름: 천천히 흘러간다 */
+  .wx-amb .cloud {
+    top: var(--top);
+    left: 38%;
+    width: calc(54px * var(--s, 1));
+    opacity: 0;
+    animation: amb-cloud var(--t, 60s) linear var(--d, 0s) infinite;
+  }
+  /* 비: 추적추적 */
+  .wx-amb .rain {
+    top: -14%;
+    left: var(--l);
+    width: 2.4px;
+    height: var(--h, 14px);
+    background: #3d9a94;
+    border-radius: 2px;
+    opacity: var(--o, 0.6);
+    transform: rotate(12deg);
+    animation: amb-rain var(--t, 1s) linear var(--d, 0s) infinite;
+  }
+  .wx-amb .ripple {
+    bottom: 4px;
+    left: var(--l);
+    width: 26px;
+    height: 8px;
+    border: 1.6px solid rgba(74, 166, 160, 0.7);
+    border-radius: 50%;
+    opacity: 0;
+    animation: amb-ripple 2.6s ease-out var(--d, 0s) infinite;
+  }
+  .wx-amb .flash {
+    inset: 0;
+    background: rgba(255, 246, 190, 0.7);
+    opacity: 0;
+    animation: amb-flash 6s steps(1, end) infinite;
+  }
+  /* 눈: 살랑살랑 내려앉는다 */
+  .wx-amb .flake {
+    top: -8%;
+    left: var(--l);
+    width: var(--s, 6px);
+    height: var(--s, 6px);
+    background: #fff;
+    border: 1.4px solid rgba(34, 34, 34, 0.42);
+    border-radius: 50%;
+    animation: amb-snow var(--t, 6s) ease-in-out var(--d, 0s) infinite;
+  }
+  /* 안개: 줄이 천천히 오간다 */
+  .wx-amb .fogband {
+    top: var(--top);
+    left: -10%;
+    width: 120%;
+    height: 20px;
+    opacity: 0.22;
+    animation: amb-fog var(--t, 18s) ease-in-out var(--d, 0s) infinite alternate;
+  }
+  /* 바람: 바람 줄이 쓱쓱 지나간다 */
+  .wx-amb .gust {
+    top: var(--top);
+    left: 0;
+    width: var(--w, 50px);
+    height: 14px;
+    opacity: 0;
+    animation: amb-gust var(--t, 2.2s) ease-in var(--d, 0s) infinite;
+  }
+  /* 먼지: 알갱이가 둥둥 */
+  .wx-amb .speck {
+    top: var(--top);
+    left: var(--l);
+    width: var(--s, 4px);
+    height: var(--s, 4px);
+    background: #b8975a;
+    border-radius: 50%;
+    opacity: 0.55;
+    animation: amb-speck var(--t, 8s) ease-in-out var(--d, 0s) infinite alternate;
+  }
+  /* 별/반짝임 */
+  .wx-amb .star {
+    top: var(--top);
+    left: var(--l);
+    width: var(--s, 4px);
+    height: var(--s, 4px);
+    background: #f2cf4a;
+    border-radius: 50%;
+    animation: wx-twinkle 2.6s ease-in-out var(--d, 0s) infinite;
+  }
+  .wx-amb.k-cold .star,
+  .wx-amb.k-frost .star {
+    background: #9fd3cf;
+  }
+
+  @keyframes amb-glow {
+    0%, 100% {
+      opacity: 0.75;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+  @keyframes amb-cloud {
+    0% {
+      transform: translateX(0);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.4;
+    }
+    85% {
+      opacity: 0.4;
+    }
+    100% {
+      transform: translateX(62vw);
+      opacity: 0;
+    }
+  }
+  @keyframes amb-rain {
+    from {
+      transform: translate(0, 0) rotate(12deg);
+    }
+    to {
+      transform: translate(-26px, 190px) rotate(12deg);
+    }
+  }
+  @keyframes amb-ripple {
+    0% {
+      transform: scale(0.2);
+      opacity: 0;
+    }
+    18% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+  }
+  @keyframes amb-flash {
+    0%, 100% {
+      opacity: 0;
+    }
+    92% {
+      opacity: 0;
+    }
+    93% {
+      opacity: 0.55;
+    }
+    95% {
+      opacity: 0.05;
+    }
+    96% {
+      opacity: 0.4;
+    }
+    98% {
+      opacity: 0;
+    }
+  }
+  @keyframes amb-snow {
+    0% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.95;
+    }
+    50% {
+      transform: translate(14px, 90px);
+    }
+    100% {
+      transform: translate(-6px, 190px);
+      opacity: 0.2;
+    }
+  }
+  @keyframes amb-fog {
+    from {
+      transform: translateX(-6%);
+    }
+    to {
+      transform: translateX(6%);
+    }
+  }
+  @keyframes amb-gust {
+    0% {
+      transform: translateX(-70px);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: translateX(110vw);
+      opacity: 0;
+    }
+  }
+  @keyframes amb-speck {
+    from {
+      transform: translate(0, 0);
+    }
+    to {
+      transform: translate(26px, -18px);
+    }
+  }
+
+  /* ───── 화면이 열릴 때: 아래에서 살짝 올라오며 나타난다 ───── */
+  .page-in {
+    animation: page-in 0.32s ease-out both;
+  }
+  .rise {
+    animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ───── 옷장: 빨랫줄에 걸린 옷이 바람에 살랑살랑 ───── */
+  main:not(.deleting) .hung:not(.arriving):not(.waiting):not(.leaving) .hang {
+    transform-origin: 50% 0;
+    will-change: transform;
+    animation: line-sway 5.2s ease-in-out infinite;
+  }
+  main:not(.deleting) .hung:nth-child(3n + 2):not(.arriving):not(.waiting):not(.leaving) .hang {
+    animation-duration: 6.1s;
+    animation-delay: -1.7s;
+  }
+  main:not(.deleting) .hung:nth-child(3n + 3):not(.arriving):not(.waiting):not(.leaving) .hang {
+    animation-duration: 4.6s;
+    animation-delay: -3.1s;
+  }
+  @keyframes line-sway {
+    0%, 100% {
+      transform: rotate(-1.7deg);
+    }
+    50% {
+      transform: rotate(1.7deg);
+    }
+  }
+  /* 빈 옷장·캐릭터 장면의 졸라맨은 숨 쉬듯 */
+  .closet-scene svg,
+  .empty > svg.doodle {
+    animation: gentle-bob 3.6s ease-in-out infinite;
+  }
+  @keyframes gentle-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* ───── 내 캐릭터: 둥실둥실 + 잠금 자물쇠 달랑달랑 ───── */
+  .char-stage > svg.doodle {
+    animation: char-float 3.4s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+  .char-lock-badge {
+    animation: lock-swing 4s ease-in-out infinite;
+    transform-origin: 50% 0;
+  }
+  .char-title {
+    animation: rise-in 0.6s ease-out both;
+  }
+  @keyframes char-float {
+    0%, 100% {
+      transform: translateY(0) rotate(-0.6deg);
+    }
+    50% {
+      transform: translateY(-5px) rotate(0.6deg);
+    }
+  }
+  @keyframes lock-swing {
+    0%, 70%, 100% {
+      transform: rotate(0);
+    }
+    78% {
+      transform: rotate(10deg);
+    }
+    86% {
+      transform: rotate(-8deg);
+    }
+    94% {
+      transform: rotate(4deg);
+    }
+  }
+
+  /* ───── 일정: 오늘 날짜가 콩닥콩닥, 카드는 차례로 나타난다 ───── */
+  .cal-day.today {
+    animation: today-pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes today-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(34, 34, 34, 0);
+    }
+    50% {
+      box-shadow: 0 0 0 5px rgba(34, 34, 34, 0.12);
+    }
+  }
+  .events-list .card-wrap {
+    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .events-list .card-wrap:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .events-list .card-wrap:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  .events-list .card-wrap:nth-child(n + 4) {
+    animation-delay: 210ms;
+  }
+
+  /* ───── 설정: 묶음이 차례로 ───── */
+  .set-group {
+    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .set-group:nth-of-type(2) {
+    animation-delay: 70ms;
+  }
+  .set-group:nth-of-type(3) {
+    animation-delay: 140ms;
+  }
+  .set-group:nth-of-type(n + 4) {
+    animation-delay: 210ms;
+  }
+
+  /* 달리는 졸라맨의 바람 줄이 뒤로 흩날린다 */
+  .run-lines {
+    animation: run-lines 0.8s linear infinite;
+  }
+  @keyframes run-lines {
+    from {
+      transform: translateX(0);
+      opacity: 0.95;
+    }
+    to {
+      transform: translateX(-9px);
+      opacity: 0.15;
+    }
+  }
+
+  /* ───── 하단 탭: 고른 아이콘이 통통 ───── */
+  .navitem.active .navicon {
+    animation: nav-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  @keyframes nav-pop {
+    0% {
+      transform: scale(0.8) rotate(-8deg);
+    }
+    60% {
+      transform: scale(1.18) rotate(4deg);
+    }
+    100% {
+      transform: scale(1) rotate(0);
+    }
+  }
+
+  /* ───── 버튼: 누르면 꾹 ───── */
+  .dbtn,
+  .set-row,
+  .adm-tab {
+    transition: translate 0.12s ease, scale 0.12s ease;
+  }
+  .dbtn:active:not(:disabled),
+  .set-row:active {
+    translate: 0 1px;
+    scale: 0.97;
+  }
+}
+
+/* 날씨 낙서 미리보기(/weather): 카드 안에서 배경 효과를 보여준다 */
+.wx-preview {
+  overflow: hidden;
+}
+.wx-preview .wx-amb {
+  inset: 0;
+}

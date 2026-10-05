@@ -5,7 +5,7 @@ import type { HourlyForecast } from './types.js'
 
 export type WeatherKind =
   | 'clear' | 'cloudy' | 'partly' | 'rain' | 'thunder' | 'snow' | 'windy' | 'dust' | 'fog' | 'heat' | 'cold'
-  | 'shower' | 'sleet' | 'range' | 'uv' | 'frost' | 'typhoon' | 'night'
+  | 'shower' | 'sleet' | 'range' | 'uv' | 'frost' | 'typhoon' | 'night' | 'partlynight'
 
 // MVP Draft 임계값
 export const conditionConfig = {
@@ -24,6 +24,8 @@ export interface ConditionInput {
   tempMin: number | null
   tempMax: number | null
   dustGrade: number | null
+  /** 지금 해가 졌는가(위치·날짜로 계산한 일몰~일출). 없으면 20시~새벽 5시를 밤으로 본다 */
+  night?: boolean
 }
 
 export function deriveCondition(i: ConditionInput): { condition: WeatherKind; flags: WeatherKind[] } {
@@ -42,11 +44,20 @@ export function deriveCondition(i: ConditionInput): { condition: WeatherKind; fl
   else if (flags.some((f) => f !== 'range')) condition = flags.find((f) => f !== 'range')!
   else {
     const hour = toKstParts(i.now).hour
-    const night = hour >= 20 || hour < 5
+    const night = i.night ?? (hour >= 20 || hour < 5)
+    // 해가 진 뒤에는 맑음·구름 조금의 그림이 해에서 달로 바뀐다. 비·눈·바람·미세먼지처럼 따로 표시해야 하는 날씨는 그대로다.
     if (i.current.sky === 'clear') condition = night ? 'night' : 'clear'
-    else if (i.current.sky === 'partly') condition = 'partly'
+    else if (i.current.sky === 'partly') condition = night ? 'partlynight' : 'partly'
     else if (i.current.sky === 'cloudy') condition = 'cloudy'
     else condition = flags.includes('range') ? 'range' : 'cloudy'
   }
   return { condition, flags: flags.filter((f) => f !== condition) }
+}
+
+/** 시간별 예보 한 칸의 그림 종류: 비·눈은 그대로, 맑음·구름 조금은 밤이면 달 그림 */
+export function hourlyKind(h: { precip: string; sky?: string | null }, night: boolean): string {
+  if (h.precip !== 'none') return h.precip
+  if (h.sky === 'clear') return night ? 'night' : 'clear'
+  if (h.sky === 'partly') return night ? 'partlynight' : 'partly'
+  return h.sky ?? 'cloudy'
 }

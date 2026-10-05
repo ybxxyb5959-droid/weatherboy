@@ -36,3 +36,29 @@ export function latLngToGrid(lat: number, lng: number): { nx: number; ny: number
     ny: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5),
   }
 }
+
+/** 기상청 격자 -> 위도·경도(위 변환의 역변환). 격자 칸의 중심에 가까운 좌표를 돌려준다. */
+export function gridToLatLng(nx: number, ny: number): { lat: number; lng: number } {
+  const DEGRAD = Math.PI / 180.0
+  const re = RE / GRID
+  const slat1 = SLAT1 * DEGRAD
+  const slat2 = SLAT2 * DEGRAD
+  const olon = OLON * DEGRAD
+  const olat = OLAT * DEGRAD
+
+  let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5)
+  sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn)
+  let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5)
+  sf = (Math.pow(sf, sn) * Math.cos(slat1)) / sn
+  let ro = Math.tan(Math.PI * 0.25 + olat * 0.5)
+  ro = (re * sf) / Math.pow(ro, sn)
+
+  const xn = nx - XO
+  const yn = ro - ny + YO
+  let ra = Math.sqrt(xn * xn + yn * yn)
+  if (sn < 0) ra = -ra
+  const alat = 2.0 * Math.atan(Math.pow((re * sf) / ra, 1.0 / sn)) - Math.PI * 0.5
+  const theta = Math.abs(xn) <= 0 ? 0 : Math.abs(yn) <= 0 ? (xn < 0 ? -Math.PI * 0.5 : Math.PI * 0.5) : Math.atan2(xn, yn)
+  const alon = theta / sn + olon
+  return { lat: alat / DEGRAD, lng: alon / DEGRAD }
+}

@@ -109,6 +109,44 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 기타 일정 그림: 러닝(달리는 졸라맨) 추가 (작성: Claude Code)
+- 수정 목적: 기타 일정 제목에 러닝·달리기 등이 있을 때 공 차는 "운동" 그림이 아니라 달리는 그림을 보여줌.
+- 변경 파일:
+  - `frontend/src/components/StickPerson.tsx` — `Mood` 에 `run`: 앞으로 7° 기운 몸, 성큼성큼 달리는 다리, 접어 흔드는 팔, 파란 머리띠, 땀방울, 뒤로 흩날리는 바람 줄(움직임 줄이기 아닐 때만 흩날림)·땅 먼지
+  - `frontend/src/lib/eventMood.ts` — 키워드 `러닝/런닝/달리기/조깅/마라톤/러너/러닝크루/트레일런/10km/5km/10k` → `run`(운동 `sport` 보다 먼저), `isSceneMood` 에 `run`
+  - `frontend/src/pages/WeatherPreviewPage.tsx`(`/weather` 에 "한강 러닝" 예시), `styles/motion.css`(`.run-lines`)
+- 프론트 연결 사항: 없음.
+- 검증 결과: frontend tsc/build 통과. `/weather` 에서 그림 확인, 키워드 10개 매핑 확인(풋살·헬스·농구는 기존 `sport` 유지).
+- 남은 일 / 상대에게 요청: 없음.
+- 적용한 규칙 번호: 해당 없음
+
+### 2026-10-05 일몰 후 날씨 그림: 맑음·구름 조금은 해→달 (작성: Claude Code)
+- 수정 목적: 밤 그림이 "맑음 + 20시~새벽 5시"에만 적용돼, 구름 조금은 밤에도 해가 구름 뒤에 있는 그림이었고 일몰 시각도 계절을 반영하지 못했음.
+- 규칙(사용자 결정): 실제 일몰~일출 사이면 **맑음 → 달(night), 구름 조금 → 구름 뒤 달(partlynight, 신규)**. 비·눈·진눈깨비·소나기·바람·미세먼지·폭염·한파·서리 등 따로 표시해야 하는 날씨와 흐림은 밤에도 그대로.
+- 변경 파일:
+  - `backend/src/services/weather/sun.ts`(신규) — 날짜·위경도로 태양 고도를 구해 일몰~일출 판정(`isNightAt`, 기준 -0.833°). 서울 하지·동지 일출·일몰이 실제와 1분 차이
+  - `backend/src/utils/grid.ts` — `gridToLatLng`(기상청 격자 → 위경도, 역변환)
+  - `backend/src/services/weather/conditions.ts` — `night` 입력(없으면 예전 20시~5시 규칙), `partlynight` 종류, `hourlyKind()`(시간별 줄 공통 규칙)
+  - `backend/src/api/routes/weather.ts` — 지역 격자 중심 좌표로 현재·시간별 모두 일몰 계산
+  - `frontend/src/components/DoodleWeather.tsx`(구름 뒤 달 그림 `partlynight`), `WeatherAmbience.tsx`(밤 배경: 별 + 구름)
+  - 테스트 `backend/tests/unit/sun.test.ts`(15개)
+- 프론트 연결 사항: `/api/weather/today` 의 `condition` 과 `hourly[].condition` 에 `partlynight` 가 올 수 있음(`WeatherKind` 에 추가됨). 일정 날씨 아이콘(`daily`)은 낮 기준이라 변경 없음.
+- 검증 결과: backend typecheck/lint/전체 테스트 615 통과, 3 실패는 기존(미세먼지 1, 다른 세션 칭호 변경 후 낡은 캐릭터 테스트 2). frontend tsc/build 통과, `/weather` 에서 새 그림 확인.
+- 남은 일 / 상대에게 요청: 지역 좌표는 5km 격자 중심이라 일몰이 실제와 1~2분 어긋날 수 있음. 커밋 안 함.
+- 적용한 규칙 번호: 해당 없음
+
+### 2026-10-05 움직이는 날씨 그림·홈 배경 효과·화면 등장·옷장/캐릭터/일정/탭 움직임 (작성: Claude Code)
+- 수정 목적: 앱에 낙서 디자인에 어울리는 살아 있는 느낌을 더함. 홈 날씨가 해(햇살이 돌고 숨 쉬듯)·구름(흘러감)·비(추적추적 + 물웅덩이 파문)·번개(번쩍)·눈(내려앉음)·바람·안개·먼지·밤(별 반짝) 등으로 움직임.
+- 변경 파일:
+  - `frontend/src/components/DoodleWeather.tsx` — `WeatherDoodle`/`Sun`/`Cloud` 에 `animate` 옵션. 그림 모양은 그대로, 움직이는 부분에만 `wx-*` 클래스(animate 일 때 svg 에 `wx` 클래스가 붙어야 움직임)
+  - `frontend/src/components/WeatherAmbience.tsx` — 날씨 카드 뒤 배경 효과(햇살 빛+도는 햇살선, 흐르는 구름, 빗줄기+파문, 번개 번쩍임, 눈, 안개 줄, 바람 줄, 먼지, 별). 날씨 종류 → 효과 매핑 `LAYERS`, 무작위 대신 계산으로 흩뿌려 렌더마다 같은 모양
+  - `frontend/src/styles/motion.css`(신규, `main.tsx` 에서 불러옴) — 모든 움직임. 전부 `@media (prefers-reduced-motion: no-preference)` 안에 있어 "움직임 줄이기" 설정이면 멈춤. 홈 카드 차례로 올라옴(`.rise`), 화면 전환 시 나타남(`.page-in`, `App.tsx` 에서 첫 경로 조각이 바뀔 때만), 옷장 빨랫줄 옷 살랑살랑(`line-sway`), 캐릭터 둥실·잠금 자물쇠 달랑, 일정 오늘 날짜 콩닥·카드 차례로, 설정 묶음 차례로, 하단 탭 고른 아이콘 통통, 버튼 누르면 꾹
+  - `frontend/src/pages/HomePage.tsx`, `WeatherPreviewPage.tsx`(개발용 `/weather` 에서 모든 날씨를 움직이는 상태로 확인)
+- 프론트 연결 사항: 없음.
+- 검증 결과: frontend tsc/lint(기존 경고만)/build 통과. `/weather` 와 홈(구름 조금)에서 직접 확인, 옷장 34벌 sway 동작·각 화면 animation 개수 확인. 비·눈 등의 실제 움직임 느낌과 저사양 폰 성능은 폰에서 확인 필요.
+- 남은 일 / 상대에게 요청: 옷장은 옷이 많으면 `will-change` 레이어가 늘어남 → 폰에서 버벅이면 sway 를 화면에 보이는 줄만 또는 끄기. 밤 날씨는 'night' 일 때만 별이 나옴(현재 날씨 데이터에 night 가 오는지 확인 필요). 커밋 안 함.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 개인정보 안내 정리 + 로그인 없이 열리는 공개 페이지 + 후기 본문 디스코드 제외 (작성: Claude Code)
 - 수정 목적: 점검 보고서 P0(S5): 국외 이전·연령 기준·탈퇴 후 남는 정보·디스코드 전송이 안내와 실제 처리가 어긋났던 것을 정리하고, 스토어 제출·계정 삭제 안내용 공개 URL 을 만듦.
 - 사용자 답을 못 받아 기본값으로 정함(바꾸려면 알려 주세요): 연령 기준 **만 14세 이상**(`MIN_AGE`), 후기·의견 **본문은 디스코드로 안 보냄**(관리자 화면에서만 확인, `DISCORD_INCLUDE_MESSAGE=true` 로 켤 수 있으나 켜면 방침 5번 문구도 고쳐야 함).

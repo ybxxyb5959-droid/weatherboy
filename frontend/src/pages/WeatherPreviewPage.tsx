@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { WeatherDoodle, weatherKinds } from '../components/DoodleWeather'
 import StickPerson, { type Mood } from '../components/StickPerson'
+import WeatherAmbience from '../components/WeatherAmbience'
 
 // 기타 일정 제목 예시 -> 장면 (lib/eventMood.ts 의 키워드)
 const OTHER_EXAMPLES: [string, Mood][] = [
@@ -10,6 +11,7 @@ const OTHER_EXAMPLES: [string, Mood][] = [
   ['팀 회식', 'drink'],
   ['콘서트', 'show'],
   ['풋살', 'sport'],
+  ['한강 러닝', 'run'],
   ['저녁 약속', 'meal'],
   ['면접', 'work'],
   ['그 밖의 일정', 'trip'],
@@ -27,8 +29,9 @@ export default function WeatherPreviewPage() {
       </div>
       <div className="grid2">
         {weatherKinds.map((w, i) => (
-          <div key={w.kind} className={`box w${i % 4} cloth`}>
-            <WeatherDoodle kind={w.kind} size={96} />
+          <div key={w.kind} className={`box w${i % 4} cloth has-amb wx-preview`}>
+            <WeatherAmbience kind={w.kind} />
+            <WeatherDoodle kind={w.kind} size={96} animate />
             <div className="label">{w.label}</div>
           </div>
         ))}

@@ -15,6 +15,7 @@ import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
 import DailyForecast from '../components/DailyForecast'
 import { WeatherDoodle } from '../components/DoodleWeather'
+import WeatherAmbience from '../components/WeatherAmbience'
 import { categories } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
 import { useAsync } from '../hooks'
@@ -314,7 +315,8 @@ export default function HomePage() {
   const blocks: Record<BlockId, ReactNode> = {
     weather: (
       <>
-      <section className="section weather">
+      <section className="section weather has-amb">
+        <WeatherAmbience kind={w.condition} />
         <div>
           <div className="tiny">
             {w.location}
@@ -330,7 +332,7 @@ export default function HomePage() {
           {w.stale && <p className="tiny">최신 예보를 못 받아서 이전 예보를 보여줘요</p>}
         </div>
         <div className="weather-btn">
-          <WeatherDoodle kind={w.condition} size={96} />
+          <WeatherDoodle kind={w.condition} size={96} animate />
         </div>
       </section>
 
@@ -472,7 +474,7 @@ export default function HomePage() {
         const hidden = layout.hidden.includes(id)
         if (hidden && !editing) return id === 'recommend' ? <div key={id}>{feedbackCard}</div> : null
         return (
-          <div key={id} className={editing ? `edit-block${hidden ? ' off' : ''}` : undefined}>
+          <div key={id} className={`${editing ? `edit-block${hidden ? ' off' : ''} ` : ''}rise`} style={{ '--i': idx } as React.CSSProperties}>
             {editing && (
               <div className="edit-bar">
                 <span>{blockLabels[id]}</span>
