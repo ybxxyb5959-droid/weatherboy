@@ -79,8 +79,8 @@ describe('프록시 IP 진단', () => {
 })
 
 describe('접속자 IP 를 읽는 프록시 단계', () => {
-  it('Render 는 2단계, 그 밖에는 1단계, 설정값이 있으면 그 값', () => {
-    expect(trustProxyHops(undefined, true)).toBe(2)
+  it('Render 는 4단계, 그 밖에는 1단계, 설정값이 있으면 그 값', () => {
+    expect(trustProxyHops(undefined, true)).toBe(4)
     expect(trustProxyHops(undefined, false)).toBe(1)
     expect(trustProxyHops(0, true)).toBe(0)
     expect(trustProxyHops(3, false)).toBe(3)
