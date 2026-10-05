@@ -55,8 +55,10 @@ export default function LineScroller({ label, className, arriving, onReady, focu
     const item = el.querySelector<HTMLElement>(`[data-hung-id="${arriving}"]`)
     // 그 옷의 오른쪽 끝이 화면 안에 들어오게(오른쪽에 조금 여유). 새 옷이면 줄 맨 끝까지 넘어간다.
     const want = item ? Math.min(el.scrollWidth - el.clientWidth, Math.max(0, item.offsetLeft + item.offsetWidth + 24 - el.clientWidth)) : el.scrollWidth
-    if (Math.abs(want - el.scrollLeft) > 4) el.scrollTo({ left: want, behavior: reduce ? 'auto' : 'smooth' })
-    const t = window.setTimeout(() => readyRef.current?.(), reduce ? 0 : SCROLL_MS)
+    // 멀리(두 화면 넘게) 넘겨야 하면 부드럽게 굴리지 않고 바로 간다: 옷이 많을 때 렉이 걸려 중간에 멈추는 걸 막는다
+    const instant = reduce || Math.abs(want - el.scrollLeft) > el.clientWidth * 2
+    if (Math.abs(want - el.scrollLeft) > 4) el.scrollTo({ left: want, behavior: instant ? 'auto' : 'smooth' })
+    const t = window.setTimeout(() => readyRef.current?.(), instant ? 0 : SCROLL_MS)
     return () => window.clearTimeout(t)
   }, [arriving, focus])
 

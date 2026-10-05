@@ -13,6 +13,9 @@ import { useAsync } from '../hooks'
 // 빨래집게가 풀리고 옷이 떨어지는 애니메이션 길이(ms). global.css 의 wb-pin-*/wb-drop 과 맞춘다.
 const LEAVE_MS = 1000
 
+// 새 옷이 빨랫줄에 걸리는 애니메이션을 보여주는 최대 벌 수(줄마다, 줄 끝쪽 옷부터)
+const MAX_HANG_ANIM = 6
+
 const nameOf = (c: Clothing) => `${c.color}${c.pattern && c.pattern !== '무지' ? ` ${c.pattern}` : ''} ${c.type}`
 
 export default function WardrobePage() {
@@ -129,8 +132,9 @@ export default function WardrobePage() {
           {groups.map((g, gi) => {
             const target = lastArriving(g.items)
             const play = shown.includes(g.name)
-            // 이 줄에서 몇 번째로 걸리는 옷인지(차례로 하나씩 걸린다)
-            const order = g.items.filter((c) => arriving.includes(c.id)).map((c) => c.id)
+            // 이 줄에서 몇 번째로 걸리는 옷인지(차례로 하나씩 걸린다).
+            // 한꺼번에 많이 담아도 줄 끝(화면에 보이는 쪽)의 마지막 몇 벌만 걸리는 모습을 보여준다. 나머지는 처음부터 걸려 있어서, 보이는 자리가 비거나 렉이 걸리지 않는다.
+            const order = g.items.filter((c) => arriving.includes(c.id)).map((c) => c.id).slice(-MAX_HANG_ANIM)
             return (
             <section key={g.name} className="cat">
               <LineScroller
@@ -141,7 +145,7 @@ export default function WardrobePage() {
                 onReady={() => setShown((s) => (s.includes(g.name) ? s : [...s, g.name]))}
               >
                   {g.items.map((c, i) => (
-                    <div key={c.id} data-hung-id={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}${arriving.includes(c.id) ? (play ? ' arriving' : ' waiting') : ''}`} style={arriving.includes(c.id) ? ({ '--arrive-delay': `${order.indexOf(c.id) * 0.35}s` } as React.CSSProperties) : undefined}>
+                    <div key={c.id} data-hung-id={c.id} className={`hung h${(gi + i) % 3}${leaving.includes(c.id) ? ' leaving' : ''}${order.includes(c.id) ? (play ? ' arriving' : ' waiting') : ''}`} style={order.includes(c.id) ? ({ '--arrive-delay': `${order.indexOf(c.id) * 0.35}s` } as React.CSSProperties) : undefined}>
                       <div className="hang">
                         <Clothespin style={{ left: 20, top: -12 }} />
                         <Clothespin style={{ left: 50, top: -12 }} />

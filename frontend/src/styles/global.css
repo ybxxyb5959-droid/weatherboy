@@ -43,6 +43,8 @@ body {
   border-left: 2px solid rgba(34, 34, 34, 0.35);
   border-right: 2px solid rgba(34, 34, 34, 0.35);
   overflow-x: hidden;
+  /* clip 은 가로로 넘친 것만 잘라내고 스크롤 영역을 만들지 않아서, 안쪽 제목 줄의 sticky(고정)가 화면 스크롤을 따른다. 지원 안 하는 브라우저는 위의 hidden 을 쓴다. */
+  overflow-x: clip;
 }
 
 /* 구겨진 자국: 아주 흐린 선 몇 개 */
@@ -4268,4 +4270,44 @@ a.card {
 }
 .scan-item.owned .scan-cats {
   display: none;
+}
+
+/* 로딩 줄: 빨래집게는 옷 위에 고정(옷장의 .hang 과 같은 배치) */
+.hl-item {
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+.hl-item .pin {
+  position: absolute;
+  z-index: 2;
+}
+.hl-item > svg:not(.pin) {
+  display: block;
+  width: 64px;
+  height: 64px;
+}
+
+/* ---------- 위쪽 제목·버튼 줄 고정 (스크롤해도 [옷 추가]·[일정 추가] 같은 버튼이 항상 보인다) ---------- */
+.page-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: var(--paper);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+}
+/* 상태바(안전 영역) 뒤로 내용이 비치지 않게, 첫 줄은 그 여백까지 덮는다(제자리 위치는 그대로) */
+.page-head:first-child {
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+}
+/* 일정 탭: 달 제목도 목록 위에 고정 */
+.events-list .month-title {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 0 8px;
+  padding: 2px 0 6px;
+  background-color: var(--paper);
 }
