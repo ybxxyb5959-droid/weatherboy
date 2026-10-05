@@ -437,10 +437,10 @@
 
   /* ───── 화면이 열릴 때: 아래에서 살짝 올라오며 나타난다 ───── */
   .page-in {
-    animation: page-in 0.32s ease-out both;
+    animation: page-in 0.32s ease-out backwards;
   }
   .rise {
-    animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
     animation-delay: calc(var(--i, 0) * 80ms);
   }
   @keyframes page-in {
@@ -510,7 +510,7 @@
     transform-origin: 50% 0;
   }
   .char-title {
-    animation: rise-in 0.6s ease-out both;
+    animation: rise-in 0.6s ease-out backwards;
   }
   @keyframes char-float {
     0%, 100% {
@@ -548,7 +548,7 @@
     }
   }
   .events-list .card-wrap {
-    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   }
   .events-list .card-wrap:nth-child(2) {
     animation-delay: 70ms;
@@ -562,7 +562,7 @@
 
   /* ───── 설정: 묶음이 차례로 ───── */
   .set-group {
-    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   }
   .set-group:nth-of-type(2) {
     animation-delay: 70ms;
