@@ -1,4 +1,5 @@
 import BackButton from '../components/BackButton'
+import { Loading } from '../components/LoadingScene'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -163,7 +164,7 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) return <main><p>불러오는 중…</p></main>
+  if (loading) return <main><Loading kind="gear" label="설정 불러오는 중…" /></main>
   if (!s || !me) return <main><p role="alert">{loadError ?? '설정을 불러오지 못했어요.'}</p></main>
 
   const changed = (sensDraft !== null && sensDraft !== s.sensitivity) || routineDraft !== null

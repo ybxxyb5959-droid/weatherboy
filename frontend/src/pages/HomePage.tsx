@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Loading } from '../components/LoadingScene'
 import StickPerson from '../components/StickPerson'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
@@ -247,7 +248,7 @@ export default function HomePage() {
       <main className="home">
         {header}
         {notice && <p role="alert">{notice}</p>}
-        <p>날씨 보는 중…</p>
+        <Loading kind="weather" label="날씨 보는 중…" />
       </main>
     )
   }

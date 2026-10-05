@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Loading } from '../components/LoadingScene'
 import AddClothesSheet from '../components/AddClothesSheet'
 import RuleText from '../components/RuleText'
 import StickPerson from '../components/StickPerson'
@@ -59,7 +60,7 @@ export default function CharacterPage() {
         <div className="page-head">
           <h1>내 캐릭터</h1>
         </div>
-        {error ? <p role="alert">{error}</p> : <p>불러오는 중…</p>}
+        {error ? <p role="alert">{error}</p> : <Loading kind="mirror" label="거울 보는 중…" />}
       </main>
     )
   }

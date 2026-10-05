@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Loading } from '../components/LoadingScene'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, errorMessage } from '../api'
 import BackButton from '../components/BackButton'
@@ -68,7 +69,7 @@ export default function ReviewPage() {
     </div>
   )
 
-  if (status.loading) return <main>{head}<p>불러오는 중…</p></main>
+  if (status.loading) return <main>{head}<Loading kind="letter" label="후기 불러오는 중…" /></main>
 
   if (done || status.data?.reviewed) {
     return (

@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
+import { Loading } from '../components/LoadingScene'
 import { Link } from 'react-router-dom'
 import HandText from '../components/HandText'
 import Toast, { useToast } from '../components/Toast'
@@ -124,7 +125,7 @@ export default function EventsPage() {
           ))}
         </ul>
       )}
-      {loading && <p>불러오는 중…</p>}
+      {loading && <Loading kind="calendar" label="일정 보는 중…" />}
       {error && (
         <div className="empty">
           <p role="alert">{error}</p>

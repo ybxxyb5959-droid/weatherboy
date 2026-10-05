@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Loading } from '../components/LoadingScene'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
@@ -106,7 +107,7 @@ export default function WardrobePage() {
       )}
 
       {loading ? (
-        <p>불러오는 중…</p>
+        <Loading kind="closet" label="옷장 여는 중…" />
       ) : error ? (
         <div className="empty">
           <p role="alert">{error}</p>

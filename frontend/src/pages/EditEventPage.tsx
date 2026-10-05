@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { Loading } from '../components/LoadingScene'
 import HandText from '../components/HandText'
 import StickPerson from '../components/StickPerson'
 import { EventForm } from './NewEventPage'
@@ -11,7 +12,7 @@ export default function EditEventPage() {
   const { id = '' } = useParams()
   const ev = useAsync(() => api<PlanEvent>('GET', `/api/events/${id}`), id)
 
-  if (ev.loading) return <main><p>불러오는 중…</p></main>
+  if (ev.loading) return <main><Loading kind="edit" label="일정 가져오는 중…" /></main>
   if (!ev.data) {
     return (
       <main className="empty">

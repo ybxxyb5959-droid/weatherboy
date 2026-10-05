@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Loading } from '../components/LoadingScene'
 import BackButton from '../components/BackButton'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
@@ -15,7 +16,7 @@ export default function EditClothingPage() {
   const { id = '' } = useParams()
   const { data, error, loading } = useAsync(() => api<Clothing[]>('GET', '/api/clothes'), id)
   const cloth = data?.find((c) => c.id === id)
-  if (loading) return <main><p>불러오는 중…</p></main>
+  if (loading) return <main><Loading kind="edit" label="옷 가져오는 중…" /></main>
   if (error || !cloth) {
     return (
       <main>

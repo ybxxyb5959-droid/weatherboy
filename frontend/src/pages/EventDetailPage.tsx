@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Loading } from '../components/LoadingScene'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
 import ActivityScore from '../components/ActivityScore'
@@ -160,7 +161,7 @@ function EventDetail({ id }: { id: string }) {
   }), `${examples}`)
   const e = ev.data
 
-  if (ev.loading) return <main><p>불러오는 중…</p></main>
+  if (ev.loading) return <main><Loading kind="note" label="일정 펼치는 중…" /></main>
   if (!e) {
     return (
       <main className="empty">
