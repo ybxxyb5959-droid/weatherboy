@@ -7,7 +7,7 @@ import { LockIcon } from '../components/ToolIcons'
 import ThemeScribble from '../components/ThemeScribble'
 import { ItemThumb, type Accessories, type Slot } from '../components/CharacterDecor'
 import { colorHex } from '../mocks/clothes'
-import { BASIC_WEAR, PERSONA_WEAR, useCharacter, type Share } from '../lib/character'
+import { wearOf, useCharacter, type Share } from '../lib/character'
 import { buildCharacterCard, shareImage } from '../lib/shareCard'
 import { useAuth } from '../auth'
 import { errorMessage } from '../api'
@@ -15,6 +15,22 @@ import { errorMessage } from '../api'
 const pct = (s: number) => `${Math.floor(s * 1000 + 1e-9) / 10}%`
 // 맞는 칭호가 하나도 없을 때(옷이 충분히 모인 뒤) 보여주는 임시 칭호. 도감의 칭호가 아니다.
 const TASTE_TITLE = '취향 탐색 중'
+
+/** 도감의 취향 칭호 설명: 희귀 칭호가 없을 때 옷장에서 가장 눈에 띄는 한 가지로 이름이 붙고, 복장도 그 취향을 따른다 */
+function TasteDex({ mine }: { mine: { name: string; reason?: string } | null }) {
+  return (
+    <div className="taste-dex">
+      <h3>취향 칭호</h3>
+      <p className="tiny">희귀 칭호가 없을 때, 옷장에서 가장 두드러진 한 가지(같은 특징 2벌 이상)로 이름이 붙고 캐릭터도 그 취향대로 입어요.</p>
+      <ul className="char-dex">
+        <li><b>○○ 편애 중</b><div className="tiny">가장 많은 색 · 예: 파랑 편애 중</div></li>
+        <li><b>○○ 단골</b><div className="tiny">가장 많은 옷 종류 · 예: 니트 단골</div></li>
+        <li><b>○○ 포인트</b><div className="tiny">가장 많은 무늬 · 예: 체크 포인트</div></li>
+      </ul>
+      {mine && <p className="tiny">지금 내 취향 칭호: <b>{mine.name}</b>{mine.reason ? ' · ' + mine.reason : ''}</p>}
+    </div>
+  )
+}
 
 const dexGuide = '비율은 내 옷 전체 기준이며, 적힌 조건을 모두 만족해야 해요. 주·부칭호는 특징의 실제 비중순으로, 동점은 정해진 순서로 골라요. 무지개 칭호는 특징 칭호 다음이에요. 눌러보면 모습을 확인할 수 있어요.'
 const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
@@ -78,7 +94,7 @@ export default function CharacterPage() {
         <section className="char-hero">
           <div className="char-stage">
             <ThemeScribble persona={shownLocked?.key ?? null} />
-            <StickPerson mood="stand" size={200} wear={(shownLocked && PERSONA_WEAR[shownLocked.key]) || BASIC_WEAR} persona={shownLocked?.key ?? null} />
+            <StickPerson mood="stand" size={200} wear={wearOf(shownLocked)} persona={shownLocked?.key ?? null} />
             {/* 아직 잠겨 있다는 표시: 옷을 더 등록하면 열린다 */}
             <span className="char-lock-badge" role="img" aria-label="잠겨 있어요">
               <LockIcon size={46} />
@@ -144,6 +160,7 @@ export default function CharacterPage() {
               </li>
             ))}
           </ul>
+          <TasteDex mine={null} />
         </section>
       </main>
     )
@@ -153,7 +170,7 @@ export default function CharacterPage() {
   const title = a.title ?? a.taste ?? null // 희귀 칭호가 없으면 취향 칭호
   const config = local ?? data.config
   const shown = preview ? (data.titles.find((t) => t.key === preview) ?? title) : title
-  const wear = (shown && PERSONA_WEAR[shown.key]) || BASIC_WEAR
+  const wear = wearOf(shown)
   const current = data.catalog.find((c) => c.slot === slot)!
   const equippedCount = Object.values(config).filter(Boolean).length
 
@@ -191,7 +208,7 @@ export default function CharacterPage() {
         title: title?.name ?? (a.ready ? TASTE_TITLE : '내 캐릭터'),
         tagline: title?.tagline ?? (a.ready ? '아직 취향을 찾고 있어요' : '내 옷장의 특징을 찾아가는 중이에요'),
         persona: title?.key ?? null,
-        wear: (title && PERSONA_WEAR[title.key]) || BASIC_WEAR,
+        wear: wearOf(title),
         accessories: config,
         colors: a.colors,
         count: a.count,
@@ -348,6 +365,7 @@ export default function CharacterPage() {
             </li>
           ))}
         </ul>
+        <TasteDex mine={isTaste ? a.taste ?? null : null} />
       </section>
     </main>
   )

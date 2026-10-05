@@ -443,6 +443,46 @@ function PersonaDecor({ persona, acc }: { persona: string; acc: Accessories }) {
       ) : null
     case 'RAINBOW':
       return free && !acc.hat ? EXTRA.rainbow : null
+    case 'SUMMER_COOL':
+      // 아이스바와 시원한 물방울
+      return free ? (
+        <g>
+          <rect x="85" y="6" width="11" height="17" rx="5" fill="#8fd8e8" strokeWidth="1.8" />
+          <path d="M90.5 23 V30" strokeWidth="2" />
+          <path d="M88 11 V15" stroke="#fff" strokeWidth="1.4" />
+          <path d="M31 16 C29 20 29 22 31 23 C33 22 33 20 31 16Z" fill="#cfeef7" strokeWidth="1.2" />
+          <path d="M27 36 C25 40 25 42 27 43 C29 42 29 40 27 36Z" fill="#cfeef7" strokeWidth="1.2" />
+        </g>
+      ) : null
+    case 'SPRING_FALL':
+      // 낙엽과 꽃잎
+      return free ? (
+        <g strokeWidth="1.4">
+          <path d="M31 16 Q38 12 40 20 Q33 24 31 16Z" fill="#e8a458" />
+          <path d="M31 16 L37 19" fill="none" />
+          <path d="M88 44 Q95 40 97 48 Q90 52 88 44Z" fill="#d9774e" />
+          <Flower x={90} y={14} s={0.8} petal="#f9c3d6" />
+        </g>
+      ) : null
+    case 'WINTER_THICK':
+      return free ? EXTRA.snow : null
+    case 'TOP_HEAVY':
+      // 접어 쌓은 옷더미
+      return free ? (
+        <g strokeWidth="1.6">
+          <rect x="84" y="20" width="18" height="6" rx="2" fill="#f4a3b8" />
+          <rect x="85" y="14" width="16" height="6" rx="2" fill="#9fc9f3" />
+          <rect x="86" y="8" width="14" height="6" rx="2" fill="#f6d44c" />
+        </g>
+      ) : null
+    case 'BOTTOM_HEAVY':
+      // 옷걸이에 걸린 바지
+      return free ? (
+        <g strokeWidth="1.6">
+          <path d="M92 4 Q92 1 95 1 Q98 1 98 4 L95 8 M80 14 L95 8 L110 14" fill="none" />
+          <path d="M84 14 H106 L104 32 H97 L95 22 L93 32 H86Z" fill="#5a6ea8" />
+        </g>
+      ) : null
     default:
       return null
   }

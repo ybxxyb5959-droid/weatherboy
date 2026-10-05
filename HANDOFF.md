@@ -109,6 +109,20 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 칭호: 새 칭호 5종 + 칭호별 복장·소품 + 도감에 취향 칭호 (작성: Claude Code)
+- 수정 목적: 지난 기록의 남은 일 처리. 새 칭호(계절·상하의 쏠림), 취향 칭호도 도감에 안내, 칭호에 맞는 옷 스타일로 캐릭터가 입도록(캐릭터 그림은 그대로).
+- 변경 파일:
+  - `backend/src/services/character/analysis.ts` — 칭호 15→20종: SUMMER_COOL(얇은 옷 50%), WINTER_THICK(두꺼운 옷 40%), SPRING_FALL(보통 두께 긴팔·셔츠·맨투맨·가디건·자켓·바람막이 60%), TOP_HEAVY(상의 70%·7벌), BOTTOM_HEAVY(하의 45%·4벌). 상·하의 쏠림은 구조 칭호(특징 칭호 뒤). 취향 칭호에 `kind/value/category` 추가(복장용)
+  - `backend/tests/unit/characterAnalysis.test.ts`, `tests/unit/adminOps.test.ts` — 20종·경계값·취향 힌트 테스트
+  - `frontend/src/lib/character.ts` — 새 5종 `PERSONA_WEAR`, `tasteWear()`/`wearOf()`(취향 칭호는 두드러진 색·종류·무늬를 그대로 입음)
+  - `frontend/src/components/CharacterDecor.tsx`, `ThemeScribble.tsx` — 새 5종 소품(아이스바·낙엽/꽃잎·눈·옷더미·걸린 바지)과 테마색
+  - `frontend/src/pages/CharacterPage.tsx`, `styles/global.css` — 도감에 취향 칭호 3가지 설명 섹션(내 취향 칭호 표시), 복장은 `wearOf`
+  - `PROJECT_RULES.md` — 15종→20종
+- 프론트 연결 사항: TitleKey 20종(백엔드 `TitleKey` ↔ 프론트 `PERSONA_WEAR`·소품·테마). `analysis.taste` 에 `kind('color'|'type'|'pattern')`, `value`(화면 문자열), `category`('TOP'|'BOTTOM'|'OUTER', 종류일 때) 추가.
+- 검증 결과: backend typecheck/lint, 단위 테스트 444 통과. frontend tsc/build 통과(lint 오류 없음). 로그인이 필요한 캐릭터 화면은 브라우저로 직접 못 봄.
+- 남은 일 / 상대에게 요청: 새 칭호 복장·소품 모양은 실제 화면에서 한번 확인 필요. 아직 커밋 안 된 다른 작업(admin, push, sw.js)은 이번 커밋에서 제외.
+- 적용한 규칙 번호: C-8, R-13
+
 ### 2026-10-05 칭호: 취향 칭호 추가 + 희귀 칭호 조건 약하게 완화 (작성: Claude Code)
 - 수정 목적: 옷이 10벌 이상이어도 칭호가 거의 안 나오던 문제(시뮬레이션: 10벌 93%, 20벌 99% 칭호 없음). 모든 사용자가 열리면 칭호를 갖도록 함.
 - 결정(사용자 합의): B(취향 칭호 자동 부여) + A(조건 약하게 완화). 희귀 칭호 15개는 그대로 두고 비율 기준만 5~15%p 낮춤.

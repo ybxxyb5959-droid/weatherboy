@@ -48,7 +48,7 @@
 |---|---|---|---|
 | API 응답/요청 모양 | `backend/src/api/routes/*.ts`, `backend/src/services/serializers.ts`, `recommendationService.ts` | `frontend/src/types.ts`, 각 화면의 `api<T>()` 호출 | 필드를 **추가**하는 건 자유(프론트는 몰라도 동작). **이름 변경·삭제·타입 변경**은 프론트와 같은 날 함께 처리 |
 | 옷 종류/색/무늬/두께/일정 종류/후기 값 (한글 enum) | `backend/src/config/mappings.ts` (**단일 지점**), `prisma/schema.prisma` enum | `frontend/src/mocks/clothes.ts`(`clothingTypes`, `categories`, `colorNames`, `colorHex`, `patternNames`, `thicknesses`), `mocks/events.ts`, `lib/clothingParse.ts`, `lib/eventParse.ts`, `components/ClothingDoodle.tsx` | 항목을 추가하면 **백엔드 매핑 + Prisma 마이그레이션 + 프론트 목록·그림·색**을 한 번에. 옷 종류를 추가했는데 그림이 없으면 화면이 깨진다 |
-| 캐릭터 칭호 15종(key) | `backend/src/services/character/analysis.ts` (`TitleKey`) | `frontend/src/lib/character.ts` (`PERSONA_WEAR`), `components/StickPerson.tsx`, `CharacterDecor.tsx`, `ThemeScribble.tsx` | key 문자열이 양쪽에서 같아야 한다 |
+| 캐릭터 칭호 20종(key) | `backend/src/services/character/analysis.ts` (`TitleKey`) | `frontend/src/lib/character.ts` (`PERSONA_WEAR`), `components/StickPerson.tsx`, `CharacterDecor.tsx`, `ThemeScribble.tsx` | key 문자열이 양쪽에서 같아야 한다 |
 | 캐릭터 꾸미기 아이템 id | `backend/src/services/character/catalog.ts` (`CATALOG`) | `frontend/src/components/CharacterDecor.tsx` (같은 id 로 그림) | 서버 카탈로그에 id 를 넣으면 프론트에 그림이 **반드시** 있어야 한다 |
 | 에러 `code` → 화면 동작 | `backend/src/utils/errors.ts`, 각 라우트의 `AppError`, `api/middleware/aiLimits.ts` | `frontend/src/api.ts`, `lib/ai.ts` (`isPhotoLimit`), `pages/ReviewPage` 등 | 새 코드를 만들면 프론트가 그 코드를 어떻게 보여줄지 정한다 (6-4) |
 | 로그인/세션/쿠키/CORS | `backend/src/app.ts`, `routes/auth.ts`, `middleware/common.ts`, `config/env.ts` (`FRONTEND_ORIGIN`) | `frontend/src/api.ts`, `auth.tsx`, `vite.config.ts` (프록시), `frontend/vercel.json` (rewrite) | 도메인·쿠키 설정을 바꾸면 Vercel rewrite 와 Render 환경변수까지 같이 본다 |
@@ -165,7 +165,7 @@
 | C-5 | 상황 그림(`StickPerson`)은 `Mood`(`wave cold rain trip empty wait stand travel camp hike outdoor birthday date meal drink gift show sport work`) 로 고른다. 새 상황이 필요하면 `Mood` 에 추가하고 그림을 같은 파일에 만든다 | `components/StickPerson.tsx` |
 | C-6 | `mood='stand'` 일 때만 **추천 옷(`wear`)·우산·칭호 소품(`persona`)·꾸미기(`accessories`)** 가 붙는다. 손/팔은 소매 길이에 맞춰 옷 위에 따로 그린다(`Hands`) | `StickPerson.tsx` |
 | C-7 | 꾸미기 슬롯은 6개: `hat hairpin glasses neck face extra`. 슬롯마다 아이템 하나. 그림 좌표계는 `StickPerson 'stand'` 와 같다(머리 중심 60.5,30 · 반지름 약 17.5 · 눈 53.5/66.5) | `components/CharacterDecor.tsx`, 서버 `services/character/catalog.ts` |
-| C-8 | 칭호(15종)마다 **기본 복장**이 있다(`PERSONA_WEAR`), 칭호가 없으면 `BASIC_WEAR`(흰 반팔+파란 바지) | `frontend/src/lib/character.ts` |
+| C-8 | 칭호(20종)마다 **기본 복장**이 있다(`PERSONA_WEAR`), 칭호가 없으면 `BASIC_WEAR`(흰 반팔+파란 바지) | `frontend/src/lib/character.ts` |
 | C-9 | 홈과 캐릭터 화면은 **같은 캐릭터 데이터를 공유**(모듈 캐시+구독). 꾸미기를 저장하면 홈의 캐릭터도 바로 바뀐다 | `lib/character.ts` (`useCharacter`) |
 | C-10 | 캐릭터는 **잠금 개념이 있다**: 옷장에 직접 담은 옷이 `minClothes`(현재 10)벌 미만이면 칭호·꾸미기가 잠긴다(탭에 잠금 표시). ❓ 이 방침이 최종인지는 11번 | `lib/character.ts`(`unlocked`), `BottomNav.tsx`, 서버 `analysis.ts` (`MIN_CLOTHES`) |
 
@@ -273,7 +273,7 @@ Browser(PWA) ──/api──▶ API (Express 5) ──▶ PostgreSQL (Prisma)
 | R-10 | AI 가 꺼져 있거나(`AI_ENABLED`, 키, 모델 중 하나라도 비면 꺼짐) 실패해도 **핵심 기능은 동작**해야 한다(템플릿/규칙 대체, 직접 입력 가능). 사진 인식 전용 모델은 `GEMINI_PHOTO_MODEL`(없으면 `GEMINI_MODEL`) | `aiEnabled()` in `explain.ts`, `config/env.ts` |
 | R-11 | **AI 한도 3단**: ① 사용자당 **시간당** 60회(사진/말 따로 집계, `aiLimits.ts`) ② 사용자당 **하루**(최근 24h) 사진 120·말 150, 가입 24시간 내는 300/200 ③ **서버 전체 하루** `AI_GLOBAL_DAILY`(3000) 초과 시 AI 를 모두에게 닫음(`503 AI_BUSY`, 직접 입력·칩은 계속 열림). 수치는 env 로 조정. ④ **자동 설명**은 사진·말과 별도 풀(`AI_EXPLAIN_DAILY`, 사용자당 24h 20회)이고 서버 전체 상한에는 합산. 걸리면 AI 를 부르지 않고 템플릿 문장을 저장(에러 아님). 동시 요청은 프로세스 메모리의 진행 중 카운터(`reserveExplain`)로 막음 — 서버가 여러 대가 되면 DB 로 옮길 것 | `api/middleware/aiLimits.ts`, `services/ai/aiQuota.ts`, `aiScope.ts`, `config/env.ts` |
 | R-12 | 사진은 **분석에만 쓰고 저장하지 않는다.** 크기 한도: 요청 1MB(`/api/ai`만), 디코딩 후 700KB, JPG/PNG/WEBP | `api/routes/ai.ts` |
-| R-13 | **캐릭터 칭호는 규칙으로 계산**한다(AI 아님). 옷장의 색·종류·무늬·두께 비율로 15종 중 결정, 이유(`reason`)를 함께 낸다 | `services/character/analysis.ts` |
+| R-13 | **캐릭터 칭호는 규칙으로 계산**한다(AI 아님). 옷장의 색·종류·무늬·두께 비율로 20종 중 결정, 이유(`reason`)를 함께 낸다 | `services/character/analysis.ts` |
 
 ---
 

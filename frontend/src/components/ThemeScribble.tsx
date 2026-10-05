@@ -15,6 +15,11 @@ const THEME: Record<string, string | string[]> = {
   VITAMIN: '#ffd54f',
   RAINBOW: ['#f28b82', '#fbbc66', '#f6e27a', '#9ed89f', '#8ec3f0', '#b9a2e6'],
   COLOR_LOVER: '#9ed89f',
+  SUMMER_COOL: '#8fd8e8',
+  SPRING_FALL: '#e8c99a',
+  WINTER_THICK: '#b9d3ee',
+  TOP_HEAVY: '#f2b8c6',
+  BOTTOM_HEAVY: '#a9b8e0',
 }
 const NEUTRAL = '#e6e6df'
 

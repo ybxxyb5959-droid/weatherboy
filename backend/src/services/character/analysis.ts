@@ -8,6 +8,7 @@ export type TitleKey =
   | 'HOODIE_ADDICT' | 'WARM_BEAR' | 'TEE_ONLY' | 'OUTER_FAN'
   | 'SHIRT_GENTLE' | 'SKIRT_LOVER' | 'EARTH_TONE' | 'BLUE_SEA'
   | 'VITAMIN' | 'RAINBOW' | 'COLOR_LOVER'
+  | 'SUMMER_COOL' | 'SPRING_FALL' | 'WINTER_THICK' | 'TOP_HEAVY' | 'BOTTOM_HEAVY'
 
 export interface TitleDef {
   key: TitleKey
@@ -32,6 +33,10 @@ export interface TasteTitle {
   tagline: string
   rule: string
   reason: string
+  /** 캐릭터 복장을 맞추기 위한 값: 두드러진 것이 색/종류/무늬 중 무엇인지와 화면 문자열(예: '파랑'). 종류면 상의/하의/겉옷 구분도 준다. */
+  kind: 'color' | 'type' | 'pattern'
+  value: string
+  category?: 'TOP' | 'BOTTOM' | 'OUTER'
 }
 
 export interface Share { name: string; count: number; share: number }
@@ -82,6 +87,9 @@ const colorful: Predicate = (c) => c.color !== 'OTHER' && !neutral(c)
 const shortTop = isType('SHORT_SLEEVE', 'SHORT_SLEEVE_SHIRT')
 const outer: Predicate = (c) => ['LIGHT_OUTER', 'HEAVY_OUTER'].includes(categoryOfType[c.type])
 const warm: Predicate = (c) => isType('KNIT', 'COAT', 'PADDING')(c) && c.thickness !== 'THIN'
+const isCategory = (...cats: string[]): Predicate => (c) => cats.includes(categoryOfType[c.type])
+const thick = (t: Thickness): Predicate => (c) => c.thickness === t
+const springFall: Predicate = (c) => isType('LONG_SLEEVE', 'SHIRT', 'SWEATSHIRT', 'CARDIGAN', 'JACKET', 'WINDBREAKER')(c) && c.thickness === 'NORMAL'
 const distinct = (items: ClothesForAnalysis[], field: 'color' | 'type', pred: Predicate = () => true) => new Set(items.filter(pred).map((c) => c[field])).size
 const largest = (items: ClothesForAnalysis[], field: 'color' | 'type', pred: Predicate = () => true) => {
   const values = new Map<string, number>()
@@ -115,6 +123,11 @@ const RULES: TitleRule[] = [
     ratio('검정·회색·흰색·기타를 제외한 옷', colorful, 80, 7),
     { label: '가장 많은 한 색', count: (items) => largest(items, 'color'), maxPercent: 30 },
   ] },
+  { key: 'SUMMER_COOL', name: '여름 나라 주민', tagline: '시원한 게 최고야, 땀은 사절', requirements: [ratio('얇은 옷', thick('THIN'), 50)], hint: hint('SHORT_SLEEVE', 'WHITE', 'SOLID', 'THIN') },
+  { key: 'WINTER_THICK', name: '한겨울 대비반', tagline: '두툼해야 마음이 놓여', requirements: [ratio('두꺼운 옷', thick('THICK'), 40)], hint: hint('PADDING', 'BLACK', 'SOLID', 'THICK') },
+  { key: 'SPRING_FALL', name: '봄가을 산책러', tagline: '선선한 바람엔 딱 이 정도가 좋아', requirements: [ratio('보통 두께의 긴팔·셔츠·맨투맨·가디건·자켓·바람막이', springFall, 60)], hint: hint('LONG_SLEEVE', 'BEIGE') },
+  { key: 'TOP_HEAVY', name: '상의 부자', tagline: '위는 풍족한데 아래는 늘 같은 바지', structural: true, requirements: [ratio('상의(반팔·긴팔·셔츠·맨투맨·니트·후드티)', isCategory('TOP'), 70, 7)], hint: hint('SHIRT', 'SKYBLUE') },
+  { key: 'BOTTOM_HEAVY', name: '하의 부자', tagline: '바지·치마가 가득한 옷장', structural: true, requirements: [ratio('하의(바지·반바지·치마)', isCategory('BOTTOM'), 45, 4)], hint: hint('PANTS', 'NAVY') },
 ]
 
 const describe = (r: Requirement) => `${r.label} ${[
@@ -124,7 +137,7 @@ const describe = (r: Requirement) => `${r.label} ${[
 ].filter(Boolean).join('·')}`
 const def = (r: TitleRule): TitleDef => ({ key: r.key, name: r.name, tagline: r.tagline, rule: r.requirements.map(describe).join(' / ') })
 // 도감 순서는 기존 그대로 유지하고, 선정 우선순위는 RULES에서 별도로 관리한다.
-const DEX: TitleKey[] = ['DARK_CHILD', 'MINIMALIST', 'PATTERN_MASTER', 'PASTEL_FAIRY', 'HOODIE_ADDICT', 'WARM_BEAR', 'TEE_ONLY', 'OUTER_FAN', 'SHIRT_GENTLE', 'SKIRT_LOVER', 'EARTH_TONE', 'BLUE_SEA', 'VITAMIN', 'RAINBOW', 'COLOR_LOVER']
+const DEX: TitleKey[] = ['DARK_CHILD', 'MINIMALIST', 'PATTERN_MASTER', 'PASTEL_FAIRY', 'HOODIE_ADDICT', 'WARM_BEAR', 'TEE_ONLY', 'OUTER_FAN', 'SHIRT_GENTLE', 'SKIRT_LOVER', 'EARTH_TONE', 'BLUE_SEA', 'VITAMIN', 'RAINBOW', 'COLOR_LOVER', 'SUMMER_COOL', 'SPRING_FALL', 'WINTER_THICK', 'TOP_HEAVY', 'BOTTOM_HEAVY']
 export const TITLES = DEX.map((key) => def(RULES.find((r) => r.key === key)!))
 export const titleOf = (key: TitleKey) => TITLES.find((t) => t.key === key)!
 
@@ -167,11 +180,14 @@ export function tasteOf(items: ClothesForAnalysis[]): TasteTitle | null {
     return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
   }
   const order = ['color', 'type', 'pattern']
-  const cands: { kind: 'color' | 'type' | 'pattern'; ui: string; count: number }[] = []
+  const cands: { kind: 'color' | 'type' | 'pattern'; ui: string; count: number; category?: 'TOP' | 'BOTTOM' | 'OUTER' }[] = []
   const color = top(items.filter((c) => c.color !== 'OTHER').map((c) => c.color))
   if (color) cands.push({ kind: 'color', ui: colorMap.toUi(color[0] as ClothingColor), count: color[1] })
   const type = top(items.map((c) => c.type))
-  if (type) cands.push({ kind: 'type', ui: clothingTypeMap.toUi(type[0] as ClothingType), count: type[1] })
+  if (type) {
+    const cat = categoryOfType[type[0] as ClothingType]
+    cands.push({ kind: 'type', ui: clothingTypeMap.toUi(type[0] as ClothingType), count: type[1], category: cat === 'TOP' || cat === 'BOTTOM' ? cat : 'OUTER' })
+  }
   const pattern = top(items.filter((c) => c.pattern !== 'SOLID').map((c) => c.pattern))
   if (pattern) cands.push({ kind: 'pattern', ui: patternMap.toUi(pattern[0] as ClothingPattern), count: pattern[1] })
   const best = cands.filter((c) => c.count >= 2).sort((a, b) => b.count - a.count || order.indexOf(a.kind) - order.indexOf(b.kind))[0]
@@ -183,7 +199,7 @@ export function tasteOf(items: ClothesForAnalysis[]): TasteTitle | null {
     type: { name: `${best.ui} 단골`, tagline: '내 옷장의 단골손님' },
     pattern: { name: `${best.ui} 포인트`, tagline: '무늬 하나쯤은 있어야지' },
   }[best.kind]
-  return { key: 'TASTE', ...byKind, rule: '내 옷장에서 가장 눈에 띄는 취향이에요', reason }
+  return { key: 'TASTE', ...byKind, rule: '내 옷장에서 가장 눈에 띄는 취향이에요', reason, kind: best.kind, value: best.ui, category: best.category }
 }
 
 /** min: 캐릭터가 열리는 최소 옷 벌 수(기본은 MIN_CLOTHES). 칭호 규칙만 따로 시험할 때 바꿔 쓴다. */

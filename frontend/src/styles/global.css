@@ -4385,3 +4385,6 @@ dd,
 .set-value .set-line {
   display: block;
 }
+
+.taste-dex { margin-top: 14px; }
+.taste-dex h3 { font-size: 1rem; margin: 0 0 4px; }

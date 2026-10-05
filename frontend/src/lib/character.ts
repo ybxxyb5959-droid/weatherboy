@@ -10,6 +10,10 @@ export interface Share {
 }
 export interface TitleInfo {
   key: string
+  /** 취향 칭호일 때만: 두드러진 것이 색/종류/무늬 중 무엇인지, 그 값(예: '파랑'), 종류면 상의/하의/겉옷 */
+  kind?: 'color' | 'type' | 'pattern'
+  value?: string
+  category?: 'TOP' | 'BOTTOM' | 'OUTER'
   name: string
   tagline: string
   rule: string
@@ -44,7 +48,32 @@ export const PERSONA_WEAR: Record<string, Wear> = {
   VITAMIN: { top: { type: '반팔', color: '노랑' }, bottom: { type: '반바지', color: '주황' } },
   RAINBOW: { top: { type: '후드티', color: '빨강' }, bottom: { type: '바지', color: '파랑' } },
   COLOR_LOVER: { top: { type: '후드티', color: '초록' }, bottom: { type: '바지', color: '초록' } },
+  SUMMER_COOL: { top: { type: '반팔', color: '하늘색' }, bottom: { type: '반바지', color: '흰색' } },
+  SPRING_FALL: { top: { type: '긴팔', color: '베이지' }, bottom: { type: '바지', color: '카키' }, outer: { type: '가디건', color: '갈색' } },
+  WINTER_THICK: { top: { type: '니트', color: '회색' }, bottom: { type: '바지', color: '검정' }, outer: { type: '패딩', color: '네이비' } },
+  TOP_HEAVY: { top: { type: '후드티', color: '분홍' }, bottom: { type: '바지', color: '회색' }, outer: { type: '가디건', color: '하늘색' } },
+  BOTTOM_HEAVY: { top: { type: '반팔', color: '흰색' }, bottom: { type: '치마', color: '네이비', pattern: '줄무늬' } },
 }
+
+/** 취향 칭호(옷장에서 가장 두드러진 색·종류·무늬)에 맞춘 복장: 그 취향을 그대로 입는다 */
+export function tasteWear(t: { kind?: string; value?: string; category?: string }): Wear | null {
+  const v = t.value
+  if (!v) return null
+  if (t.kind === 'color') {
+    const rest = v === '회색' ? '검정' : '회색'
+    return { top: { type: v === '검정' ? '후드티' : '니트', color: v }, bottom: { type: '바지', color: rest } }
+  }
+  if (t.kind === 'pattern') return { top: { type: '셔츠', color: '하늘색', pattern: v }, bottom: { type: '바지', color: '회색' } }
+  if (t.kind === 'type') {
+    if (t.category === 'BOTTOM') return { top: { type: '반팔', color: '흰색' }, bottom: { type: v, color: '네이비' } }
+    if (t.category === 'OUTER') return { top: { type: '긴팔', color: '흰색' }, bottom: { type: '바지', color: '검정' }, outer: { type: v, color: '베이지' } }
+    return { top: { type: v, color: '하늘색' }, bottom: { type: '바지', color: '회색' } }
+  }
+  return null
+}
+/** 칭호(희귀 key 또는 취향 칭호)에 맞는 복장. 없으면 기본 복장 */
+export const wearOf = (t: (Pick<TitleInfo, 'key'> & { kind?: string; value?: string; category?: string }) | null | undefined): Wear =>
+  (t && (t.key === 'TASTE' ? tasteWear(t) : PERSONA_WEAR[t.key])) || BASIC_WEAR
 export const BASIC_WEAR: Wear = { top: { type: '반팔', color: '흰색' }, bottom: { type: '바지', color: '파랑' } }
 
 // 홈과 캐릭터 화면이 같은 캐릭터를 쓰도록 한 번 불러온 값을 공유한다 (꾸미면 홈의 캐릭터도 바로 같이 바뀐다)

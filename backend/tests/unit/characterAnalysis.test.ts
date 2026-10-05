@@ -35,7 +35,7 @@ const boundaryCases: { key: TitleKey; yes: ClothesForAnalysis[]; no: ClothesForA
   { key: 'COLOR_LOVER', yes: mixedColor('GREEN', 6), no: base() },
 ]
 
-describe('15개 칭호: 충족 조건과 경계', () => {
+describe('20개 칭호: 충족 조건과 경계', () => {
   it.each(boundaryCases)('$key: 조건을 채운 옷장만 통과한다', ({ key, yes, no }) => {
     expect(qualifies(yes, key)).toBe(true)
     expect(qualifies(no, key)).toBe(false)
@@ -50,11 +50,11 @@ describe('15개 칭호: 충족 조건과 경계', () => {
     expect(qualifies([c(type, 'GREEN'), c(type, 'RED'), ...base(3)], key)).toBe(false)
     expect(qualifies([c(type, 'GREEN'), c(type, 'RED'), c(type, 'PURPLE'), ...base(2)], key)).toBe(true)
   })
-  it('도감의 15개 이름·순서·조건이 유지되고 실제 판정 수치가 문구에 나온다', () => {
-    expect(TITLES).toHaveLength(15)
-    expect(new Set(TITLES.map((t) => t.key)).size).toBe(15)
+  it('도감의 20개 이름·순서·조건이 유지되고 실제 판정 수치가 문구에 나온다', () => {
+    expect(TITLES).toHaveLength(20)
+    expect(new Set(TITLES.map((t) => t.key)).size).toBe(20)
     expect(TITLES[0]?.key).toBe('DARK_CHILD')
-    expect(TITLES.at(-1)?.key).toBe('COLOR_LOVER')
+    expect(TITLES.at(-1)?.key).toBe('BOTTOM_HEAVY')
     for (const t of TITLES) expect(t.name && t.tagline && t.rule).toBeTruthy()
     expect(TITLES.find((t) => t.key === 'DARK_CHILD')?.rule).toContain('50% 이상')
     expect(TITLES.find((t) => t.key === 'SKIRT_LOVER')?.rule).toContain('3벌 이상')
@@ -70,8 +70,8 @@ describe('15개 칭호: 충족 조건과 경계', () => {
 })
 
 describe('납득하기 어려웠던 옷장 회귀 사례', () => {
-  it('기타색 바지만 있어도 꾸미기는 열리지만 칭호를 억지로 붙이지 않는다', () => {
-    expect(analyze(many(5, () => c('PANTS', 'OTHER')))).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
+  it('기타색 옷만 있어도 꾸미기는 열리지만 색·무늬 칭호를 억지로 붙이지 않는다', () => {
+    expect(analyze(many(5, (i) => c(['LONG_SLEEVE', 'PANTS', 'KNIT', 'PANTS', 'LONG_SLEEVE'][i] as ClothingType, 'OTHER')))).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
   })
   it('무채색 80%와 무지 80%가 각각 있어도 같은 옷이 아니면 미니멀리스트가 아니다', () => {
     const items = base().map((x, i) => ({ ...x, color: i < 8 ? 'GRAY' as const : x.color, pattern: i < 2 ? 'CHECK' as const : 'SOLID' as const }))
@@ -119,7 +119,7 @@ describe('칭호 선정과 설명', () => {
     const a = analyze(items)
     expect(a.title?.key).toBe('PATTERN_MASTER') // 실제 비중: 무늬 100%, 검정 80%, 치마 50%
     expect(a.subTitle?.key).toBe('DARK_CHILD')
-    expect(a.matchedTitles.map((t) => t.key)).toEqual(['PATTERN_MASTER', 'DARK_CHILD', 'SKIRT_LOVER'])
+    expect(a.matchedTitles.map((t) => t.key)).toEqual(['PATTERN_MASTER', 'DARK_CHILD', 'SKIRT_LOVER', 'BOTTOM_HEAVY'])
   })
   it('검정 무지 옷만 있으면 어둠의 아이가 미니멀리스트보다 먼저다', () => {
     const a = analyze(many(8, () => c('PANTS', 'BLACK')))
@@ -243,5 +243,18 @@ describe('캐릭터가 열리는 기준', () => {
     expect(MIN_CLOTHES).toBe(10)
     expect(analyzeWith(many(9, () => c('PANTS', 'BLACK')))).toMatchObject({ ready: false, need: 1 })
     expect(analyzeWith(many(10, () => c('PANTS', 'BLACK')))).toMatchObject({ ready: true, need: 0 })
+  })
+})
+
+describe('취향 칭호의 복장 힌트', () => {
+  const taste = (items: ClothesForAnalysis[]) => tasteOf(items)
+  it('색이면 kind=color, value=화면 색 이름', () => {
+    expect(taste(many(6, (i) => c(i < 3 ? 'PANTS' : 'LONG_SLEEVE', 'BLUE')))).toMatchObject({ kind: 'color', value: '파랑' })
+  })
+  it('종류면 상의/하의/겉옷 구분을 같이 준다', () => {
+    const t = (type: ClothingType) => taste([c(type, 'RED'), c(type, 'BLUE'), c('SHIRT', 'GREEN'), c('PANTS', 'PINK'), c('KNIT', 'BROWN'), c('HOODIE', 'KHAKI'), c(type, 'NAVY')])
+    expect(t('KNIT')).toMatchObject({ kind: 'type', category: 'TOP' })
+    expect(t('SKIRT')).toMatchObject({ kind: 'type', category: 'BOTTOM' })
+    expect(t('JACKET')).toMatchObject({ kind: 'type', category: 'OUTER' })
   })
 })
