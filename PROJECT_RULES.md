@@ -238,7 +238,7 @@ Browser(PWA) ──/api──▶ API (Express 5) ──▶ PostgreSQL (Prisma)
 | `/api/calendar` | `calendar.ts` | iCal 연동(목록·추가·동기화·삭제) |
 | `/api/push` | `push.ts` | `GET /public-key` · `POST/DELETE /subscribe` |
 | `/api/reviews`, `/api/support` | `reviews.ts`, `support.ts` | 앱 후기 / 문의 |
-| `/api/admin` | `admin.ts` | 비밀번호 로그인 + 대시보드·후기·문의·AI 사용량 |
+| `/api/admin` | `admin.ts` | 비밀번호 로그인 + 대시보드·후기·문의·AI 사용량 + 시스템 점검(`/ops/health`)·사용자 목록(`/users`)·인사이트(`/insights`). 화면은 `AdminPage.tsx` + `pages/admin/*`(탭 6개, PC 는 `body.admin-mode` 로 넓게) |
 | `/health`, `/ready` | `app.ts` | 프로세스 생존 / DB 연결 |
 
 ### 4-3. 규칙
@@ -304,7 +304,7 @@ Browser(PWA) ──/api──▶ API (Express 5) ──▶ PostgreSQL (Prisma)
 | S-3 | `frontend/src/mocks/*` 는 이름과 달리 **실제 상수 목록**(옷 종류·색 이름·일정 종류)이 들어 있다. 예시 데이터가 아니라 선택지 정의이므로 지우지 않는다 | `mocks/clothes.ts`, `events.ts`, `weather.ts` |
 | S-4 | 한도: 옷 500벌, 일정 1000개, 즐겨찾기 10곳(`409 FAVORITES_LIMIT`) | `routes/clothes.ts`, `events.ts`, `places.ts` |
 | S-5 | 옷 삭제는 **soft delete**(`active=false`). 회원 탈퇴(`DELETE /api/me`)는 **모든 데이터 삭제**(되돌릴 수 없음). 단 `AiCallLog` 는 삭제하지 않고 **FK `ON DELETE SET NULL` 로 userId 만 비운다**(서버 전체 상한·관리자 집계 유지, 탈퇴·재가입으로 상한 우회 방지). AI 호출 기록은 `services/ai/aiLog.ts` 의 `recordAiCall` 로만 쓴다(탈퇴 중 끝난 호출은 FK 위반 시 userId 없이 재기록) | `routes/clothes.ts`, `routes/auth.ts` |
-| S-6 | 사용자 기록 테이블: `CollectLog`(수집), `NotifyLog`(푸시), `AiCallLog`(AI 호출), `AppReview`, `SupportMessage`. 운영 요약은 `GET /api/admin/ops/summary`, `/api/admin/dashboard` | `schema.prisma`, `routes/admin.ts` |
+| S-6 | 사용자 기록 테이블: `CollectLog`(수집), `NotifyLog`(푸시), `AiCallLog`(AI 호출), `AppReview`, `SupportMessage`. 운영 요약은 `GET /api/admin/ops/summary`(화면 미사용), `/api/admin/ops/health`(설정 점검: 값은 절대 안 줌), `/api/admin/dashboard`, `/api/admin/users`, `/api/admin/insights` | `schema.prisma`, `routes/admin.ts` |
 | S-7 | 백업: `backend/scripts/backup-db.sh` → `backups/*.dump`(git 제외). 복원 절차는 `docs/backup-restore.md` | `backend/scripts/` |
 
 ---

@@ -16,6 +16,11 @@ self.addEventListener('push', (event) => {
       body: data.body || '',
       data: { url: data.url || '/' },
       icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // 진동(소리·헤드업 팝업은 폰의 알림 설정이 정한다). 같은 tag 는 알림창에서 하나로 합치되, 새로 와도 다시 울린다.
+      vibrate: [200, 100, 200],
+      tag: data.tag || undefined,
+      renotify: !!data.tag,
     }),
   )
 })

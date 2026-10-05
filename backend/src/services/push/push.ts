@@ -31,7 +31,8 @@ export type PushSender = (sub: { endpoint: string; keys: { p256dh: string; auth:
 
 const defaultSender: PushSender = async (sub, payload) => {
   init()
-  await webpush.sendNotification(sub, payload, { TTL: 3600 })
+  // urgency high: 폰이 절전(Doze) 중이어도 바로 전달하도록 요청한다
+  await webpush.sendNotification(sub, payload, { TTL: 3600, urgency: 'high' })
 }
 
 const MAX_ATTEMPTS = 3

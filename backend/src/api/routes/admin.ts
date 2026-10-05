@@ -7,7 +7,10 @@ import { prisma } from '../../db.js'
 import { AppError, notFound } from '../../utils/errors.js'
 import { avgMsByKind, buildDays, failureRate, type UsageRow } from '../../services/ai/aiUsageReport.js'
 import { getGlobalUsage } from '../../services/ai/aiQuota.js'
-import { MIN_CLOTHES } from '../../services/character/analysis.js'
+import { MIN_CLOTHES, type ClothesForAnalysis } from '../../services/character/analysis.js'
+import { clothingTypeMap, colorMap, eventKindMap, patternMap } from '../../config/mappings.js'
+import { buildChecks } from '../../services/admin/opsChecks.js'
+import { activeDaysBuckets, retentionOf, titleDistribution } from '../../services/admin/insights.js'
 import { parse, requireAdmin, wrap } from '../middleware/common.js'
 
 export const adminRouter = Router()
@@ -226,5 +229,164 @@ adminRouter.post(
     const id = z.string().uuid().parse(req.params.id)
     await prisma.supportMessage.updateMany({ where: { id, readAt: null }, data: { readAt: new Date() } })
     res.json({ ok: true })
+  }),
+)
+
+// ───── 시스템 점검: 환경설정 확인, 예약 작업, 알림 발송 현황 ─────
+adminRouter.get(
+  '/ops/health',
+  wrap(async (_req, res) => {
+    const now = Date.now()
+    const since24 = new Date(now - 24 * 3600_000)
+    const since7 = new Date(now - 7 * 86400_000)
+    const t0 = Date.now()
+    let dbOk = true
+    try {
+      await prisma.$queryRaw`SELECT 1`
+    } catch {
+      dbOk = false
+    }
+    const dbMs = Date.now() - t0
+    const optKeys = ['notifyMorning', 'notifyRain', 'notifyColdReturn', 'notifyDust', 'notifyFeedback', 'notifyCloset'] as const
+    const [jobs, collectErrors, subs, subUsers, usersTotal, notify, notifyFails, ...optOuts] = await Promise.all([
+      prisma.$queryRaw<{ job: string; last_ok: Date | null; last_fail: Date | null; ok24: number; fail24: number }[]>`
+        SELECT job,
+               max(CASE WHEN status = 'SUCCESS' THEN "createdAt" END) AS last_ok,
+               max(CASE WHEN status <> 'SUCCESS' THEN "createdAt" END) AS last_fail,
+               (count(*) FILTER (WHERE status = 'SUCCESS' AND "createdAt" >= ${since24}))::int AS ok24,
+               (count(*) FILTER (WHERE status <> 'SUCCESS' AND "createdAt" >= ${since24}))::int AS fail24
+        FROM "CollectLog" GROUP BY job ORDER BY job`,
+      prisma.collectLog.findMany({ where: { status: { in: ['FAILED', 'PARTIAL'] } }, orderBy: { createdAt: 'desc' }, take: 10, select: { job: true, target: true, status: true, message: true, createdAt: true } }),
+      prisma.pushSubscription.count(),
+      prisma.pushSubscription.groupBy({ by: ['userId'] }),
+      prisma.user.count(),
+      prisma.notifyLog.groupBy({ by: ['kind', 'status'], where: { createdAt: { gte: since7 } }, _count: true }),
+      prisma.notifyLog.findMany({ where: { status: 'FAILED' }, orderBy: { createdAt: 'desc' }, take: 10, select: { kind: true, message: true, createdAt: true } }),
+      ...optKeys.map((k) => prisma.user.count({ where: { pushSubscriptions: { some: {} }, [k]: false } })),
+    ])
+    const lastCollect = jobs.reduce<Date | null>((m, j) => (j.last_ok && (!m || j.last_ok > m) ? j.last_ok : m), null)
+    const kinds = new Map<string, { sent: number; failed: number; skipped: number }>()
+    for (const r of notify) {
+      const k = kinds.get(r.kind) ?? { sent: 0, failed: 0, skipped: 0 }
+      if (r.status === 'SENT') k.sent += r._count
+      else if (r.status === 'FAILED') k.failed += r._count
+      else k.skipped += r._count
+      kinds.set(r.kind, k)
+    }
+    const [morning, rain, coldReturn, dust, feedback, closet] = optOuts
+    res.json({
+      checks: buildChecks(env, { dbOk, dbMs, lastCollectAt: lastCollect }),
+      jobs: jobs.map((j) => ({ job: j.job, lastOkAt: j.last_ok, lastFailAt: j.last_fail, ok24: j.ok24, fail24: j.fail24 })),
+      collectErrors,
+      push: {
+        subscriptions: subs,
+        usersWithPush: subUsers.length,
+        users: usersTotal,
+        kinds: [...kinds.entries()].map(([kind, v]) => ({ kind, ...v })).sort((a, b) => b.sent + b.failed + b.skipped - (a.sent + a.failed + a.skipped)),
+        failures: notifyFails,
+        // 알림을 받는 사용자 중 이 종류를 끈 사람 수
+        optOut: { morning, rain, coldReturn, dust, feedback, closet },
+      },
+      server: { uptimeSec: Math.round(process.uptime()), node: process.version, rssMb: Math.round(process.memoryUsage().rss / 1048576), dbMs },
+    })
+  }),
+)
+
+// ───── 사용자 목록(고객번호만, 닉네임·이메일 없음): 가입·접속·옷·일정·알림 ─────
+adminRouter.get(
+  '/users',
+  wrap(async (req, res) => {
+    const q = z.string().trim().max(20).optional().parse(req.query.q)
+    const [total, rows] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+        select: {
+          id: true,
+          createdAt: true,
+          lastSeenAt: true,
+          activeDays: true,
+          regionSido: true,
+          onboardingDone: true,
+          plan: true,
+          identities: { select: { provider: true }, take: 1 },
+          appReview: { select: { id: true } },
+          _count: { select: { events: true, pushSubscriptions: true, feedbacks: true, clothes: { where: { isSample: false, active: true } } } },
+        },
+      }),
+    ])
+    const users = rows
+      .map((u) => ({
+        code: u.id.slice(0, 8).toUpperCase(),
+        provider: u.identities[0]?.provider ?? null,
+        createdAt: u.createdAt,
+        lastSeenAt: u.lastSeenAt,
+        activeDays: u.activeDays,
+        region: u.regionSido,
+        onboardingDone: u.onboardingDone,
+        plan: u.plan,
+        clothes: u._count.clothes,
+        events: u._count.events,
+        feedbacks: u._count.feedbacks,
+        push: u._count.pushSubscriptions > 0,
+        reviewed: !!u.appReview,
+      }))
+      .filter((u) => !q || u.code.includes(q.toUpperCase()))
+    res.json({ total, shown: users.length, users })
+  }),
+)
+
+// ───── 인사이트: 재방문, 추천 조회, 옷 분포, 칭호 분포, 후기(체감), 일정 ─────
+adminRouter.get(
+  '/insights',
+  wrap(async (_req, res) => {
+    const now = new Date()
+    const since30 = new Date(now.getTime() - 30 * 86400_000)
+    const [seen, activeDays, daily14, typeRows, colorRows, patternRows, owners, feedback, followed, eventKinds, eventTotal] = await Promise.all([
+      prisma.user.findMany({ select: { createdAt: true, lastSeenAt: true } }),
+      prisma.user.findMany({ select: { activeDays: true } }),
+      // 하루에 홈 추천을 만든 사용자 수(= 그날 앱을 열어 추천을 본 사용자의 근사값)
+      prisma.$queryRaw<{ d: string; users: number; recs: number }[]>`
+        SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS d,
+               count(DISTINCT "userId")::int AS users, count(*)::int AS recs
+        FROM "Recommendation" WHERE "eventId" IS NULL AND "createdAt" >= NOW() - INTERVAL '14 days' GROUP BY 1 ORDER BY 1`,
+      prisma.clothing.groupBy({ by: ['type'], where: { isSample: false, active: true }, _count: true }),
+      prisma.clothing.groupBy({ by: ['color'], where: { isSample: false, active: true }, _count: true }),
+      prisma.clothing.groupBy({ by: ['pattern'], where: { isSample: false, active: true }, _count: true }),
+      // 옷이 MIN_CLOTHES 벌 이상인 사용자의 옷(칭호 분포 계산용)
+      prisma.$queryRaw<{ userId: string; type: string; color: string; pattern: string; thickness: string }[]>`
+        SELECT c."userId", c."type"::text AS type, c."color"::text AS color, c."pattern"::text AS pattern, c."thickness"::text AS thickness
+        FROM "Clothing" c
+        WHERE c."isSample" = false AND c.active = true
+          AND c."userId" IN (SELECT "userId" FROM "Clothing" WHERE "isSample" = false AND active = true GROUP BY "userId" HAVING count(*) >= ${MIN_CLOTHES})
+        LIMIT 20000`,
+      prisma.feedback.groupBy({ by: ['rating'], where: { createdAt: { gte: since30 } }, _count: true }),
+      prisma.feedback.groupBy({ by: ['followed'], where: { createdAt: { gte: since30 } }, _count: true }),
+      prisma.event.groupBy({ by: ['kind'], _count: true }),
+      prisma.event.count(),
+    ])
+    const closets = new Map<string, ClothesForAnalysis[]>()
+    for (const r of owners) {
+      const list = closets.get(r.userId) ?? []
+      list.push({ type: r.type as ClothesForAnalysis['type'], color: r.color as ClothesForAnalysis['color'], pattern: r.pattern as ClothesForAnalysis['pattern'], thickness: r.thickness as ClothesForAnalysis['thickness'] })
+      closets.set(r.userId, list)
+    }
+    const top = (rows: { label: string; count: number }[], n = 8) => rows.sort((a, b) => b.count - a.count).slice(0, n)
+    const fb = Object.fromEntries(feedback.map((f) => [f.rating, f._count]))
+    const fol = Object.fromEntries(followed.map((f) => [String(f.followed), f._count]))
+    res.json({
+      retention: { d1: retentionOf(seen, 1, now), d7: retentionOf(seen, 7, now) },
+      activeDays: activeDaysBuckets(activeDays.map((u) => u.activeDays)),
+      daily14,
+      clothes: {
+        types: top(typeRows.map((r) => ({ label: clothingTypeMap.toUi(r.type), count: r._count }))),
+        colors: top(colorRows.map((r) => ({ label: colorMap.toUi(r.color), count: r._count }))),
+        patterns: top(patternRows.map((r) => ({ label: patternMap.toUi(r.pattern), count: r._count })), 5),
+      },
+      titles: titleDistribution(closets.values()),
+      feedback: { cold: fb.COLD ?? 0, ok: fb.OK ?? 0, hot: fb.HOT ?? 0, followed: fol.true ?? 0, notFollowed: fol.false ?? 0, windowDays: 30 },
+      events: { total: eventTotal, kinds: eventKinds.map((k) => ({ label: eventKindMap.toUi(k.kind), count: k._count })).sort((a, b) => b.count - a.count) },
+    })
   }),
 )

@@ -109,6 +109,20 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 관리자 페이지 PC 넓은 화면 + 시스템 점검·사용자·인사이트 추가, 알림 진동·긴급 전달 (작성: Claude Code)
+- 수정 목적: 관리자 화면이 PC 에서도 폰 폭(460px)으로만 보이던 것을 넓은 대시보드로 바꾸고, 베타 운영에 필요한 확인 기능을 추가. (별도) 푸시 알림에 진동·긴급 우선순위를 요청.
+- 변경 파일:
+  - `backend/src/api/routes/admin.ts` — `GET /ops/health`(설정 점검·예약 작업·알림 발송 현황·서버 정보), `GET /users`(고객번호·활동 수치, 닉네임·이메일 없음), `GET /insights`(재방문 D1/D7 근사, 하루 추천 조회 사용자, 접속일수, 옷·칭호 분포, 체감 후기, 일정 종류)
+  - `backend/src/services/admin/opsChecks.ts`, `insights.ts` — 순수 함수(점검 항목에 키·비밀번호 값은 넣지 않음, VAPID_SUBJECT 형식 검사 포함)
+  - `backend/tests/unit/adminOps.test.ts`, `tests/integration/admin-dashboard.test.ts` — 신규(21개)
+  - `frontend/src/pages/AdminPage.tsx` — 탭(개요·사용자·인사이트·시스템·AI·후기·의견), 먼저 도착한 것부터 표시, 1분 자동 새로고침 선택
+  - `frontend/src/pages/admin/*`, `frontend/src/styles/admin.css` — 탭별 화면과 PC/폰 레이아웃
+  - `frontend/public/sw.js` — 알림에 진동·badge·tag(renotify), `backend/src/services/push/push.ts` — `urgency: 'high'`
+- 프론트 연결 사항: 새 관리자 API 3개(위). 기존 관리자 API 는 그대로.
+- 검증 결과: backend typecheck/lint/신규 테스트 통과, frontend tsc/build 통과. 로컬(사용자 512명 테스트 데이터)에서 PC 1440px·폰 375px 로 6개 탭을 직접 확인. 헤드업(위에서 내려오는 띠) 여부는 안드로이드 알림 채널 중요도가 정하므로 앱에서 강제할 수 없음 — 폰의 알림 설정 안내 필요.
+- 남은 일 / 상대에게 요청: 재방문율은 접속 기록이 마지막 접속 시각 하나뿐이라 근사값(정확하게 하려면 접속 기록 테이블 필요). 사용자 목록은 최근 가입 500명까지. 커밋 안 함.
+- 적용한 규칙 번호: S-6
+
 ### 2026-10-05 칭호: 새 칭호 5종 + 칭호별 복장·소품 + 도감에 취향 칭호 (작성: Claude Code)
 - 수정 목적: 지난 기록의 남은 일 처리. 새 칭호(계절·상하의 쏠림), 취향 칭호도 도감에 안내, 칭호에 맞는 옷 스타일로 캐릭터가 입도록(캐릭터 그림은 그대로).
 - 변경 파일:

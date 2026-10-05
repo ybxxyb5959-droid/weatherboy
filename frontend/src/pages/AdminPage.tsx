@@ -1,182 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, errorMessage } from '../api'
-import DoodleCheck from '../components/DoodleCheck'
-import HandText from '../components/HandText'
+import '../styles/admin.css'
+import AiTab from './admin/AiTab'
+import InboxTab from './admin/InboxTab'
+import InsightsTab from './admin/InsightsTab'
+import OpsTab from './admin/OpsTab'
+import OverviewTab from './admin/OverviewTab'
+import UsersTab from './admin/UsersTab'
+import type { AiUsage, Dashboard, Health, Insights, ReviewRow, SupportRow, Users } from './admin/types'
 
-// 관리자 페이지(/admin): 가입자 수, 접속, 사용 단계(퍼널), 후기. 비밀번호로 로그인하고 12시간 뒤에 풀린다.
-// 보안은 서버가 지킨다(API 가 관리자 세션을 확인). 이 화면은 주소를 알아도 로그인 전에는 아무것도 못 본다.
-interface Dashboard {
-  users: { total: number; kakao: number; guest: number; active24h: number; active7d: number }
-  daily: { d: string; c: number }[]
-  funnel: { step: string; count: number }[]
-  reviews: { total: number; average: number | null; unread: number }
-  support: { total: number; unread: number }
-}
-interface AiUsage {
-  days: { date: string; photo: number; text: number; explain: number; other: number; total: number; failed: number }[]
-  failureRate: number | null
-  avgMs: { photo: number | null; text: number | null }
-  topUsers: { code: string; photo: number; text: number; explain: number; total: number }[]
-  global: { used: number; cap: number; open: boolean }
-  limits: { photoDaily: number; photoNewUser: number; textDaily: number; textNewUser: number; explainDaily: number; newUserHours: number; hourly: number }
-}
-interface ReviewRow {
-  id: string
-  rating: number
-  message: string
-  createdAt: string
-  read: boolean
-  code: string
-  provider: 'KAKAO' | 'GUEST' | null
-  activeDays: number
-}
+// 관리자 페이지(/admin): 가입·접속·사용 단계, 사용자, 인사이트, 시스템 점검, AI 사용, 후기·의견.
+// 비밀번호로 로그인하고 12시간 뒤에 풀린다. 보안은 서버가 지킨다(API 가 관리자 세션을 확인). 이 화면은 주소를 알아도 로그인 전에는 아무것도 못 본다.
+// PC 에서는 넓은 화면(body.admin-mode)으로 보여 주고, 폰에서는 한 줄 세로 배치로 접힌다.
 
-interface SupportRow {
-  id: string
-  kind: 'BUG' | 'IDEA' | 'OTHER'
-  message: string
-  createdAt: string
-  read: boolean
-  code: string
-  provider: 'KAKAO' | 'GUEST' | null
-}
-const KIND_LABEL = { BUG: '불편·오류', IDEA: '제안', OTHER: '기타' } as const
-
-const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n)
-const fmtDate = (iso: string) => {
-  const d = new Date(iso)
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
-function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="box w1 admin-stat">
-      <div className="tiny">{label}</div>
-      <b>{value}</b>
-      {sub && <div className="tiny">{sub}</div>}
-    </div>
-  )
-}
-
-function Bars({ rows }: { rows: { label: string; value: number }[] }) {
-  const max = Math.max(1, ...rows.map((r) => r.value))
-  return (
-    <div className="char-bars">
-      {rows.map((r) => (
-        <div key={r.label} className="char-bar admin-bar">
-          <span className="lbl">{r.label}</span>
-          <span className="track">
-            <i style={{ width: `${Math.max(r.value ? 3 : 0, (r.value / max) * 100)}%` }} />
-          </span>
-          <span className="val">{r.value}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** 최근 7일(한국 날짜) 신규 가입: 가입이 없는 날은 0으로 채운 꺾은선 그래프 */
-function LineChart({ rows }: { rows: { d: string; c: number }[] }) {
-  const byDay = new Map(rows.map((r) => [r.d, r.c]))
-  const [now] = useState(() => Date.now()) // 화면을 연 시점의 한국 날짜 기준
-  const kstNow = now + 9 * 3600_000
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(kstNow - (6 - i) * 86400_000).toISOString().slice(0, 10)
-    return { d, c: byDay.get(d) ?? 0 }
-  })
-  const W = 340
-  const H = 160
-  const L = 26
-  const R = 20 // 마지막 날짜 라벨이 잘리지 않을 여백
-  const T = 22
-  const B = 28
-  const max = Math.max(4, ...days.map((x) => x.c))
-  const x = (i: number) => L + ((W - L - R) * i) / (days.length - 1)
-  const y = (c: number) => T + (H - T - B) * (1 - c / max)
-  const pts = days.map((p, i) => `${x(i)},${y(p.c)}`).join(' ')
-  const total = days.reduce((a, p) => a + p.c, 0)
-  return (
-    <figure className="admin-chart" aria-label={`최근 7일 신규 가입 ${total}명`}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
-        {/* 가로 눈금 */}
-        {[0, 0.5, 1].map((f) => (
-          <g key={f}>
-            <path d={`M${L} ${y(max * f)} H${W - R}`} stroke="#222" strokeOpacity="0.18" strokeDasharray="4 4" />
-            <text x={L - 5} y={y(max * f) + 4} textAnchor="end" fontSize="11" fill="#222" opacity="0.7">
-              {Math.round(max * f)}
-            </text>
-          </g>
-        ))}
-        {/* 선과 점(살짝 흔들어 손으로 그은 느낌) */}
-        <g className="doodle" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points={pts} />
-          {days.map((p, i) => (
-            <circle key={p.d} cx={x(i)} cy={y(p.c)} r="3.4" fill="#fcfcfa" />
-          ))}
-        </g>
-        {/* 값(가입이 있는 날만) */}
-        {days.map((p, i) =>
-          p.c > 0 ? (
-            <text key={p.d} x={x(i)} y={y(p.c) - 8} textAnchor="middle" fontSize="12" fontWeight="700" fill="#222">
-              {p.c}
-            </text>
-          ) : null,
-        )}
-        {/* 날짜: 7일이라 매일 표시 */}
-        {days.map((p, i) => (
-          <text key={p.d} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="#222" opacity="0.75">
-            {p.d.slice(5).replace('-', '/')}
-          </text>
-        ))}
-      </svg>
-      <figcaption className="tiny">7일 합계 {total}명</figcaption>
-    </figure>
-  )
-}
-
-const secs = (ms: number | null) => (ms == null ? '-' : `${(ms / 1000).toFixed(1)}초`)
-
-/** AI 사용 현황: 최근 7일 호출 수, 실패율, 평균 응답, 서버 전체 상한과 상위 사용자, 지금 한도 설정 */
-function AiUsageSection({ ai }: { ai: AiUsage }) {
-  const today = ai.days.at(-1)
-  const week = ai.days.reduce((a, d) => a + d.total, 0)
-  const pct = Math.min(100, Math.round((ai.global.used / ai.global.cap) * 100))
-  return (
-    <section>
-      <h2>
-        <HandText>AI 사용 현황</HandText>
-      </h2>
-      <div className="admin-stats">
-        <Stat label="오늘 호출" value={today?.total ?? 0} sub={`사진 ${today?.photo ?? 0} · 말 ${today?.text ?? 0} · 설명 ${today?.explain ?? 0} · 그 밖 ${today?.other ?? 0}`} />
-        <Stat label="7일 호출" value={week} sub={ai.failureRate == null ? '아직 없어요' : `실패 ${ai.failureRate}%`} />
-        <Stat label="사진 평균 응답" value={secs(ai.avgMs.photo)} sub={`말 입력 ${secs(ai.avgMs.text)}`} />
-        <Stat label="서버 전체 24시간" value={`${pct}%`} sub={`${ai.global.used} / ${ai.global.cap}${ai.global.open ? '' : ' · 지금 쉬는 중'}`} />
-      </div>
-      <p className="tiny" style={{ marginTop: 12 }}>하루 호출 수 (최근 7일)</p>
-      <Bars rows={ai.days.map((d) => ({ label: d.date.slice(5).replace('-', '/'), value: d.total }))} />
-      <p className="tiny" style={{ marginTop: 12 }}>
-        지금 한도: 시간당 {ai.limits.hourly}회 · 사진 하루 {ai.limits.photoDaily}회(가입 {ai.limits.newUserHours}시간 동안 {ai.limits.photoNewUser}회) · 말 하루 {ai.limits.textDaily}회(가입 직후 {ai.limits.textNewUser}회) · 설명 하루 {ai.limits.explainDaily}회
-      </p>
-      <p className="tiny" style={{ marginTop: 12 }}>최근 24시간 많이 쓴 사용자</p>
-      {ai.topUsers.length === 0 ? (
-        <p className="tiny">아직 사용자별 기록이 없어요. (사용자 기록은 이번 업데이트 이후 호출부터 쌓여요)</p>
-      ) : (
-        <ul className="admin-reviews">
-          {ai.topUsers.map((u) => (
-            <li key={u.code} className="box w1">
-              <div className="row between">
-                <b>사용자 {u.code}</b>
-                <span className="tiny">
-                  사진 {u.photo} · 말 {u.text} · 설명 {u.explain} · 합계 {u.total}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
+type Tab = 'overview' | 'users' | 'insights' | 'ops' | 'ai' | 'inbox'
 
 function Login({ onDone }: { onDone: () => void }) {
   const [pw, setPw] = useState('')
@@ -198,7 +35,7 @@ function Login({ onDone }: { onDone: () => void }) {
     }
   }
   return (
-    <form className="col" onSubmit={(e) => void submit(e)}>
+    <form className="col adm-login" onSubmit={(e) => void submit(e)}>
       <p className="tiny">관리자 비밀번호를 입력해주세요.</p>
       <input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} className="admin-input" aria-label="관리자 비밀번호" />
       {err && <p role="alert">{err}</p>}
@@ -211,23 +48,51 @@ function Login({ onDone }: { onDone: () => void }) {
 
 export default function AdminPage() {
   const [state, setState] = useState<'checking' | 'login' | 'ready'>('checking')
+  const [tab, setTab] = useState<Tab>('overview')
   const [dash, setDash] = useState<Dashboard | null>(null)
   const [ai, setAi] = useState<AiUsage | null>(null)
+  const [health, setHealth] = useState<Health | null>(null)
+  const [insights, setInsights] = useState<Insights | null>(null)
+  const [users, setUsers] = useState<Users | null>(null)
   const [reviews, setReviews] = useState<ReviewRow[]>([])
   const [support, setSupport] = useState<SupportRow[]>([])
   const [error, setError] = useState('')
-  const [onlyUnread, setOnlyUnread] = useState(false)
+  const [partial, setPartial] = useState(false) // 일부 항목만 못 불러옴
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [auto, setAuto] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  // 넓은 화면(PC)에서는 폰 폭(460px) 제한을 풀어 준다
+  useEffect(() => {
+    document.body.classList.add('admin-mode')
+    return () => document.body.classList.remove('admin-mode')
+  }, [])
 
   const load = useCallback(async () => {
+    setBusy(true)
     try {
-      const [d, r, sp] = await Promise.all([api<Dashboard>('GET', '/api/admin/dashboard'), api<ReviewRow[]>('GET', '/api/admin/reviews'), api<SupportRow[]>('GET', '/api/admin/support')])
-      setError('')
+      // 대시보드로 로그인 여부를 먼저 확인하고, 나머지는 따로 받는다: 하나가 실패해도 다른 항목은 그대로 보인다
+      const d = await api<Dashboard>('GET', '/api/admin/dashboard')
       setDash(d)
-      setReviews(r)
-      setSupport(sp)
-      // AI 사용 현황은 따로 받는다: 실패해도 나머지 화면은 그대로 보인다
-      setAi(await api<AiUsage>('GET', '/api/admin/ai-usage').catch(() => null))
-      setState('ready')
+      setError('')
+      setState('ready') // 개요부터 바로 보여주고, 나머지는 도착하는 대로 채운다
+      let failed = false
+      const fill = <T,>(path: string, set: (v: T) => void) =>
+        api<T>('GET', path)
+          .then(set)
+          .catch(() => {
+            failed = true
+          })
+      await Promise.all([
+        fill<ReviewRow[]>('/api/admin/reviews', setReviews),
+        fill<SupportRow[]>('/api/admin/support', setSupport),
+        fill<Health>('/api/admin/ops/health', setHealth),
+        fill<Insights>('/api/admin/insights', setInsights),
+        fill<Users>('/api/admin/users', setUsers),
+        fill<AiUsage>('/api/admin/ai-usage', setAi),
+      ])
+      setPartial(failed)
+      setLoadedAt(new Date())
     } catch (e) {
       // 로그인 전/만료: 로그인 화면으로
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setState('login')
@@ -235,6 +100,8 @@ export default function AdminPage() {
         setError(errorMessage(e))
         setState('ready')
       }
+    } finally {
+      setBusy(false)
     }
   }, [])
 
@@ -242,145 +109,93 @@ export default function AdminPage() {
     void load()
   }, [load])
 
-  const markRead = async (id: string) => {
+  // 자동 새로고침(1분마다)
+  useEffect(() => {
+    if (!auto || state !== 'ready') return
+    const t = window.setInterval(() => void load(), 60_000)
+    return () => window.clearInterval(t)
+  }, [auto, state, load])
+
+  const markRead = (id: string) => {
     setReviews((rs) => rs.map((r) => (r.id === id ? { ...r, read: true } : r)))
     setDash((d) => (d ? { ...d, reviews: { ...d.reviews, unread: Math.max(0, d.reviews.unread - 1) } } : d))
-    await api('POST', `/api/admin/reviews/${id}/read`).catch(() => undefined)
+    void api('POST', `/api/admin/reviews/${id}/read`).catch(() => undefined)
   }
-  const markSupportRead = async (id: string) => {
+  const markSupportRead = (id: string) => {
     setSupport((rs) => rs.map((r) => (r.id === id ? { ...r, read: true } : r)))
     setDash((d) => (d ? { ...d, support: { ...d.support, unread: Math.max(0, d.support.unread - 1) } } : d))
-    await api('POST', `/api/admin/support/${id}/read`).catch(() => undefined)
+    void api('POST', `/api/admin/support/${id}/read`).catch(() => undefined)
   }
   const logout = async () => {
     await api('POST', '/api/admin/logout').catch(() => undefined)
     setDash(null)
     setAi(null)
+    setHealth(null)
+    setInsights(null)
+    setUsers(null)
     setReviews([])
     setSupport([])
     setState('login')
   }
 
-  const head = (
-    <div className="page-head">
-      <h1>관리자</h1>
-      {state === 'ready' && (
-        <div className="row">
-          <button type="button" className="dbtn small" onClick={() => void load()}>
-            새로고침
+  const problems = health ? health.checks.filter((c) => !c.ok && !c.optional).length : 0
+  const unread = reviews.filter((r) => !r.read).length + support.filter((r) => !r.read).length
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
+    { id: 'overview', label: '개요' },
+    { id: 'users', label: '사용자' },
+    { id: 'insights', label: '인사이트' },
+    { id: 'ops', label: '시스템', badge: problems },
+    { id: 'ai', label: 'AI' },
+    { id: 'inbox', label: '후기·의견', badge: unread },
+  ]
+
+  if (state === 'checking') return <main className="admin">{<h1>관리자</h1>}<p>확인하는 중…</p></main>
+  if (state === 'login')
+    return (
+      <main className="admin">
+        <h1>관리자</h1>
+        <Login onDone={() => void load()} />
+      </main>
+    )
+
+  const missing = busy ? <p className="tiny">불러오는 중…</p> : <p className="tiny adm-missing">이 항목을 불러오지 못했어요. 새로고침을 눌러 다시 시도해 주세요.</p>
+  return (
+    <main className="admin adm-shell">
+      <header className="adm-top">
+        <h1>관리자</h1>
+        <nav className="adm-tabs" aria-label="관리자 메뉴">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" className={`adm-tab${tab === t.id ? ' on' : ''}`} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+              {t.label}
+              {t.badge ? <i className="adm-badge">{t.badge}</i> : null}
+            </button>
+          ))}
+        </nav>
+        <div className="adm-actions">
+          <span className="tiny">{loadedAt ? `${loadedAt.getHours()}:${String(loadedAt.getMinutes()).padStart(2, '0')} 기준` : ''}</span>
+          <label className="adm-auto tiny">
+            <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> 1분마다 새로고침
+          </label>
+          <button type="button" className="dbtn small" disabled={busy} onClick={() => void load()}>
+            {busy ? '불러오는 중…' : '새로고침'}
           </button>
           <button type="button" className="dbtn small" onClick={() => void logout()}>
             로그아웃
           </button>
         </div>
-      )}
-    </div>
-  )
+      </header>
 
-  if (state === 'checking') return <main>{head}<p>확인하는 중…</p></main>
-  if (state === 'login') return <main className="admin">{head}<Login onDone={() => void load()} /></main>
-
-  const shown = onlyUnread ? reviews.filter((r) => !r.read) : reviews
-  return (
-    <main className="admin">
-      {head}
       {error && <p role="alert">{error}</p>}
-      {dash && (
-        <>
-          <div className="admin-stats">
-            <Stat label="전체 가입자" value={dash.users.total} sub={`카카오 ${dash.users.kakao} · 게스트 ${dash.users.guest}`} />
-            <Stat label="최근 24시간 접속" value={dash.users.active24h} sub={`7일 ${dash.users.active7d}명`} />
-            <Stat label="후기" value={dash.reviews.total} sub={dash.reviews.average ? `평균 ★${dash.reviews.average} · 안 읽음 ${dash.reviews.unread}` : '아직 없어요'} />
-            <Stat label="의견·제보" value={dash.support.total} sub={dash.support.total ? `안 읽음 ${dash.support.unread}` : '아직 없어요'} />
-          </div>
+      {partial && <p className="tiny adm-missing">일부 항목을 불러오지 못했어요. 해당 탭에서 안내가 보일 수 있어요.</p>}
 
-          <hr className="scribble" />
-          <section>
-            <h2>
-              <HandText>사용 단계 (어디서 떠나요?)</HandText>
-            </h2>
-            <Bars rows={dash.funnel.map((f) => ({ label: f.step, value: f.count }))} />
-          </section>
-
-          <hr className="scribble" />
-          <section>
-            <h2>
-              <HandText>최근 7일 신규 가입</HandText>
-            </h2>
-            <LineChart rows={dash.daily} />
-          </section>
-        </>
-      )}
-
-      {ai && (
-        <>
-          <hr className="scribble" />
-          <AiUsageSection ai={ai} />
-        </>
-      )}
-
-      <hr className="scribble" />
-      <section>
-        <div className="row between">
-          <h2>
-            <HandText>후기</HandText>
-          </h2>
-          <DoodleCheck checked={onlyUnread} onChange={setOnlyUnread}>
-            안 읽은 것만
-          </DoodleCheck>
-        </div>
-        {shown.length === 0 && <p className="tiny">{reviews.length === 0 ? '아직 후기가 없어요.' : '안 읽은 후기가 없어요.'}</p>}
-        <ul className="admin-reviews">
-          {shown.map((r) => (
-            <li key={r.id} className={`box w${r.rating % 3 + 1}${r.read ? ' read' : ''}`}>
-              <div className="row between">
-                <b className="admin-stars">{stars(r.rating)}</b>
-                <span className="tiny">{fmtDate(r.createdAt)}</span>
-              </div>
-              <p className="admin-msg">{r.message || '(별점만 남겼어요)'}</p>
-              <div className="row between">
-                <span className="tiny">
-                  사용자 {r.code} · {r.provider === 'KAKAO' ? '카카오' : '게스트'} · 접속 {r.activeDays}일
-                </span>
-                {!r.read && (
-                  <button type="button" className="dbtn small" onClick={() => void markRead(r.id)}>
-                    읽음
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <hr className="scribble" />
-      <section>
-        <h2>
-          <HandText>의견·제보</HandText>
-        </h2>
-        {support.length === 0 && <p className="tiny">아직 의견이 없어요.</p>}
-        <ul className="admin-reviews">
-          {support.map((r) => (
-            <li key={r.id} className={`box w${(r.message.length % 3) + 1}${r.read ? ' read' : ''}`}>
-              <div className="row between">
-                <span className="admin-kind">{KIND_LABEL[r.kind]}</span>
-                <span className="tiny">{fmtDate(r.createdAt)}</span>
-              </div>
-              <p className="admin-msg">{r.message}</p>
-              <div className="row between">
-                <span className="tiny">
-                  사용자 {r.code} · {r.provider === 'KAKAO' ? '카카오' : '게스트'}
-                </span>
-                {!r.read && (
-                  <button type="button" className="dbtn small" onClick={() => void markSupportRead(r.id)}>
-                    읽음
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="adm-body">
+        {tab === 'overview' && dash && <OverviewTab dash={dash} health={health} insights={insights} reviews={reviews} support={support} go={setTab} />}
+        {tab === 'users' && (users ? <UsersTab data={users} /> : missing)}
+        {tab === 'insights' && (insights ? <InsightsTab data={insights} /> : missing)}
+        {tab === 'ops' && (health ? <OpsTab data={health} /> : missing)}
+        {tab === 'ai' && (ai ? <AiTab ai={ai} /> : missing)}
+        {tab === 'inbox' && <InboxTab reviews={reviews} support={support} markRead={markRead} markSupportRead={markSupportRead} />}
+      </div>
     </main>
   )
 }
