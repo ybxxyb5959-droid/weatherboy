@@ -2343,3 +2343,41 @@
   64% { opacity: 1; }
   100% { opacity: 1; transform: none; }
 }
+
+/* 홈 일출·일몰(SunBar): 열 때 한 번만 움직인다. 일출은 해가 빌딩 위로 떠오르고, 노을 전에는 빌딩이 땅에서 올라오고, 일몰은 해가 빌딩 사이로 진다. 움직임 줄이기에서는 정지 */
+.act-sun .sb-ray {
+  opacity: 0.7;
+}
+.act-sun .sb-set-in {
+  transform: translateY(20px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .act-sun .sb-ray {
+    animation: sb-ray 3.2s ease-in-out var(--d, 0s) infinite;
+  }
+  .act-sun .sb-rise-in {
+    animation: sb-rise 5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .act-sun .sb-set-in {
+    animation: sb-set 5s ease-in both;
+  }
+  .act-sun .sb-moon-in {
+    animation: sb-moon 3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
+@keyframes sb-ray {
+  0%, 100% { opacity: 0.15; }
+  45%, 60% { opacity: 1; }
+}
+@keyframes sb-rise {
+  from { transform: translateY(50px); }
+  to { transform: translateY(0); }
+}
+@keyframes sb-set {
+  from { transform: translateY(0); }
+  to { transform: translateY(46px); }
+}
+@keyframes sb-moon {
+  from { opacity: 0; transform: translateY(26px) scale(0.6) rotate(-25deg); }
+  to { opacity: 1; transform: none; }
+}
