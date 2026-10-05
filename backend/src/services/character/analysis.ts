@@ -25,6 +25,15 @@ export interface ClothesForAnalysis {
   thickness: Thickness
 }
 
+/** 희귀 칭호에 안 걸릴 때, 내 옷장에서 가장 두드러진 특징으로 만든 칭호. 도감에는 없다. */
+export interface TasteTitle {
+  key: 'TASTE'
+  name: string
+  tagline: string
+  rule: string
+  reason: string
+}
+
 export interface Share { name: string; count: number; share: number }
 export interface Analysis {
   count: number
@@ -35,6 +44,8 @@ export interface Analysis {
   /** 선택된 특징의 실제 비중(0~1). 충족 판정은 matchedTitles로 확인한다. */
   strength: number
   subTitle: TitleDef | null
+  /** 희귀 칭호(title)가 없고 꾸미기가 열렸을 때만 채워진다. 특징이 정말 없으면 null. */
+  taste: TasteTitle | null
   matchedTitles: TitleDef[]
   /** what에 명시한 예시 옷을 추가하면 주/부칭호로 나타나는 힌트만 제공한다. */
   next: { title: TitleDef; more: number; what: string; example: ClothesForAnalysis } | null
@@ -85,20 +96,20 @@ const hint = (type: ClothingType, color: ClothingColor = 'GREEN', pattern: Cloth
 // 수치와 도감 문구는 같은 requirements에서 생성한다. 비율의 분모는 항상 내 옷 전체다.
 // 동점: 구체적인 종류/단색 > 무늬 > 복합 색 계열 > 구조. 비율/기준으로 나누어 특정 칭호를 과대평가하지 않는다.
 const RULES: TitleRule[] = [
-  { key: 'HOODIE_ADDICT', name: '후드티 중독자', tagline: '후드를 쓰면 마음이 편해져', requirements: [ratio('후드티', isType('HOODIE'), 50)], hint: hint('HOODIE') },
-  { key: 'SHIRT_GENTLE', name: '셔츠 신사', tagline: '다림질은 마음에서부터', requirements: [ratio('셔츠·반팔셔츠', isType('SHIRT', 'SHORT_SLEEVE_SHIRT'), 50)], hint: hint('SHIRT') },
-  { key: 'SKIRT_LOVER', name: '스커트 러버', tagline: '걸을 때마다 살랑살랑', requirements: [ratio('치마', isType('SKIRT'), 50)], hint: hint('SKIRT') },
-  { key: 'TEE_ONLY', name: '반팔 한 장 인간', tagline: '반팔 상의가 옷장의 주인공', requirements: [ratio('반팔·반팔셔츠 상의(반바지 제외)', shortTop, 60)], hint: hint('SHORT_SLEEVE') },
-  { key: 'DARK_CHILD', name: '어둠의 아이', tagline: '당신의 옷장엔 빛이 들지 않는다…', requirements: [ratio('검정 옷', isColor('BLACK'), 60)], hint: hint('PANTS', 'BLACK') },
-  { key: 'COLOR_LOVER', name: '하나에만 꽂힌다', tagline: '이 색이 아니면 안 돼', requirements: [{ label: '검정·회색·흰색·기타를 제외한 한 색', count: (items) => largest(items, 'color', colorful), percent: 60, min: 3 }] },
-  { key: 'PATTERN_MASTER', name: '패턴 장인', tagline: '체크, 줄무늬, 도트… 무늬 없이는 외출 못 해', requirements: [ratio('체크·줄무늬·도트·프린트 옷', (c) => !plain(c), 60)], hint: hint('PANTS', 'GREEN', 'CHECK') },
-  { key: 'MINIMALIST', name: '무채색 미니멀리스트', tagline: '검정·회색·흰색, 그리고 무지. 더 이상 뭐가 필요해?', requirements: [ratio('검정·회색·흰색이면서 무지인 옷', (c) => neutral(c) && plain(c), 80, 4)], hint: hint('PANTS', 'GRAY') },
-  { key: 'WARM_BEAR', name: '따뜻한 곰', tagline: '겨울잠을 준비하는 옷장', requirements: [ratio('보통·두꺼움 니트·패딩·코트(얇음 제외)', warm, 50)], hint: hint('KNIT') },
-  { key: 'OUTER_FAN', name: '겉옷 수집가', tagline: '겉옷 하나면 인생이 한 겹 더 따뜻해', requirements: [ratio('바람막이·자켓·가디건·코트·패딩', outer, 50)], hint: hint('JACKET') },
-  { key: 'PASTEL_FAIRY', name: '파스텔 요정', tagline: '오늘도 반짝반짝 포근포근', requirements: [ratio('분홍·하늘색·베이지 옷', isColor('PINK', 'SKYBLUE', 'BEIGE'), 60), ratio('분홍·하늘색 옷', isColor('PINK', 'SKYBLUE'), 40, 2)], hint: hint('PANTS', 'PINK') },
-  { key: 'EARTH_TONE', name: '모카 라떼 인간', tagline: '따뜻한 카페 같은 옷장', requirements: [ratio('베이지·갈색·카키 옷', isColor('BEIGE', 'BROWN', 'KHAKI'), 60)], hint: hint('PANTS', 'BROWN') },
-  { key: 'BLUE_SEA', name: '푸른 바다', tagline: '파도처럼 시원한 옷장', requirements: [ratio('파랑·네이비·하늘색 옷', isColor('BLUE', 'NAVY', 'SKYBLUE'), 60)], hint: hint('PANTS', 'BLUE') },
-  { key: 'VITAMIN', name: '비타민 폭탄', tagline: '눈이 번쩍! 에너지 충전 완료', requirements: [ratio('빨강·주황·노랑 옷', isColor('RED', 'ORANGE', 'YELLOW'), 60)], hint: hint('PANTS', 'RED') },
+  { key: 'HOODIE_ADDICT', name: '후드티 중독자', tagline: '후드를 쓰면 마음이 편해져', requirements: [ratio('후드티', isType('HOODIE'), 40)], hint: hint('HOODIE') },
+  { key: 'SHIRT_GENTLE', name: '셔츠 신사', tagline: '다림질은 마음에서부터', requirements: [ratio('셔츠·반팔셔츠', isType('SHIRT', 'SHORT_SLEEVE_SHIRT'), 40)], hint: hint('SHIRT') },
+  { key: 'SKIRT_LOVER', name: '스커트 러버', tagline: '걸을 때마다 살랑살랑', requirements: [ratio('치마', isType('SKIRT'), 40)], hint: hint('SKIRT') },
+  { key: 'TEE_ONLY', name: '반팔 한 장 인간', tagline: '반팔 상의가 옷장의 주인공', requirements: [ratio('반팔·반팔셔츠 상의(반바지 제외)', shortTop, 50)], hint: hint('SHORT_SLEEVE') },
+  { key: 'DARK_CHILD', name: '어둠의 아이', tagline: '당신의 옷장엔 빛이 들지 않는다…', requirements: [ratio('검정 옷', isColor('BLACK'), 50)], hint: hint('PANTS', 'BLACK') },
+  { key: 'COLOR_LOVER', name: '하나에만 꽂힌다', tagline: '이 색이 아니면 안 돼', requirements: [{ label: '검정·회색·흰색·기타를 제외한 한 색', count: (items) => largest(items, 'color', colorful), percent: 50, min: 3 }] },
+  { key: 'PATTERN_MASTER', name: '패턴 장인', tagline: '체크, 줄무늬, 도트… 무늬 없이는 외출 못 해', requirements: [ratio('체크·줄무늬·도트·프린트 옷', (c) => !plain(c), 50)], hint: hint('PANTS', 'GREEN', 'CHECK') },
+  { key: 'MINIMALIST', name: '무채색 미니멀리스트', tagline: '검정·회색·흰색, 그리고 무지. 더 이상 뭐가 필요해?', requirements: [ratio('검정·회색·흰색이면서 무지인 옷', (c) => neutral(c) && plain(c), 65, 4)], hint: hint('PANTS', 'GRAY') },
+  { key: 'WARM_BEAR', name: '따뜻한 곰', tagline: '겨울잠을 준비하는 옷장', requirements: [ratio('보통·두꺼움 니트·패딩·코트(얇음 제외)', warm, 40)], hint: hint('KNIT') },
+  { key: 'OUTER_FAN', name: '겉옷 수집가', tagline: '겉옷 하나면 인생이 한 겹 더 따뜻해', requirements: [ratio('바람막이·자켓·가디건·코트·패딩', outer, 40)], hint: hint('JACKET') },
+  { key: 'PASTEL_FAIRY', name: '파스텔 요정', tagline: '오늘도 반짝반짝 포근포근', requirements: [ratio('분홍·하늘색·베이지 옷', isColor('PINK', 'SKYBLUE', 'BEIGE'), 50), ratio('분홍·하늘색 옷', isColor('PINK', 'SKYBLUE'), 30, 2)], hint: hint('PANTS', 'PINK') },
+  { key: 'EARTH_TONE', name: '모카 라떼 인간', tagline: '따뜻한 카페 같은 옷장', requirements: [ratio('베이지·갈색·카키 옷', isColor('BEIGE', 'BROWN', 'KHAKI'), 50)], hint: hint('PANTS', 'BROWN') },
+  { key: 'BLUE_SEA', name: '푸른 바다', tagline: '파도처럼 시원한 옷장', requirements: [ratio('파랑·네이비·하늘색 옷', isColor('BLUE', 'NAVY', 'SKYBLUE'), 50)], hint: hint('PANTS', 'BLUE') },
+  { key: 'VITAMIN', name: '비타민 폭탄', tagline: '눈이 번쩍! 에너지 충전 완료', requirements: [ratio('빨강·주황·노랑 옷', isColor('RED', 'ORANGE', 'YELLOW'), 50)], hint: hint('PANTS', 'RED') },
   { key: 'RAINBOW', name: '무지개 수집가', tagline: '어느 색이든 환영이야', structural: true, requirements: [
     { label: '검정·회색·흰색·기타를 제외한 색', count: (items) => distinct(items, 'color', colorful), min: 7, unit: '색' },
     ratio('검정·회색·흰색·기타를 제외한 옷', colorful, 80, 7),
@@ -146,6 +157,35 @@ const shares = (names: string[]): Share[] => {
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'))
 }
 
+/** 가장 두드러진 한 가지(개수가 같으면 색 > 종류 > 무늬)로 이름을 만든다. 같은 특징이 2벌 미만이면 만들지 않는다. */
+export function tasteOf(items: ClothesForAnalysis[]): TasteTitle | null {
+  const n = items.length
+  if (n === 0) return null
+  const top = (values: string[]) => {
+    const m = new Map<string, number>()
+    for (const v of values) m.set(v, (m.get(v) ?? 0) + 1)
+    return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+  }
+  const order = ['color', 'type', 'pattern']
+  const cands: { kind: 'color' | 'type' | 'pattern'; ui: string; count: number }[] = []
+  const color = top(items.filter((c) => c.color !== 'OTHER').map((c) => c.color))
+  if (color) cands.push({ kind: 'color', ui: colorMap.toUi(color[0] as ClothingColor), count: color[1] })
+  const type = top(items.map((c) => c.type))
+  if (type) cands.push({ kind: 'type', ui: clothingTypeMap.toUi(type[0] as ClothingType), count: type[1] })
+  const pattern = top(items.filter((c) => c.pattern !== 'SOLID').map((c) => c.pattern))
+  if (pattern) cands.push({ kind: 'pattern', ui: patternMap.toUi(pattern[0] as ClothingPattern), count: pattern[1] })
+  const best = cands.filter((c) => c.count >= 2).sort((a, b) => b.count - a.count || order.indexOf(a.kind) - order.indexOf(b.kind))[0]
+  if (!best) return null
+  const pct = Math.floor((1000 * best.count) / n) / 10
+  const reason = `${best.ui}${best.kind === 'type' ? '' : ' 옷'} ${best.count}/${n}벌(${pct}%)`
+  const byKind = {
+    color: { name: `${best.ui} 편애 중`, tagline: `자꾸 손이 가는 ${best.ui}` },
+    type: { name: `${best.ui} 단골`, tagline: '내 옷장의 단골손님' },
+    pattern: { name: `${best.ui} 포인트`, tagline: '무늬 하나쯤은 있어야지' },
+  }[best.kind]
+  return { key: 'TASTE', ...byKind, rule: '내 옷장에서 가장 눈에 띄는 취향이에요', reason }
+}
+
 /** min: 캐릭터가 열리는 최소 옷 벌 수(기본은 MIN_CLOTHES). 칭호 규칙만 따로 시험할 때 바꿔 쓴다. */
 export function analyze(clothes: ClothesForAnalysis[], min = MIN_CLOTHES): Analysis {
   const n = clothes.length
@@ -172,6 +212,7 @@ export function analyze(clothes: ClothesForAnalysis[], min = MIN_CLOTHES): Analy
   return {
     count: n, ready: n >= min, need: Math.max(0, min - n),
     title: passed[0]?.title ?? null, subTitle: passed[1]?.title ?? null,
+    taste: n >= min && passed.length === 0 ? tasteOf(clothes) : null,
     strength: passed[0]?.strength ?? 0, matchedTitles: passed.map((p) => p.title), next,
     colors: shares(clothes.map((c) => colorMap.toUi(c.color))),
     types: shares(clothes.map((c) => clothingTypeMap.toUi(c.type))),

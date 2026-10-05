@@ -149,7 +149,8 @@ export default function CharacterPage() {
     )
   }
 
-  const title = a.title
+  const isTaste = !a.title && !!a.taste
+  const title = a.title ?? a.taste ?? null // 희귀 칭호가 없으면 취향 칭호
   const config = local ?? data.config
   const shown = preview ? (data.titles.find((t) => t.key === preview) ?? title) : title
   const wear = (shown && PERSONA_WEAR[shown.key]) || BASIC_WEAR
@@ -239,8 +240,18 @@ export default function CharacterPage() {
                 <button type="button" className="tiny" aria-expanded={why} onClick={() => setWhy((v) => !v)} style={{ background: 'none', border: 0, padding: 0, textDecoration: 'underline dotted', cursor: 'pointer', font: 'inherit' }}>
                   {why ? '접기' : '왜 이 칭호예요?'}
                 </button>
-                {why && <p className="tiny">{title.reason}</p>}
+                {why && (
+                  <p className="tiny">
+                    {isTaste ? '희귀 칭호 조건에는 아직 안 맞아서, 내 옷장에서 가장 눈에 띄는 취향으로 붙였어요. ' : ''}
+                    {title.reason}
+                  </p>
+                )}
               </>
+            )}
+            {isTaste && a.next && (
+              <p className="tiny char-next">
+                가장 가까운 희귀 칭호는 <b>{a.next.title.name}</b>예요. {a.next.what} {a.next.more}벌만 더 담으면 받을 수 있어요.
+              </p>
             )}
           </>
         ) : (

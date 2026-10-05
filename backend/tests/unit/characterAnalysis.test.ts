@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ClothingColor, ClothingPattern, ClothingType, Thickness } from '@prisma/client'
-import { analyze as analyzeWith, MIN_CLOTHES, TITLES, type ClothesForAnalysis, type TitleKey } from '../../src/services/character/analysis.js'
+import { analyze as analyzeWith, MIN_CLOTHES, TITLES, tasteOf, type ClothesForAnalysis, type TitleKey } from '../../src/services/character/analysis.js'
 import { CATALOG, cleanConfig } from '../../src/services/character/catalog.js'
 
 // 칭호 규칙을 시험하는 옷장은 5~10벌 안팎으로 만들어져 있어서, 규칙 시험에서는 열리는 기준을 5벌로 두고 본다.
@@ -18,19 +18,19 @@ const rainbowColors: ClothingColor[] = ['RED', 'BLUE', 'GREEN', 'YELLOW', 'PURPL
 const rainbow = rainbowColors.map((color, i) => c(i % 2 ? 'PANTS' : 'LONG_SLEEVE', color))
 
 const boundaryCases: { key: TitleKey; yes: ClothesForAnalysis[]; no: ClothesForAnalysis[] }[] = [
-  { key: 'DARK_CHILD', yes: mixedColor('BLACK', 6), no: mixedColor('BLACK', 5) },
-  { key: 'MINIMALIST', yes: base().map((x, i) => i < 8 ? { ...x, color: i % 2 ? 'WHITE' : 'GRAY' } : x), no: base().map((x, i) => i < 7 ? { ...x, color: i % 2 ? 'WHITE' : 'GRAY' } : x) },
-  { key: 'PATTERN_MASTER', yes: base().map((x, i) => ({ ...x, pattern: i < 6 ? 'CHECK' : 'SOLID' })), no: base().map((x, i) => ({ ...x, pattern: i < 5 ? 'CHECK' : 'SOLID' })) },
-  { key: 'PASTEL_FAIRY', yes: base().map((x, i) => ({ ...x, color: i < 4 ? 'PINK' : i < 6 ? 'BEIGE' : x.color })), no: base().map((x, i) => ({ ...x, color: i < 3 ? 'PINK' : i < 6 ? 'BEIGE' : x.color })) },
-  { key: 'HOODIE_ADDICT', yes: mixedType('HOODIE', 5), no: mixedType('HOODIE', 4) },
-  { key: 'WARM_BEAR', yes: mixedType('KNIT', 5), no: mixedType('KNIT', 4) },
-  { key: 'TEE_ONLY', yes: mixedType('SHORT_SLEEVE', 6), no: mixedType('SHORT_SLEEVE', 5) },
-  { key: 'OUTER_FAN', yes: mixedType('JACKET', 5), no: mixedType('JACKET', 4) },
-  { key: 'SHIRT_GENTLE', yes: mixedType('SHIRT', 5), no: mixedType('SHIRT', 4) },
-  { key: 'SKIRT_LOVER', yes: mixedType('SKIRT', 5), no: mixedType('SKIRT', 4) },
-  { key: 'EARTH_TONE', yes: mixedColor('BROWN', 6), no: mixedColor('BROWN', 5) },
-  { key: 'BLUE_SEA', yes: mixedColor('NAVY', 6), no: mixedColor('NAVY', 5) },
-  { key: 'VITAMIN', yes: many(10, (i) => c('PANTS', i < 6 ? 'YELLOW' : 'PURPLE')), no: many(10, (i) => c('PANTS', i < 5 ? 'YELLOW' : 'PURPLE')) },
+  { key: 'DARK_CHILD', yes: mixedColor('BLACK', 5), no: mixedColor('BLACK', 4) },
+  { key: 'MINIMALIST', yes: base().map((x, i) => i < 7 ? { ...x, color: i % 2 ? 'WHITE' : 'GRAY' } : x), no: base().map((x, i) => i < 6 ? { ...x, color: i % 2 ? 'WHITE' : 'GRAY' } : x) },
+  { key: 'PATTERN_MASTER', yes: base().map((x, i) => ({ ...x, pattern: i < 5 ? 'CHECK' : 'SOLID' })), no: base().map((x, i) => ({ ...x, pattern: i < 4 ? 'CHECK' : 'SOLID' })) },
+  { key: 'PASTEL_FAIRY', yes: base().map((x, i) => ({ ...x, color: i < 3 ? 'PINK' : i < 5 ? 'BEIGE' : x.color })), no: base().map((x, i) => ({ ...x, color: i < 2 ? 'PINK' : i < 5 ? 'BEIGE' : x.color })) },
+  { key: 'HOODIE_ADDICT', yes: mixedType('HOODIE', 4), no: mixedType('HOODIE', 3) },
+  { key: 'WARM_BEAR', yes: mixedType('KNIT', 4), no: mixedType('KNIT', 3) },
+  { key: 'TEE_ONLY', yes: mixedType('SHORT_SLEEVE', 5), no: mixedType('SHORT_SLEEVE', 4) },
+  { key: 'OUTER_FAN', yes: mixedType('JACKET', 4), no: mixedType('JACKET', 3) },
+  { key: 'SHIRT_GENTLE', yes: mixedType('SHIRT', 4), no: mixedType('SHIRT', 3) },
+  { key: 'SKIRT_LOVER', yes: mixedType('SKIRT', 4), no: mixedType('SKIRT', 3) },
+  { key: 'EARTH_TONE', yes: mixedColor('BROWN', 5), no: mixedColor('BROWN', 4) },
+  { key: 'BLUE_SEA', yes: mixedColor('NAVY', 5), no: mixedColor('NAVY', 4) },
+  { key: 'VITAMIN', yes: many(10, (i) => c('PANTS', i < 5 ? 'YELLOW' : 'PURPLE')), no: many(10, (i) => c('PANTS', i < 4 ? 'YELLOW' : 'PURPLE')) },
   { key: 'RAINBOW', yes: rainbow, no: rainbow.slice(0, 6) },
   { key: 'COLOR_LOVER', yes: mixedColor('GREEN', 6), no: base() },
 ]
@@ -56,12 +56,12 @@ describe('15개 칭호: 충족 조건과 경계', () => {
     expect(TITLES[0]?.key).toBe('DARK_CHILD')
     expect(TITLES.at(-1)?.key).toBe('COLOR_LOVER')
     for (const t of TITLES) expect(t.name && t.tagline && t.rule).toBeTruthy()
-    expect(TITLES.find((t) => t.key === 'DARK_CHILD')?.rule).toContain('60% 이상')
+    expect(TITLES.find((t) => t.key === 'DARK_CHILD')?.rule).toContain('50% 이상')
     expect(TITLES.find((t) => t.key === 'SKIRT_LOVER')?.rule).toContain('3벌 이상')
   })
-  it('5~500벌에서 검정 60% 경계를 반올림 없이 판정한다', () => {
+  it('5~500벌에서 검정 50% 경계를 반올림 없이 판정한다', () => {
     for (const n of [5, 6, 7, 9, 10, 11, 99, 100, 499, 500]) {
-      const minimum = Math.ceil(n * 3 / 5)
+      const minimum = Math.ceil(n / 2)
       const items = (m: number) => many(n, (i) => c('PANTS', i < m ? 'BLACK' : MIX[i % MIX.length]!))
       expect(qualifies(items(minimum), 'DARK_CHILD')).toBe(true)
       expect(qualifies(items(minimum - 1), 'DARK_CHILD')).toBe(false)
@@ -154,6 +154,46 @@ describe('칭호 선정과 설명', () => {
       expect(list.reduce((s, x) => s + x.share, 0)).toBeCloseTo(1, 10)
     }
     expect(analyze([]).colors).toEqual([])
+  })
+})
+
+describe('취향 칭호: 희귀 칭호가 없을 때 옷장의 가장 두드러진 특징으로 만든다', () => {
+  // 어느 희귀 칭호에도 안 걸리는 평범한 옷장(색·종류가 흩어져 있고 한 색이 2벌만)
+  const plainCloset = () => [c('LONG_SLEEVE', 'BLACK'), c('SHORT_SLEEVE', 'WHITE'), c('SWEATSHIRT', 'GRAY'), c('PANTS', 'NAVY'), c('PANTS', 'BEIGE'), c('SHORTS', 'BLUE'), c('SHIRT', 'SKYBLUE'), c('KNIT', 'BROWN'), c('JACKET', 'KHAKI'), c('CARDIGAN', 'RED'), c('PANTS', 'GREEN')]
+  // 종류는 최대 2벌, 색은 모두 다른 10벌에서, 앞쪽 몇 벌만 한 가지 특징을 갖게 만든다
+  const spreadTypes: ClothingType[] = ['LONG_SLEEVE', 'SHORT_SLEEVE', 'SWEATSHIRT', 'PANTS', 'PANTS', 'SHORTS', 'SHIRT', 'KNIT', 'JACKET', 'CARDIGAN']
+  const spreadColors: ClothingColor[] = ['BLACK', 'WHITE', 'GRAY', 'NAVY', 'BEIGE', 'BLUE', 'SKYBLUE', 'BROWN', 'KHAKI', 'GREEN']
+  const spread = (f: (i: number) => { color?: ClothingColor; pattern?: ClothingPattern }) => spreadTypes.map((t, i) => c(t, f(i).color ?? spreadColors[i]!, f(i).pattern ?? 'SOLID'))
+  it('희귀 칭호가 있으면 취향 칭호는 붙지 않는다', () => {
+    const a = analyzeWith(many(10, () => c('HOODIE', 'BLACK')))
+    expect(a.title).not.toBeNull()
+    expect(a.taste).toBeNull()
+  })
+  it('옷이 열리는 기준 미만이면 취향 칭호도 없다', () => {
+    expect(analyzeWith(many(MIN_CLOTHES - 1, (i) => c('PANTS', i % 2 ? 'BLACK' : 'WHITE'))).taste).toBeNull()
+  })
+  it('평범한 옷장도 열리면 가장 두드러진 특징으로 취향 칭호를 받는다', () => {
+    const a = analyzeWith(plainCloset())
+    expect(a).toMatchObject({ ready: true, title: null })
+    expect(a.taste).toMatchObject({ key: 'TASTE', name: '바지 단골' })
+    expect(a.taste?.reason).toBe('바지 3/11벌(27.2%)')
+  })
+  it('색이 가장 두드러지면 "○○ 편애 중"이 된다', () => {
+    const a = analyzeWith(spread((i) => ({ color: i < 3 ? 'GRAY' : undefined })))
+    expect(a.title).toBeNull()
+    expect(a.taste).toMatchObject({ name: '회색 편애 중', tagline: '자꾸 손이 가는 회색' })
+    expect(a.taste?.reason).toBe('회색 옷 3/10벌(30%)')
+  })
+  it('무늬가 가장 두드러지면 "○○ 포인트"가 된다', () => {
+    const a = analyzeWith(spread((i) => ({ pattern: i < 3 ? 'STRIPE' : undefined })))
+    expect(a.title).toBeNull()
+    expect(a.taste?.name).toBe('줄무늬 포인트')
+  })
+  it('기타 색과 무지는 특징으로 세지 않고, 같은 특징이 2벌 미만이면 만들지 않는다', () => {
+    expect(tasteOf(many(4, (i) => c(['LONG_SLEEVE', 'SHORT_SLEEVE', 'SHIRT', 'KNIT'][i] as ClothingType, 'OTHER')))).toBeNull()
+  })
+  it('옷 입력 순서가 바뀌어도 같은 취향 칭호가 나온다', () => {
+    expect(analyzeWith([...plainCloset()].reverse()).taste).toEqual(analyzeWith(plainCloset()).taste)
   })
 })
 
