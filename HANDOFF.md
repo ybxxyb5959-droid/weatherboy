@@ -109,6 +109,15 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 첫 로딩 가볍게: 화면별 코드 분리 + 폰트 자체 호스팅 (작성: Claude Code)
+- 수정 목적: JS 한 덩어리(835KB)와 Google Fonts 의존 제거.
+- 변경: frontend/src/App.tsx(대부분의 화면을 React.lazy 로 분리, 소개·로그인 화면은 바로 받음, Suspense 대기 중에는 Splash), frontend/src/lib/lazyPage.ts(새 버전 배포로 옛 조각 파일을 못 찾으면 한 번만 새로고침), frontend/src/main.tsx(폰트 CSS 를 따로 비동기로 받음), frontend/src/styles/fonts.css(@fontsource/gaegu, poor-story 의 woff2 글꼴 조각만 옮김, scripts/gen-fonts.cjs 로 다시 생성), frontend/index.html(구글 폰트 링크 제거), package.json(@fontsource/gaegu, @fontsource/poor-story)
+- 결과: 첫 JS 835KB(gzip 약 250KB) -> 336KB(gzip 105KB), 화면을 막는 CSS 는 gzip 22KB, 폰트 CSS(gzip 80KB)는 따로 받고 한글은 쓰는 글자 조각만. 구글 서버 요청 0건. 글자 모양은 같음.
+- 프론트 연결 사항: 없음. 개인정보처리방침의 국외 이전 항목에서 Google Fonts 언급은 원래 없음(변경 불필요).
+- 검증 결과: tsc·lint·build 통과. 브라우저에서 /terms 가 로컬 폰트(Gaegu 400/700)로 뜨고 구글 요청 0건, 콘솔 오류 없음. 홈·일정·옷장 등 로그인 필요한 화면의 지연 로딩은 못 봄(코드 분리 구조는 같음).
+- 남은 일: shareCard 조각(209KB)은 공유 이미지 만들 때 받음. 폰트 CSS 가 커서(gzip 80KB) 필요하면 쓰는 글자 조각만 골라 줄일 수 있음.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-06 접속 IP 한 번 더 수정(4단계) + 서버 오류 디스코드 알림 (작성: Claude Code)
 - 접속 IP: 운영 /api/net-check 로 Vercel 경유 요청의 x-forwarded-for 가 [방문자, Vercel, Cloudflare, Render 내부] 4단계임을 확인 -> Render 에서 믿는 단계 4. 확인: net-check 의 ip 가 방문자 IP, RateLimit 남은 횟수가 19,18,17,16 으로 줄고 Render 직접 호출과 같은 카운터. (/api/net-check 는 로그인 없이 방문자 자신의 가려진 IP 체인과 배포 커밋만 돌려줌)
 - 서버 오류 알림: 처리되지 않은 500 오류가 나면 DISCORD_WEBHOOK_URL 로 한 줄 알림(경로의 id 는 :id 로 가림, 오류 이름·코드만, 메시지 제외). 같은 오류는 10분에 한 번, 시간당 20건 상한. 웹훅이 없으면 보내지 않음.

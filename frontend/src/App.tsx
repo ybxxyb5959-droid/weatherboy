@@ -1,31 +1,34 @@
-import type { ReactElement } from 'react'
+import { Suspense, type ReactElement } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import IntroPage from './pages/IntroPage'
 import LandingPage from './pages/LandingPage'
-import TourPage from './pages/TourPage'
-import AdminPage from './pages/AdminPage'
-import ReviewPage from './pages/ReviewPage'
-import SupportPage from './pages/SupportPage'
-import LegalPage from './pages/LegalPage'
 import { isStandalone } from './lib/install'
-import HomePage from './pages/HomePage'
-import WardrobePage from './pages/WardrobePage'
-import EditEventPage from './pages/EditEventPage'
-import ScanClosetPage from './pages/ScanClosetPage'
-import EditClothingPage from './pages/EditClothingPage'
-import AddClothingPage from './pages/AddClothingPage'
-import EventsPage from './pages/EventsPage'
-import NewEventPage from './pages/NewEventPage'
-import EventDetailPage from './pages/EventDetailPage'
-import WeatherPreviewPage from './pages/WeatherPreviewPage'
-import SettingsPage from './pages/SettingsPage'
-import CharacterPage from './pages/CharacterPage'
 import GuestDataNotice from './components/GuestDataNotice'
 import Splash from './components/Splash'
 import LocationGate from './components/LocationGate'
 import NotifyGate from './components/NotifyGate'
 import { useAuth } from './auth'
+import { lazyPage } from './lib/lazyPage'
+
+// 처음 열 때 꼭 필요하지 않은 화면은 쓸 때 받아와서 첫 로딩을 가볍게 한다(소개·로그인 화면은 바로 받는다)
+const TourPage = lazyPage(() => import('./pages/TourPage'))
+const AdminPage = lazyPage(() => import('./pages/AdminPage'))
+const ReviewPage = lazyPage(() => import('./pages/ReviewPage'))
+const SupportPage = lazyPage(() => import('./pages/SupportPage'))
+const LegalPage = lazyPage(() => import('./pages/LegalPage'))
+const HomePage = lazyPage(() => import('./pages/HomePage'))
+const WardrobePage = lazyPage(() => import('./pages/WardrobePage'))
+const EditEventPage = lazyPage(() => import('./pages/EditEventPage'))
+const ScanClosetPage = lazyPage(() => import('./pages/ScanClosetPage'))
+const EditClothingPage = lazyPage(() => import('./pages/EditClothingPage'))
+const AddClothingPage = lazyPage(() => import('./pages/AddClothingPage'))
+const EventsPage = lazyPage(() => import('./pages/EventsPage'))
+const NewEventPage = lazyPage(() => import('./pages/NewEventPage'))
+const EventDetailPage = lazyPage(() => import('./pages/EventDetailPage'))
+const WeatherPreviewPage = lazyPage(() => import('./pages/WeatherPreviewPage'))
+const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
+const CharacterPage = lazyPage(() => import('./pages/CharacterPage'))
 
 // 세션(HttpOnly 쿠키)으로 로그인 여부를 판단한다. 첫 설정 화면은 없고 바로 홈으로 간다.
 function ConnectError() {
@@ -89,6 +92,7 @@ export default function App() {
       <GuestDataNotice />
       {/* 화면이 바뀔 때 살짝 올라오며 나타난다(같은 영역 안의 이동, 예: 설정의 하위 화면은 다시 만들지 않는다) */}
       <div key={pathname.split('/')[1] ?? ''} className="page-in">
+      <Suspense fallback={<Splash />}>
       <Routes>
         <Route path="/" element={<Front />} />
         <Route path="/start" element={<Root />} />
@@ -114,6 +118,7 @@ export default function App() {
         <Route path="/settings/:section" element={<Protected><SettingsPage /></Protected>} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+      </Suspense>
       </div>
       {showNav && <BottomNav />}
     </div>
