@@ -4830,7 +4830,7 @@ dd,
   scroll-snap-type: x proximity;
 }
 .hcol {
-  flex: 0 0 58px;
+  flex: 0 0 54px;
   gap: 6px;
   scroll-snap-align: start;
 }
@@ -4871,4 +4871,158 @@ dd,
 }
 .events-list::-webkit-scrollbar {
   display: none;
+}
+
+/* ---------- 옷장 사진 등록 가이드 ---------- */
+.cg {
+  margin: 0 0 14px;
+  padding: 12px 14px 14px;
+}
+.cg-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cg-skip {
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  font-family: 'Poor Story', var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: underline dashed;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.cg-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.cg-step h2 {
+  margin: 4px 0 0;
+}
+.cg-art {
+  min-height: 118px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cg-two {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cg-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.cg-or {
+  font-size: 26px;
+  opacity: 0.6;
+}
+.cg-chip,
+.cg-mini {
+  display: inline-block;
+  padding: 3px 10px;
+  font-family: 'Poor Story', var(--font);
+  font-size: 14px;
+  border: 2.2px solid var(--ink);
+  border-radius: 9px 12px 8px 13px / 12px 8px 13px 9px;
+  background: var(--paper);
+}
+.cg-chip.on {
+  background: var(--pick);
+}
+.cg-frame {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  padding: 22px 16px 18px;
+}
+.cg-corners {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cg-hung {
+  position: relative;
+}
+.cg-rod {
+  display: block;
+  width: 100%;
+  height: 8px;
+}
+.cg-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -2px;
+}
+.cg-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 10px;
+  text-align: left;
+  border: 2.4px dashed var(--ink);
+  border-radius: 10px 12px 9px 13px / 12px 9px 13px 10px;
+}
+.cg-box {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  line-height: 22px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  border: 2.4px solid var(--ink);
+  border-radius: 8px 10px 7px 11px / 10px 7px 11px 8px;
+  background: var(--pick);
+}
+.cg-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cg-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.cg-btns {
+  display: flex;
+  gap: 8px;
+}
+.cg-dots {
+  display: flex;
+  gap: 6px;
+}
+.cg-dots i {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+}
+.cg-dots i.on {
+  background: var(--ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cg-step {
+    animation: cg-in 0.35s cubic-bezier(0.3, 1.3, 0.5, 1) both;
+  }
+  @keyframes cg-in {
+    from { opacity: 0; transform: translateX(14px) rotate(0.6deg); }
+    to { opacity: 1; transform: none; }
+  }
 }

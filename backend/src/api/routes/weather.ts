@@ -58,15 +58,19 @@ weatherRouter.get(
     const air = await getAirQuality(region, now)
     const dustGrade = air ? Math.max(air.pm10Grade ?? 0, air.pm25Grade ?? 0) || null : null
     const today = kstDate(now)
-    const tempMin = short.dailyMin[today] ?? null
-    const tempMax = short.dailyMax[today] ?? null
+    // 밤 늦게는 오늘의 최저/최고 값이 예보에서 빠지므로, 오늘 남은 시간대(없으면 지금 기온)로 대신한다(0° 로 나오지 않게)
+    const todayTemps = short.hourly.filter((h) => kstDate(h.targetAt) === today).map((h) => h.temp)
+    if (todayTemps.length === 0) todayTemps.push(current.temp)
+    const tempMin = short.dailyMin[today] ?? Math.min(...todayTemps)
+    const tempMax = short.dailyMax[today] ?? Math.max(...todayTemps)
     // 해가 졌는지는 이 지역(격자 중심 좌표)과 날짜로 계산한 일몰·일출을 쓴다
     const { lat, lng } = gridToLatLng(region.nx, region.ny)
     const { condition, flags } = deriveCondition({ now, current, feels: f.feels, tempMin, tempMax, dustGrade, night: isNightAt(now, lat, lng) })
-    // 시간대별 예보: 3시간 간격(0,3,6..시)으로 앞으로 8칸(약 24시간)
+    // 시간대별 예보: 단기예보는 1시간 단위지만 너무 촘촘해서 2시간 간격으로 앞으로 12칸(24시간)(옆으로 밀어서 본다)
     const hourly = short.hourly
-      .filter((h) => h.targetAt.getTime() >= now.getTime() - 60 * 60 * 1000 && toKstParts(h.targetAt).hour % 3 === 0)
-      .slice(0, 8)
+      .filter((h) => h.targetAt.getTime() >= now.getTime() - 60 * 60 * 1000)
+      .filter((_, i) => i % 2 === 0)
+      .slice(0, 12)
       .map((h) => {
         const hour = toKstParts(h.targetAt).hour
         const kind = hourlyKind(h, isNightAt(h.targetAt, lat, lng))

@@ -10,6 +10,7 @@ import type { Clothing } from '../mocks/clothes'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
 import HangLoader from '../components/HangLoader'
+import ClosetGuide, { closetGuideSeen } from '../components/ClosetGuide'
 import { CameraIcon } from '../components/ToolIcons'
 import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
@@ -48,6 +49,7 @@ export default function ScanClosetPage() {
   const [editing, setEditing] = useState<number | null>(null)
   const [progress, setProgress] = useState('')
   const [busy, setBusy] = useState(false)
+  const [guide, setGuide] = useState(() => !closetGuideSeen()) // 처음 열 때만 자동으로 펼친다. 이후엔 "촬영 팁"으로 다시 본다
   const [part, setPart] = useState<(typeof PART_LABELS)[number]>('섞여 있어요')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -171,12 +173,21 @@ export default function ScanClosetPage() {
         <div className="row"><BackButton /><h1>옷장 사진으로 등록</h1></div>
       </div>
 
+      {guide && <ClosetGuide onClose={() => setGuide(false)} />}
+
       <div className="field ai-box" style={{ marginTop: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void analyze(e.target.files)} />
         <AiUsageBar usage={usage} />
         <div className="name">사진 속 옷</div>
         <ChoiceRow options={[...PART_LABELS]} value={part} onChange={setPart} />
-        <p className="tiny ai-note">상의만, 하의만 찍었다면 골라 주세요. 상의와 하의를 헷갈리는 실수가 크게 줄어요.</p>
+        <p className="tiny ai-note">
+          상의만, 하의만 찍었다면 골라 주세요. 상의와 하의를 헷갈리는 실수가 크게 줄어요.{' '}
+          {!guide && (
+            <button type="button" className="cg-skip" onClick={() => setGuide(true)}>
+              촬영 팁 보기
+            </button>
+          )}
+        </p>
         <DoodleButton seed={2} className="block sketchy" icon={<CameraIcon />} onClick={() => fileRef.current?.click()} disabled={busy || saving || blocked}>
           {busy ? progress || '살펴보는 중…' : '옷장·행거 사진 고르기'}
         </DoodleButton>
