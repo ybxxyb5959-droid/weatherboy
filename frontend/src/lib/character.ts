@@ -60,8 +60,7 @@ export function tasteWear(t: { kind?: string; value?: string; category?: string 
   const v = t.value
   if (!v) return null
   if (t.kind === 'color') {
-    const rest = v === '회색' ? '검정' : '회색'
-    return { top: { type: v === '검정' ? '후드티' : '니트', color: v }, bottom: { type: '바지', color: rest } }
+    return { top: { type: v === '검정' ? '후드티' : '니트', color: v }, bottom: { type: '바지', color: v } }
   }
   if (t.kind === 'pattern') return { top: { type: '셔츠', color: '하늘색', pattern: v }, bottom: { type: '바지', color: '회색' } }
   if (t.kind === 'type') {
