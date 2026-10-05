@@ -6,10 +6,12 @@ import { aiEnabled } from '../../services/ai/explain.js'
 import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingVision.js'
 import { parseEventText } from '../../services/ai/eventParse.js'
 import { prisma } from '../../db.js'
-import { OUTFIT_STYLES, styleLabel } from '../../rules/outfitStyle.js'
+import { OUTFIT_STYLES } from '../../rules/outfitStyle.js'
 import { stylistApplicable } from '../../rules/outfitStyle.js'
-import { defaultOptions, detectStyle, fallbackReply, stylistReply, type StyleOption } from '../../services/ai/stylist.js'
-import { exampleNote, hasWishEffect, parseWish, savedWish } from '../../rules/outfitWish.js'
+import { defaultOptions, fallbackReply } from '../../services/ai/stylist.js'
+import { applyEventWish, conditionForDate, conditionLabel, eventDates, parseEventWishRules, savedEventWish, wishOfCondition } from '../../rules/eventWish.js'
+import { parseEventWishAi } from '../../services/ai/eventWishParse.js'
+import { aiScope } from '../../services/ai/aiScope.js'
 import { Prisma } from '@prisma/client'
 import { eventKindMap } from '../../config/mappings.js'
 import { setEventStyle, stylistContext, stylistOutfit } from '../../services/stylistOutfit.js'
@@ -79,7 +81,7 @@ aiRouter.post(
 )
 
 // AI 를 실제로 부르는 요청만 호출 한도에 센다. 칩(느낌을 직접 지정)과, 원하는 옷을 규칙으로 알아듣는 말("검정색 상의")은 AI 가 필요 없다.
-const usesAi = (body: { text?: unknown; style?: unknown } | undefined) => typeof body?.text === 'string' && !body.style && !parseWish(body.text)
+const usesAi = (body: { text?: unknown; style?: unknown } | undefined) => typeof body?.text === 'string' && !body.style && !parseEventWishRules(body.text, [])
 // AI 를 쓰는 요청만 호출 기록에 묶고 한도(시간당, 하루)를 본다
 const stylistLimit: RequestHandler = (req, res, next) => {
   if (!usesAi(req.body)) return next()
@@ -119,6 +121,7 @@ aiRouter.get(
 
 aiRouter.post(
   '/event-stylist',
+  aiScope('text'),
   stylistLimit,
   wrap(async (req, res) => {
     const b = parse(stylistSchema, req.body)
@@ -126,55 +129,32 @@ aiRouter.post(
     const event = await prisma.event.findFirst({ where: { id: b.eventId, userId } })
     if (!event) throw notFound('일정을 찾을 수 없어요.')
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
-    // "검정색 상의를 입고 싶어"처럼 원하는 옷을 말하면 옷장에 없어도 그 옷을 예시로 입혀 보여준다(AI 없이 규칙으로 알아듣는다)
-    const multiDay = kstDate(event.startAt) !== kstDate(event.endAt)
-    // "원래대로"처럼 원하는 옷을 되돌리는 말: 저장해 둔 원하는 옷을 지우고 기본 코디로 돌아간다
-    const clearing = !b.style && !!b.text && /원래대로|처음으로|초기화|취소/.test(b.text)
-    let wish = !b.style && b.text && !clearing ? parseWish(b.text) : null
-    let reply = ''
-    let style = b.style ?? null
-    let options: StyleOption[] = []
-    if (clearing) {
-      // 위에서 처리
-    } else if (!style && wish) {
-      style = detectStyle(b.text!) // "검정 정장"처럼 느낌까지 말했으면 그 느낌도 같이
-    } else if (!style) {
-      const turn = await stylistReply(await stylistContext(user, event), b.history, b.text!)
-      reply = turn.reply
-      style = turn.style
-      options = turn.options
-      wish = turn.wish ?? null // 규칙으로 못 알아들은 말을 AI 가 원하는 옷으로 바꿔줬다면 그대로 쓴다
+    const dates = eventDates(event)
+    const oldPlan = savedEventWish(event.outfitWish)
+    const parsed = b.style
+      ? { patches: [{ date: 'ALL', condition: { style: b.style, pieces: [] } }] }
+      : parseEventWishRules(b.text!, dates) ?? await parseEventWishAi(await stylistContext(user, event), dates, oldPlan, b.text!)
+    if ('question' in parsed && parsed.question) return res.json({ reply: parsed.question, options: 'options' in parsed ? parsed.options ?? [] : [], outfit: null })
+    const plan = applyEventWish(oldPlan, parsed.patches, dates)
+    let saved = { ...event, outfitWish: plan as unknown as Prisma.JsonValue }
+    const first = conditionForDate(plan, dates[0]!)
+    const allStyle = plan.all.style
+    if (!b.preview) {
+      // 읽기-수정-쓰기 사이에 다른 탭이 변경했으면 조용히 덮어쓰지 않는다.
+      const changed = await prisma.event.updateMany({
+        where: { id: event.id, userId, updatedAt: event.updatedAt },
+        data: { outfitWish: plan as unknown as Prisma.InputJsonValue, ...(allStyle !== undefined ? { outfitStyle: allStyle } : {}) },
+      })
+      if (!changed.count) return res.status(409).json({ code: 'OUTFIT_CHANGED', message: '다른 화면에서 조건이 바뀌었어요. 다시 불러온 뒤 말씀해주세요.' })
+      saved = await prisma.event.findUniqueOrThrow({ where: { id: event.id } })
+      if (allStyle !== undefined && saved.lastDecisionKey) saved = await setEventStyle(user, saved, allStyle)
     }
-    if (!style && !wish && !clearing) return res.json({ reply, options, outfit: null })
-    // 며칠짜리 일정은 원하는 옷을 일정에 저장해서 날짜별 코디가 날마다 이 조건을 따르게 한다. 하루짜리는 저장하지 않고 입혀서 보여주기만 한다.
-    let wishChanged = false
-    if (multiDay && (wish || clearing)) {
-      // "다르게"만 말했으면 이미 정한 옷 조건은 두고 방식만 더한다. 새 옷 조건을 말해도 "다르게"는 유지한다.
-      const prev = savedWish(event.outfitWish)
-      const merged = wish && prev && !hasWishEffect(wish) ? { ...prev, variety: true } : wish && prev?.variety ? { ...wish, variety: true } : wish
-      await prisma.event.update({ where: { id: event.id }, data: { outfitWish: clearing ? Prisma.DbNull : (merged as unknown as Prisma.InputJsonValue) } })
-      wishChanged = true
-    }
-    // 고른 분위기는 일정에 저장한다. 원하는 옷만 말했다면 느낌은 그대로 두고(저장하지 않고) 일정에 저장돼 있던 느낌으로 보여준다.
-    const saved = b.preview || !style ? event : await setEventStyle(user, event, style)
-    const outfit = await stylistOutfit(user, saved, style ?? event.outfitStyle ?? null, wish)
-    if (!outfit) {
-      const noForecast = '아직 이 날짜의 정확한 예보가 없어서, 예보가 열리면 골라드릴게요.'
-      return res.json({ reply: style ? `${styleLabel[style]} 느낌으로 기억해 둘게요. ${noForecast}` : `말씀하신 옷은 기억해 두기 어려워요. ${noForecast}`, options: [], outfit: null, style: style ?? undefined })
-    }
-    const lack = '옷장에 딱 맞는 옷이 부족해서 가장 가까운 옷으로 골랐어요.'
-    const sample = exampleNote(outfit.examples)
-    let lead: string
-    if (clearing) lead = '원하는 옷은 지우고 원래 코디로 돌아왔어요.'
-    else if (wish?.variety && !hasWishEffect(wish)) lead = multiDay ? '날짜마다 옷이 겹치지 않게 골랐어요.' : '하루짜리 일정이라 옷이 겹칠 일은 없어요.'
-    else if (wish && !style) lead = outfit.examples.length ? `원하시는 옷을 입혀봤어요. ${sample}` : '원하시는 옷은 옷장에 있는 옷으로 입혀봤어요.'
-    else if (sample) lead = `${reply || `${styleLabel[style!]} 스타일로 입혀봤어요.`} ${sample}`
-    // AI 가 건넨 말이 있으면 그 뒤에 이어 붙이고, 없으면 분위기 이름으로 문장을 시작한다
-    else lead = reply ? (outfit.styleMatched ? `${reply} 옷장에서 골라봤어요.` : `${reply} ${lack}`) : outfit.styleMatched ? `${styleLabel[style!]} 스타일로 옷장에서 골라봤어요.` : `${styleLabel[style!]} 스타일로 골라보고 싶었지만, ${lack}`
-    // 옷이 부족하면 무엇이 있으면 좋은지, 피하지 못한 어색한 점이 있으면 솔직하게 알린다
-    const multiNote = multiDay && wish ? '연박 일정은 날짜마다 다른 옷으로 맞춰서 보여드려요.' : null
-    const extra = [multiNote, outfit.warn, !outfit.styleMatched ? outfit.gap : null, ...outfit.tabooReasons.slice(0, 2)].filter((t): t is string => !!t)
-    res.json({ reply: [lead, ...extra.map((t) => (/[.!?]$/.test(t) ? t : `${t}.`))].join(' '), options: [], outfit, style: style ?? undefined, changed: wishChanged || undefined })
+    const style = first.style ?? saved.outfitStyle ?? null
+    const outfit = await stylistOutfit(user, saved, style, wishOfCondition(first))
+    const applied = dates.map((date, i) => ({ date, day: i + 1, label: conditionLabel(conditionForDate(plan, date)) }))
+    const summary = applied.filter((a) => a.label).map((a) => `${a.day}일차: ${a.label}`).join(' / ')
+    const reply = `${summary || '기본 날씨 코디'}로 ${b.preview ? '미리 보여드려요' : '기억했어요'}. ${dates.length > 1 ? '캐릭터는 첫날 코디예요. 날짜별 카드를 확인해주세요.' : ''}`
+    res.json({ reply: `${reply}${outfit ? outfit.warn ? ` ${outfit.warn}` : '' : ' 예보가 열리면 이 조건으로 골라드릴게요.'}`, options: [], outfit, style: style ?? undefined, changed: !b.preview, applied })
   }),
 )
 

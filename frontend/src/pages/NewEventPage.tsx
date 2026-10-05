@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
@@ -92,22 +92,10 @@ export function EventForm({ event }: { event?: PlanEvent }) {
     }
   }
 
-  // 적거나 말하는 동안 바로 해석해서 채운다(앱 안의 규칙이라 빠르고 공짜). 잠깐 멈추면 반영한다.
   const today = new Date().toLocaleDateString('sv-SE')
-  useEffect(() => {
-    const text = say.trim()
-    if (event || text.length < 2) return
-    const t = window.setTimeout(() => {
-      const d = parseEventText(text, today)
-      apply({ ...d, kind: d.kindFound || d.startDate ? d.kind : null })
-      setAiNote(d.startDate ? '말한 대로 채웠어요. 맞는지 확인하고 저장해주세요.' : '언제인지도 말해주면 날짜까지 채워요 (예: 다음주 금요일)')
-    }, 250)
-    return () => window.clearTimeout(t)
-    // apply 는 touched 를 읽는다. 말이 바뀔 때만 다시 해석한다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [say])
 
-  // '채워줘'(또는 말하기가 끝남): 규칙으로 날짜까지 알아들었으면 그걸로 끝. 날짜를 못 찾았을 때만 AI(제미나이)에게 묻는다.
+  // 글로 적을 때는 '채워줘'를 눌렀을 때만, 말로 할 때는 말이 끝난 뒤(SayBox 가 끝난 글로 한 번만 부른다)에만 채운다.
+  // 규칙으로 날짜까지 알아들었으면 그걸로 끝. 날짜를 못 찾았을 때만 AI(제미나이)에게 묻는다.
   const fillFromText = async (spoken?: string) => {
     const text = (spoken ?? say).trim()
     if (thinking || text.length < 2) return

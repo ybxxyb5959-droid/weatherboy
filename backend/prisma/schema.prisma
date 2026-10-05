@@ -480,6 +480,10 @@ model AiCallLog {
   durationMs Int?
   message    String?
   // 누가 어떤 종류(photo/text)로 불렀는지. 하루 사용량 한도를 세는 데 쓴다. 예전 기록과 요청 밖 호출은 비어 있다.
+  promptTokens     Int?
+  outputTokens     Int?
+  totalTokens      Int?
+  thoughtTokens    Int?
   userId     String?   @db.Uuid
   // 탈퇴하면 DB 가 userId 를 비운다(SET NULL). 호출 기록은 서버 전체 상한·관리자 집계를 위해 익명으로 남는다.
   user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)

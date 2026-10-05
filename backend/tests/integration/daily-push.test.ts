@@ -80,6 +80,9 @@ describe('일일 알림 작업 (dailyPushJob)', () => {
   beforeEach(async () => {
     sent.length = 0
     await prisma.forecastSnapshot.deleteMany({})
+    // 테스트마다 공급자의 등급을 바꾸므로, 이전 테스트의 정상 캐시가 새 등급을 가리지 않게 한다.
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { regionSido: true, regionDistrict: true } })
+    await prisma.airQuality.deleteMany({ where: { region: `${user.regionSido}|${user.regionDistrict ?? ''}` } })
     await prisma.notifyLog.deleteMany({ where: { userId } })
     installFakeProviders({ temp: 12, pop: 20, airGrade: 2 })
     await setUser({ notifyMorning: true, notifyRain: true, notifyColdReturn: true, notifyDust: false, notifyFeedback: true, notifyCloset: false })

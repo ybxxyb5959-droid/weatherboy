@@ -109,6 +109,51 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 일정 옷 추천 3단계: 정장 예시는 [예시로 보기]만, 바꾼 코디는 보온 재검증 + 부팅 화면 디자인 통일 (작성: Claude Code, 설계 검토: Codex)
+- 수정 목적: 정장·원하는 옷 예시로 바꾼 코디가 날씨 보온을 채우는지 다시 세지 않아(5°C 후드티·바지·패딩 보온 11 → 정장 예시 6.5) 설명이 맞지 않던 문제. 예시는 기본 추천에 자동으로 섞지 않고, 내 옷이 날씨에 부족할 때만 눌러서 본다.
+- 변경 파일:
+  - `backend/src/rules/outfitCheck.ts`(신규) — `checkWarmth(items, wardrobe, required)`: 옷장 옷은 저장된 보온값, 예시 옷은 보통 두께 기본값으로 합을 세어 필요 보온과 비교
+  - `backend/src/services/recommendationService.ts` — `dailyOutfits`: 정장 세트 예시는 `reuse.examples` 일 때만, 사용자가 말한 원하는 옷(wish)은 말한 대로 항상 반영. 바꾼 뒤에는 보온을 다시 세어 `notes`(엔진의 낡은 설명 대신 부족 안내)·`sub`·`warmthShort` 를 정함. `DayOutfit` 에 `canViewExamples`(= 엔진 `insufficientWardrobe`), `warmthShort`
+  - `backend/src/api/routes/events.ts` — `GET /:id/outfit?examples=0|1`
+  - `backend/src/services/stylistOutfit.ts` — 정장·원하는 옷을 대안 조합(`alternatives`)에도 똑같이 적용(다른 조합이 요청을 되돌리던 문제), 바꾼 뒤 보온이 모자라면 `warn`
+  - `backend/tests/unit/outfitCheck.test.ts`(신규 4개) — 5°C 회귀(내 옷만이면 예시 없음·버튼 불필요, 예시로 보면 보온 부족 안내), `checkWarmth`
+  - `frontend/src/pages/EventDetailPage.tsx`, `types.ts` — 날짜별 코디의 [예시로 보기]/[내 옷으로 돌아가기](내 옷이 날씨에 모자란 날이 있을 때만)
+  - `frontend/index.html` — 서버 로딩 직전의 정적 부팅 화면(제목 위·졸라맨 아래, 같은 크기·기울기)을 앱의 스플래시 구성과 맞춤(예전엔 단순한 막대 졸라맨이 먼저 보였음)
+- 프론트 연결 사항: `/api/events/:id/outfit` 쿼리 `examples`, 응답 `days[].canViewExamples`, `days[].warmthShort` 추가. `/api/ai/event-stylist` 의 `outfit.alternatives` 가 요청을 반영하고 `warn` 이 늘어남.
+- 검증 결과: backend typecheck/lint, 단위 테스트 34파일 478개 통과. frontend tsc/build 통과. 통합 테스트·화면 직접 확인은 못 함.
+- 남은 일 / 상대에게 요청: **하루 일정(`GET /outfit` 기본 추천)에서 정장 요청의 예시 분리는 아직**(하루는 코디 도우미 POST 가 정장 예시를 입힘, 보온 경고만 추가). 오늘 홈의 빈 옷장 일반 추천(`genericWardrobe`)은 그대로. 엔진 내부 재검증 단일 함수 통합, 중복 안내 정리(예시 반복 집계)는 후속. 정적 부팅 화면(`frontend/index.html`)은 `Splash` 를 렌더링한 HTML 을 그대로 넣은 사본이라 `Splash.tsx` 를 바꾸면 같이 고쳐야 함(개발 서버에선 CSS 가 늦게 붙어 첫 순간 스타일이 없을 수 있음, 배포 빌드는 CSS 가 먼저 로드됨 — 폰 확인 필요). 커밋 안 함.
+- 적용한 규칙 번호: D-9
+
+### 2026-10-05 일정 옷 추천 2단계: 연박 [상의][하의] 돌려입기 버튼 (작성: Claude Code, 설계 검토: Codex)
+- 수정 목적: 연박 날짜별 코디는 기본적으로 앞선 날 옷을 피한다. 사용자가 버튼을 눌렀을 때만 그 자리(상의/하의)의 옷을 다시 입을 수 있게 한다. 겉옷은 항상 겹침 회피. "허용"이지 같은 옷을 강제로 고정하는 것은 아님(날씨 보온을 깨지 않으려고).
+- 변경 파일:
+  - `backend/src/services/recommendationService.ts` — `dailyOutfits(…, now, reuse)`, `DayReuse`. 돌려입기를 고른 자리는 `avoidIds` 에서 빼고 "부족해서 겹쳐요" 안내도 하지 않음. 자리는 엔진 결과의 한글 종류(`roleOf`)로 판단
+  - `backend/src/api/routes/events.ts` — `GET /:id/outfit?reuseTop=0|1&reuseBottom=0|1`(생략=0, 그 외 값은 400), 응답에 `reuse:{top,bottom}` 추가
+  - `backend/tests/unit/dailyVariety.test.ts` — 돌려입기 테스트 1개
+  - `frontend/src/pages/EventDetailPage.tsx` — 날짜별 코디 위 "옷 돌려입기 [상의][하의]" 토글(상태가 바뀌면 다시 불러옴)
+- 프론트 연결 사항: `/api/events/:id/outfit` 쿼리 `reuseTop`, `reuseBottom` 추가, 응답 `reuse` 추가(프론트는 아직 응답 `reuse` 를 읽지 않음). `docs/api.md` 갱신은 안 함.
+- 검증 결과: backend typecheck/lint, dailyVariety·dailyWish 단위 테스트 14개 통과, frontend tsc 통과. 통합 테스트와 화면 직접 확인은 못 함.
+- 남은 일 / 상대에게 요청: 3단계(예시 분리·보온 재검증). Codex 설계안: 예시 클릭 때만 가상 옷을 엔진 후보에 넣고, 최종 평가를 `outfitEngine` 의 단일 함수로 모으며, 이벤트 기본 경로에서는 `genericWardrobe` 자동 대체를 끄고 `canViewExamples`는 `insufficientWardrobe` 가 아니라 최종 보온 부족·필수 종류 없음으로 판정. 5°C 후드티+바지+패딩이 정장 선택 뒤 보온 11→6.5 로 떨어지는 사례를 회귀 테스트로 사용. 커밋 안 함.
+- 적용한 규칙 번호: D-9
+
+### 2026-10-05 일정 상세 옷 추천 개선 1단계: 오류와 '예보 없음' 분리, 추천 카드 항상 표시, 날짜별 안내 전체 표시 (작성: Claude Code)
+- 수정 목적: Codex 검토(2·5·6번)에서 나온 것 중 작은 것. 방향(사용자 결정): 연박 [상의][하의] 돌려입기 버튼(눌렀을 때만 재사용, 2단계), 예시는 옷이 부족할 때만 [예시로 보기](3단계). 푸시는 끄지 않고 그대로 둠.
+- 변경 파일:
+  - `frontend/src/pages/EventDetailPage.tsx` — 요청 실패(`failed`)를 "예보 없음"과 구분해 "불러오지 못했어요 + 다시 시도" 표시. 하루 일정은 코디 도우미가 아직 카드를 안 펼쳤을 때도 기본 추천 옷 목록을 보여줌(`showPlainOutfit`). 날짜별 코디의 안내(`notes`)를 첫 줄만이 아니라 전부 표시
+  - `frontend/src/components/EventStylist.tsx` — `onBase` 콜백(도우미가 코디 카드를 직접 보여주는지 알림)
+- 프론트 연결 사항: 없음(백엔드 변경 없음).
+- 검증 결과: frontend tsc/build 통과, lint 기존 경고만. 화면 직접 확인은 못 함(로그인·일정 데이터 필요).
+- 남은 일 / 상대에게 요청: 2단계 돌려입기 토글, 3단계 예시 분리·보온 재검증(백엔드 `stylistOutfit.ts`, `outfitWish.ts`, `recommendationService.ts`). 커밋 안 함.
+- 적용한 규칙 번호: D-9
+
+### 2026-10-05 일정 말로 적기: 말이 끝난 뒤·'채워줘' 눌렀을 때만 채움 (작성: Claude Code)
+- 수정 목적: 음성 인식 중(말이 안 끝났는데)과 직접 타이핑 중에도 250ms 뒤 칸이 바로 채워지던 것을 없앰. 음성은 말이 끝난 글로 한 번, 글자는 '채워줘'(또는 Enter)를 눌렀을 때만 해석.
+- 변경 파일: `frontend/src/pages/NewEventPage.tsx` — 입력 중 자동 해석 `useEffect([say])` 제거(음성 종료 시 실행은 `SayBox` 의 `submitOnVoice` 가 이미 담당).
+- 프론트 연결 사항: 없음.
+- 검증 결과: frontend tsc 통과, lint 기존 경고만. 실제 마이크·브라우저 동작은 못 함(폰 확인 필요).
+- 남은 일 / 상대에게 요청: Enter 키도 '채워줘'와 같은 동작으로 둠. 일정 상세 옷 추천 품질 검토는 Codex 보고 대기.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 일정 그림(졸라맨 장면)이 움직임 (작성: Claude Code)
 - 수정 목적: 일정 종류·기타 일정 그림이 정지 그림이었음. 그림 모양·색·배경은 그대로 두고 안의 기존 부분만 움직이게 함(러닝의 바람 줄처럼).
 - 변경 파일:

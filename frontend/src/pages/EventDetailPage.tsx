@@ -12,6 +12,7 @@ import UmbrellaDoodle from '../components/UmbrellaDoodle'
 import { dDay, formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
 import { useState } from 'react'
+import DoodleButton from '../components/DoodleButton'
 import { api, ApiError } from '../api'
 import { useAsync } from '../hooks'
 import { genericColor } from '../lib/genericColor'
@@ -85,15 +86,34 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
 }
 
 /** 며칠짜리 일정: 날마다 그날 날씨에 맞춰 다른 옷으로 고른 코디 */
-function DayOutfits({ days }: { days: EventDayOutfit[] }) {
+function DayOutfits({ days, reuse, onReuse, examples, onExamples, busy }: { days: EventDayOutfit[]; reuse: { top: boolean; bottom: boolean }; onReuse: (r: { top: boolean; bottom: boolean }) => void; examples: boolean; onExamples: (on: boolean) => void; busy: boolean }) {
+  const needExamples = days.some((d) => d.canViewExamples)
   // 실제로 겹친 날이 있으면 "다르게 골랐어요"라고만 말하지 않는다
   const overlapped = days.some((d) => (d.overlapSlots?.length ?? 0) > 0)
+  const reusing = reuse.top || reuse.bottom
   return (
     <section className="section">
       <h2>날짜별 코디</h2>
       <p className="tiny">
-        {overlapped ? '옷장에 옷이 적어서 겹치는 옷이 있어요. 아래 날짜별 안내를 확인해 보세요.' : '날마다 다른 옷으로 골랐어요.'}
+        {overlapped ? '옷장에 옷이 적어서 겹치는 옷이 있어요. 아래 날짜별 안내를 확인해 보세요.' : reusing ? '고른 자리는 같은 옷을 다시 입을 수 있게 골랐어요.' : '날마다 다른 옷으로 골랐어요.'}
       </p>
+      <div className="row wrap" style={{ marginTop: 6 }}>
+        <span className="tiny">옷 돌려입기</span>
+        <DoodleButton seed={0} className="small" selected={reuse.top} disabled={busy} onClick={() => onReuse({ ...reuse, top: !reuse.top })}>
+          상의
+        </DoodleButton>
+        <DoodleButton seed={1} className="small" selected={reuse.bottom} disabled={busy} onClick={() => onReuse({ ...reuse, bottom: !reuse.bottom })}>
+          하의
+        </DoodleButton>
+      </div>
+      {(needExamples || examples) && (
+        <div className="row wrap" style={{ marginTop: 6 }}>
+          <span className="tiny">{examples ? '예시 옷으로 입어본 모습이에요.' : '내 옷만으로는 날씨에 모자란 날이 있어요.'}</span>
+          <DoodleButton seed={2} className="small" selected={examples} disabled={busy} onClick={() => onExamples(!examples)}>
+            {examples ? '내 옷으로 돌아가기' : '예시로 보기'}
+          </DoodleButton>
+        </div>
+      )}
       <div className="day-outfits">
         {days.map((d, i) => (
           <div key={d.date} className={`box w${(i % 3) + 1} day-outfit`} style={{ ['--i' as string]: i }}>
@@ -101,6 +121,7 @@ function DayOutfits({ days }: { days: EventDayOutfit[] }) {
               <b>{i + 1}일차 · {dayLabel(d.date)}</b>
               <span className="tiny">{d.headline}</span>
             </div>
+            {d.requestLabel && <p className="tiny">적용 조건: {d.requestLabel}</p>}
             <div className="day-pieces">
               {d.items.map((it) => (
                 <div key={`${it.type}-${it.clothingId ?? it.label}`} className="piece">
@@ -118,8 +139,12 @@ function DayOutfits({ days }: { days: EventDayOutfit[] }) {
             <p className="tiny">
               {d.sub}
               {d.needMask ? ' · 마스크도 챙겨요' : ''}
-              {d.notes[0] ? ` · ${d.notes[0]}` : ''}
             </p>
+            {d.notes.map((n) => (
+              <p key={n} className="tiny">
+                {n}
+              </p>
+            ))}
           </div>
         ))}
       </div>
@@ -138,12 +163,16 @@ function EventDetail({ id }: { id: string }) {
   const nav = useNavigate()
   const justSaved = (useLocation().state as { saved?: 'created' | 'edited' } | null)?.saved
   const ev = useAsync(() => api<PlanEvent>('GET', `/api/events/${id}`))
-  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit`).catch((e) => {
+  // 연박: 눌렀을 때만 그 자리의 옷을 날짜 사이에 다시 입을 수 있게 한다(겉옷은 항상 겹침을 피한다)
+  const [reuse, setReuse] = useState({ top: false, bottom: false })
+  const [examples, setExamples] = useState(false) // [예시로 보기]: 내 옷이 날씨에 부족할 때만 보인다
+  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit?reuseTop=${reuse.top ? 1 : 0}&reuseBottom=${reuse.bottom ? 1 : 0}&examples=${examples ? 1 : 0}`).catch((e) => {
     if (e instanceof ApiError && e.status === 404) return null
     throw e
-  }))
+  }), `${reuse.top}${reuse.bottom}${examples}`)
   const e = ev.data
   const [stylistOn, setStylistOn] = useState<boolean | null>(null) // 코디 도우미가 이 일정에 나오는가(모르면 null)
+  const [stylistBase, setStylistBase] = useState(false) // 코디 도우미가 코디 카드를 직접 보여주는 중인가(느낌을 고른 뒤)
 
   if (ev.loading) return <main><p>불러오는 중…</p></main>
   if (!e) {
@@ -160,11 +189,15 @@ function EventDetail({ id }: { id: string }) {
 
   const rec = outfit.data?.status === 'ready' ? outfit.data.recommendation : null
   const waiting = !rec
-  // 예보가 아직 없다고 확정된 상태(불러오는 중에는 아님): 코디 도우미(캐릭터·칩·입력창)는 숨기고 예보가 열린 뒤에 보여준다
-  const forecastWaiting = waiting && !outfit.loading
+  // 요청이 실패한 것과 예보가 아직 없는 것은 다르다: 실패하면 재시도를 안내한다
+  const failed = waiting && !!outfit.error && !outfit.data
+  // 예보가 아직 없다고 확정된 상태(불러오는 중·실패는 아님): 코디 도우미(캐릭터·칩·입력창)는 숨기고 예보가 열린 뒤에 보여준다
+  const forecastWaiting = waiting && !outfit.loading && !failed
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
   const days = outfit.data?.days ?? []
+  // 하루 일정은 추천 옷 목록을 항상 보여준다: 도우미가 없거나, 도우미가 아직 카드를 안 펼쳤을 때(느낌을 고르기 전)
+  const showPlainOutfit = !waiting && days.length < 2 && (stylistOn === false || (stylistOn === true && !stylistBase))
   const styleLabel = outfit.data?.styleLabel ?? null
   // 코디 도우미의 캐릭터가 입는 옷: 지금 일정에 보이는 코디
   const stylistItems = rec ? rec.items.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) })) : []
@@ -197,8 +230,16 @@ function EventDetail({ id }: { id: string }) {
       <div className="box w1">
         <div className="row between">
           <div>
-            <h2>{statusLabel[waiting ? 'waiting' : 'ready']}</h2>
-            {waiting ? (
+            <h2>{failed ? '불러오지 못했어요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
+            {failed ? (
+              <>
+                <p>{outfit.error}</p>
+                <p>예보가 없는 게 아니라 서버에서 못 받아왔어요.</p>
+                <DoodleButton seed={1} className="small" onClick={outfit.reload}>
+                  다시 시도
+                </DoodleButton>
+              </>
+            ) : waiting ? (
               <>
                 <p>{outfit.data?.message ?? '아직 정확한 예보가 없어요.'}</p>
                 <p>예보가 열리면 옷을 골라드릴게요. 그때 다시 열어 보세요.</p>
@@ -236,7 +277,7 @@ function EventDetail({ id }: { id: string }) {
 
       {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
-      {(forecastWaiting || (stylistOn === false && days.length < 2)) && (
+      {(forecastWaiting || showPlainOutfit) && (
       <section className="section">
         <h2>{waiting ? '예보가 열리면 이렇게 보여드려요' : '이렇게 입어요'}</h2>
         <div className="box w3 outfit">
@@ -283,9 +324,9 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      {!waiting && <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />}
+      {!waiting && <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} onBase={setStylistBase} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />}
 
-      {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} />}
+      {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} reuse={reuse} onReuse={setReuse} examples={examples} onExamples={setExamples} busy={outfit.loading} />}
     </main>
   )
 }

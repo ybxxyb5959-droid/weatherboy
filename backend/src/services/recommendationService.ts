@@ -2,12 +2,13 @@ import type { Clothing, Event, Prisma, Recommendation, User } from '@prisma/clie
 import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
-import { applySuit, applyWish, hasWishEffect, roleOf, savedWish, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
+import { checkWarmth } from '../rules/outfitCheck.js'
+import { applySuit, applyWish, hasWishEffect, roleOf, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
+import { conditionForDate, conditionLabel, savedEventWish, wishOfCondition } from '../rules/eventWish.js'
 import { AppError } from '../utils/errors.js'
 import { fromKst, kstDate, kstStartOfDay } from '../utils/time.js'
-import { aiEnabled, explain, templateExplanation } from './ai/explain.js'
+import { aiEnabled, explain } from './ai/explain.js'
 import { explainBasisOf, shownExplanation, type ExplainMeta, type Outing, type StoredResult } from './ai/explainBasis.js'
-import { reserveExplain, type ExplainReservation } from './ai/aiQuota.js'
 import { runWithAiScope } from './ai/aiScope.js'
 import { bandsOf } from './feedbackBands.js'
 import { forecastForWindow, getAirQuality, type Region, type WindowForecast } from './weather/weatherService.js'
@@ -174,7 +175,7 @@ export async function compute(user: User, event: Event | null, start: Date, end:
     now,
     varietySeed: outfitStyle || wish ? undefined : `${user.id}:${event?.id ?? kstDate(start)}`,
     style: outfitStyle,
-    wish,
+    wish: wish ?? (event ? toEngineWish(wishOfCondition(conditionForDate(savedEventWish(event.outfitWish), kstDate(start)))) : undefined),
     situation, // 그 자리에 어색한 옷은 피한다
   })
   if (window.usedMid) result.reasonCodes.push('MIDTERM_APPROX')
@@ -192,13 +193,26 @@ export interface DayOutfit {
   notes: string[]
   /** 앞선 날 입은 옷장 옷과 겹친 자리(옷장에 다른 옷이 부족해서). 겹침이 없으면 빈 배열 */
   overlapSlots: ('상의' | '하의' | '겉옷')[]
+  /** 옷장 옷이 이 날 날씨에 부족해서(필요한 보온을 못 채움) 예시로 보여줄 수 있다 */
+  canViewExamples: boolean
+  /** 예시 옷으로 바꾼 코디가 날씨에 필요한 보온에 못 미침 */
+  warmthShort: boolean
+  requestLabel: string | null
+}
+
+/** 사용자가 [상의 돌려입기] [하의 돌려입기] 를 눌렀을 때만 그 자리의 옷을 날짜 사이에 다시 입을 수 있다(겉옷은 항상 겹침을 피한다) */
+export interface DayReuse {
+  top?: boolean
+  bottom?: boolean
+  /** 사용자가 [예시로 보기]를 눌렀을 때만 정장 세트·원하는 옷 예시를 입힌다 */
+  examples?: boolean
 }
 
 /**
  * 1박 2일 이상 일정: 같은 옷을 며칠 내내 입지 않으니 날마다 그날 날씨로 따로 고르고, 앞선 날 입은 옷과 덜 겹치게 한다.
  * 저장하지 않는 계산이라 같은 입력이면 항상 같은 결과다. 하루짜리 일정은 빈 배열.
  */
-export function dailyOutfits(user: User, event: Event, c: Computed, now = new Date()): DayOutfit[] {
+export function dailyOutfits(user: User, event: Event, c: Computed, now = new Date(), reuse: DayReuse = {}): DayOutfit[] {
   const byDay = new Map<string, OutingPoint[]>()
   for (const p of c.window.points) {
     const d = kstDate(p.at)
@@ -206,11 +220,18 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
   }
   if (byDay.size < 2) return []
   const used: string[] = []
-  const saved = savedWish(event.outfitWish) // 말로 정한 원하는 옷("3일 모두 검정옷"): 날마다 이 조건을 따르되 옷은 겹치지 않게
-  const strictAvoid = saved?.variety === true // "전부 다르게": 겹침 금지를 가장 먼저 본다
-  const wish = hasWishEffect(saved) ? saved : null // 방식(다르게)만 말했다면 입힐 옷은 없다
-  const style = event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined
+  const roleById = new Map<string, ReturnType<typeof roleOf>>() // 앞선 날 입은 옷의 자리(엔진 결과의 한글 종류로 판단)
+  const reusable = (id: string) => {
+    const role = roleById.get(id)
+    return (role === 'top' && !!reuse.top) || (role === 'bottom' && !!reuse.bottom)
+  }
+  const plan = savedEventWish(event.outfitWish)
   return [...byDay.entries()].map(([date, points], dayIndex) => {
+    const condition = conditionForDate(plan, date)
+    const rawWish = wishOfCondition(condition)
+    const strictAvoid = rawWish.variety === true
+    const wish = hasWishEffect(rawWish) ? rawWish : null
+    const style = condition.style ?? event.outfitStyle ?? (situationOf(event.title) ? impliedStyle[situationOf(event.title)!] : null) ?? undefined
     const r = recommend({
       points,
       sensitivity: user.sensitivity,
@@ -225,21 +246,37 @@ export function dailyOutfits(user: User, event: Event, c: Computed, now = new Da
       feelsMethod: c.window.feelsMethod,
       now,
       varietySeed: `${user.id}:${event.id}:${date}`,
-      avoidIds: used,
+      avoidIds: used.filter((id) => !reusable(id)),
       strictAvoid,
     })
     const SLOT = { top: '상의', bottom: '하의', outer: '겉옷' } as const
+    // 사용자가 돌려입기를 고른 자리는 일부러 다시 입는 것이라 "부족해서 겹침"으로 안내하지 않는다
     const overlapSlots = r.items.flatMap((it) => {
       const role = roleOf(it.type)
-      return it.clothingId && used.includes(it.clothingId) && role ? [SLOT[role]] : []
+      return it.clothingId && used.includes(it.clothingId) && role && !reusable(it.clothingId) ? [SLOT[role]] : []
     })
-    for (const it of r.items) if (it.clothingId) used.push(it.clothingId)
+    for (const it of r.items) {
+      if (!it.clothingId) continue
+      used.push(it.clothingId)
+      roleById.set(it.clothingId, roleOf(it.type))
+    }
+    // 정장 세트 예시는 사용자가 [예시로 보기]를 눌렀을 때만 입힌다(기본은 옷장 옷만으로 고른 코디).
+    // 사용자가 직접 말한 원하는 옷("3일 모두 검정옷", "겉옷 없이")은 말한 대로 반영한다.
     let items = r.items
-    if (style === 'FORMAL') items = applySuit(items).items // 정장이면 날마다 정장 세트(없는 부분은 예시)
+    let notes = [...(r.comboWhy[0]?.notes ?? [])]
+    let warmthShort = false
+    let examplesApplied = false
+    if (reuse.examples && style === 'FORMAL') items = applySuit(items).items
     if (wish) items = applyWish(items, wish, dayIndex).items
-    const notes = [...(r.comboWhy[0]?.notes ?? [])]
+    if (items !== r.items) {
+      // 옷을 바꿨으니 엔진이 쓴 설명("딱 맞는 두께" 등)은 더 이상 맞지 않는다: 바뀐 코디로 보온을 다시 센다
+      const check = checkWarmth(items, c.wardrobe, r.requiredWarmth)
+      notes = check.short ? ['바꾼 옷으로는 날씨에 비해 보온이 부족할 수 있어요'] : []
+      warmthShort = check.short
+      examplesApplied = items.some((it) => it.example)
+    }
     if (overlapSlots.length > 0 && dayIndex > 0) notes.push(`옷장에 다른 옷이 부족해서 ${overlapSlots.join('·')}은 앞선 날과 겹쳐요`)
-    return { date, items, headline: r.headline, sub: r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes, overlapSlots: dayIndex > 0 ? overlapSlots : [] }
+    return { date, items, headline: r.headline, sub: examplesApplied ? '예시 옷으로 입어본 코디예요' : r.sub, needUmbrella: r.needUmbrella, needMask: r.needMask, notes, overlapSlots: dayIndex > 0 ? overlapSlots : [], canViewExamples: r.insufficientWardrobe, warmthShort, requestLabel: conditionLabel(condition) }
   })
 }
 
@@ -284,12 +321,10 @@ function explainInBackground(rec: Pick<Recommendation, 'id' | 'userId' | 'aiExpl
   if (rec.aiExplanation != null || !aiEnabled() || explaining.has(rec.id)) return
   explaining.add(rec.id)
   void (async () => {
-    let reservation: ExplainReservation | null = null
     try {
       // 사진·말과 같은 하루 한도·서버 전체 상한을 따른다. 걸리면 AI 를 부르지 않고 템플릿 문장을 저장한다
       // (저장해야 aiPending 이 풀려 화면이 계속 다시 불러오지 않는다).
-      reservation = await reserveExplain(rec.userId)
-      const made = reservation.ok ? await runWithAiScope({ userId: rec.userId, kind: 'explain' }, () => explain(result)) : { text: templateExplanation(result), source: 'template' as const }
+      const made = await runWithAiScope({ userId: rec.userId, kind: 'explain' }, () => explain(result))
       if (made) {
         // 만들 때 쓴 조건(result)을 같이 저장한다. 호출이 느려 그 사이 날씨가 바뀌었어도, 보여줄 때 현재 조건과 비교해 걸러진다.
         const meta: ExplainMeta = { source: made.source, basis: explainBasisOf(result) }
@@ -298,7 +333,6 @@ function explainInBackground(rec: Pick<Recommendation, 'id' | 'userId' | 'aiExpl
     } catch {
       /* 설명 없이도 추천은 유효하다 */
     } finally {
-      if (reservation?.ok) reservation.release() // 호출 기록을 남긴 뒤에 놓는다
       explaining.delete(rec.id)
     }
   })()

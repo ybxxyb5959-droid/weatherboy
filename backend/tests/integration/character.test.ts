@@ -45,9 +45,9 @@ describe('내 캐릭터 API', () => {
     expect(r.unlocked).toBe(true) // 옷장을 채우면 캐릭터가 열린다
     expect(r.analysis.title).toMatchObject({ key: 'DARK_CHILD', name: '어둠의 아이' })
     expect(r.analysis.title.reason).toContain('10/10벌(100%)')
-    expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['DARK_CHILD', 'MINIMALIST'])
+    expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['DARK_CHILD', 'MINIMALIST', 'TOP_HEAVY'])
     expect(r.analysis.colors[0]).toMatchObject({ name: '검정', count: 10, share: 1 })
-    expect(r.titles).toHaveLength(15)
+    expect(r.titles).toHaveLength(20)
   })
 
   it('꾸미기를 저장하고 다시 읽을 수 있다. 값을 null 로 보내면 벗는다', async () => {
@@ -74,13 +74,14 @@ describe('내 캐릭터 API', () => {
     expect(r.analysis.count).toBe(0)
   })
 
-  it('10벌로 꾸미기는 열려도 칭호 조건이 안 맞으면 억지로 균형 칭호를 주지 않는다', async () => {
+  it('하의만 10벌이면 꾸미기가 열리고 균형 칭호 대신 하의 부자가 된다', async () => {
     const b = agent()
     await b.post('/api/auth/guest').expect(201)
     for (let i = 0; i < 10; i++) await b.post('/api/clothes').send({ type: '바지', color: '기타' }).expect(201)
     const r = (await b.get('/api/character').expect(200)).body
     expect(r.unlocked).toBe(true)
-    expect(r.analysis).toMatchObject({ ready: true, need: 0, title: null, subTitle: null, matchedTitles: [] })
+    expect(r.analysis).toMatchObject({ ready: true, need: 0, title: { key: 'BOTTOM_HEAVY', name: '하의 부자' }, subTitle: null })
+    expect(r.analysis.matchedTitles.map((t: { key: string }) => t.key)).toEqual(['BOTTOM_HEAVY'])
     await b.put('/api/character').send({ config: { hat: 'beanie' } }).expect(200)
   })
 

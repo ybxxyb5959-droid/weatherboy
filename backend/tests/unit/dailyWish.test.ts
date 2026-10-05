@@ -6,6 +6,8 @@ import type { ClothingType, Event, Thickness, User } from '@prisma/client'
 import { deriveClothing } from '../../src/rules/clothing.js'
 import type { WardrobeItem } from '../../src/rules/outfitEngine.js'
 import { dailyOutfits, type Computed } from '../../src/services/recommendationService.js'
+import { applyEventWish, parseEventWishRules, savedEventWish } from '../../src/rules/eventWish.js'
+import { roleOf } from '../../src/rules/outfitWish.js'
 
 let seq = 0
 const cloth = (type: ClothingType, color: string, thickness: Thickness = 'NORMAL'): WardrobeItem => {
@@ -39,5 +41,24 @@ describe('연박 일정: 말로 정한 원하는 옷이 날짜별 코디에 반�
   it('원하는 옷이 없으면 지금처럼 그대로(검정을 강요하지 않는다)', () => {
     const days = dailyOutfits(user, mkEvent(null), computed)
     expect(days.some((d) => d.items.some((i) => i.example))).toBe(false)
+  })
+
+  it('실제 옷 출력도 첫날은 밝게, 둘째날은 어둡게이며 첫날 재입력은 둘째날을 바꾸지 않는다', () => {
+    const dates = ['2026-10-05', '2026-10-06', '2026-10-07']
+    let plan = applyEventWish(savedEventWish(null), parseEventWishRules('첫날 밝게, 둘째날 어둡게', dates)!.patches, dates)
+    const verify = () => {
+      const days = dailyOutfits(user, mkEvent(plan), computed)
+      const first = days[0]!.items.filter((i) => ['top', 'bottom'].includes(roleOf(i.type) ?? ''))
+      const second = days[1]!.items.filter((i) => ['top', 'bottom'].includes(roleOf(i.type) ?? ''))
+      expect(first).toHaveLength(2)
+      expect(second).toHaveLength(2)
+      for (const it of first) expect(['흰색', '베이지', '하늘색', '분홍', '노랑']).toContain(it.color)
+      for (const it of second) expect(['검정', '네이비', '갈색', '카키']).toContain(it.color)
+      expect(days[0]!.requestLabel).toContain('밝은 톤')
+      expect(days[1]!.requestLabel).toContain('어두운 톤')
+    }
+    verify()
+    plan = applyEventWish(plan, parseEventWishRules('첫날 밝게', dates)!.patches, dates)
+    verify()
   })
 })

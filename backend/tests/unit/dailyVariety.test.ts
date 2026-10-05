@@ -66,6 +66,17 @@ describe('연박 일정: 겹침 금지', () => {
     expect(days[0]!.overlapSlots).toEqual([])
   })
 
+  it('돌려입기: 고른 자리만 다시 입을 수 있고 안내하지 않으며, 나머지 자리는 계속 겹침을 피한다', () => {
+    const w = [cloth('SWEATSHIRT', 'BLACK'), cloth('PANTS', 'BLACK'), cloth('PANTS', 'BLUE'), cloth('PANTS', 'BEIGE'), cloth('JACKET', 'BLACK'), cloth('WINDBREAKER', 'GREEN'), cloth('CARDIGAN', 'GRAY')]
+    const ev = mkEvent({ suit: false, variety: true, pieces: [] })
+    const off = dailyOutfits(user, ev, mk(w))
+    expect(off.slice(1).some((d) => d.overlapSlots.includes('상의'))).toBe(true) // 상의가 1벌뿐이라 겹침을 알린다
+    const on = dailyOutfits(user, ev, mk(w), new Date(), { top: true })
+    expect(on.every((d) => !d.overlapSlots.includes('상의'))).toBe(true) // 일부러 돌려입는 자리는 안내하지 않는다
+    const bottoms = on.flatMap((d) => d.items.filter((i) => i.type === 'PANTS' || i.label.includes('바지')).map((i) => i.clothingId))
+    expect(new Set(bottoms).size).toBe(bottoms.length) // 하의는 계속 겹치지 않는다
+  })
+
   it('요청이 없으면 기존처럼 동작한다(겹침 알림만 추가)', () => {
     const days = dailyOutfits(user, mkEvent(null), mk(rich))
     expect(days).toHaveLength(3)

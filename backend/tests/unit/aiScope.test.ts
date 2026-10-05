@@ -3,7 +3,16 @@ import request from 'supertest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const create = vi.fn().mockResolvedValue({})
-vi.mock('../../src/db.js', () => ({ prisma: { aiCallLog: { create: (...a: unknown[]) => create(...a) } } }))
+const update = vi.fn().mockResolvedValue({})
+vi.mock('../../src/db.js', () => ({ prisma: {
+  aiCallLog: { create: (...a: unknown[]) => create(...a), update: (...a: unknown[]) => update(...a), count: vi.fn().mockResolvedValue(0) },
+  user: { findUnique: vi.fn().mockResolvedValue({ createdAt: new Date() }) },
+  $transaction: (fn: (tx: unknown) => unknown) => fn({
+    $queryRaw: vi.fn().mockResolvedValue([]),
+    user: { findUnique: vi.fn().mockResolvedValue({ createdAt: new Date() }) },
+    aiCallLog: { count: vi.fn().mockResolvedValue(0), create: async (...a: unknown[]) => { await create(...a); return { id: 'reserved' } } },
+  }),
+} }))
 
 import { env } from '../../src/config/env.js'
 import { geminiJson } from '../../src/services/ai/gemini.js'
@@ -16,6 +25,7 @@ const schema = z.object({ a: z.number() })
 let saved: { AI_ENABLED: boolean; GEMINI_API_KEY: string; GEMINI_MODEL: string }
 beforeEach(() => {
   create.mockClear()
+  update.mockClear()
   saved = { AI_ENABLED: env.AI_ENABLED, GEMINI_API_KEY: env.GEMINI_API_KEY, GEMINI_MODEL: env.GEMINI_MODEL }
   Object.assign(env, { AI_ENABLED: true, GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm' })
 })
@@ -36,7 +46,8 @@ describe('호출 기록에 사용자와 종류가 남는다', () => {
     const r = await request(app).post('/photo')
     expect(r.body.scope).toEqual({ userId: 'user-1', kind: 'photo' })
     expect(create).toHaveBeenCalledTimes(1)
-    expect(create.mock.calls[0]![0].data).toMatchObject({ userId: 'user-1', kind: 'photo', status: 'SUCCESS' })
+    expect(create.mock.calls[0]![0].data).toMatchObject({ userId: 'user-1', kind: 'photo', status: 'PARTIAL' })
+    expect(update.mock.calls[0]![0]).toMatchObject({ where: { id: 'reserved' }, data: { status: 'SUCCESS' } })
   })
   it('요청 밖에서 부른 호출(예: 백그라운드 설명)은 사용자 없이 기록된다', async () => {
     await geminiJson({ prompt: 'x', schema: {}, validate: schema, fetchImpl: fakeFetch })

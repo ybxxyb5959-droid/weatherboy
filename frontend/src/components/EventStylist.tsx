@@ -53,6 +53,8 @@ interface Props {
   fillItems?: (items: ApiOutfitItem[]) => ApiOutfitItem[]
   /** 이 도우미가 화면에 나오는지 알린다(안 나오면 위쪽이 코디 카드를 대신 보여준다) */
   onApplicable?: (on: boolean) => void
+  /** 이 도우미가 코디 카드(옷 목록)를 직접 보여주는지 알린다(아직 느낌을 안 골라 카드가 없으면 위쪽이 기본 추천 카드를 보여준다) */
+  onBase?: (has: boolean) => void
   /** 위에 구분 줄을 그릴지(위에 날씨 섹션이 없어서 이미 줄이 있으면 false: 줄이 두 줄로 겹치지 않게). 기본 true */
   topRule?: boolean
   /** 며칠짜리 일정: 코디는 날짜별 카드(아래쪽)가 보여주므로 여기서는 카드를 펼치지 않고 캐릭터만 갈아입는다 */
@@ -71,7 +73,7 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
  * 옷은 Rule Engine 이 고르고 AI 는 말만 거든다. 일정에 저장하는 것은 "느낌"뿐이고(옷은 날씨·옷장으로 매번 다시 계산),
  * 다른 조합은 저장하지 않고 구경만 한다.
  */
-export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, topRule = true, multiDay = false, onChanged }: Props) {
+export default function EventStylist({ eventId, rec, style, styleLabel, notes = [], fillItems, onApplicable, onBase, topRule = true, multiDay = false, onChanged }: Props) {
   const character = useCharacter().data
   const [opening, setOpening] = useState<Talk | null>(null) // 처음 건 말과 기본 칩
   const [talk, setTalk] = useState<Talk | null>(null)
@@ -191,6 +193,10 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
   const rawItems = base ? combos[idx]! : (rec?.items ?? [])
   const shown = fillItems ? fillItems(rawItems) : rawItems
   shownRef.current = shown
+  const hasBase = !!base
+  useEffect(() => {
+    onBase?.(hasBase)
+  }, [hasBase, onBase])
   // 연출 중에는 갈아입기 전 옷을 그대로 입고 있다가, 옷장 뒤에서 새 옷으로 바뀐다
   const wearItems = frozen ?? shown
   const pick = (types: string[]) => wearItems.find((it) => types.includes(it.type))
@@ -242,7 +248,7 @@ export default function EventStylist({ eventId, rec, style, styleLabel, notes = 
           <SayBox
             id="stylist-say"
             label={settled ? '원하는 스타일 말하기' : '어떻게 입고 싶은지 직접 말하기'}
-            placeholder={settled ? '예) 검정색 상의를 입고 싶어' : '예) 면접인데 단정하게 입고 싶어'}
+            placeholder={multiDay ? '예) 첫날은 밝게, 둘째날은 어둡게' : settled ? '예) 검정색 상의를 입고 싶어' : '예) 면접인데 단정하게 입고 싶어'}
             value={text}
             onChange={setText}
             onSubmit={(t) => {

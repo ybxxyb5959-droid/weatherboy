@@ -111,6 +111,12 @@ export interface EventDayOutfit {
   notes: string[]
   /** 앞선 날 입은 내 옷과 겹친 자리(옷장에 다른 옷이 부족해서). 없으면 빈 배열(예전 응답에는 없을 수 있다) */
   overlapSlots?: ('상의' | '하의' | '겉옷')[]
+  /** 내 옷이 이 날 날씨에 부족해서 예시 옷으로 보여줄 수 있다 */
+  canViewExamples?: boolean
+  /** 예시 옷으로 바꾼 코디가 날씨에 필요한 보온에 못 미친다 */
+  warmthShort?: boolean
+  /** 해당 날짜에 실제 적용한 말 입력 조건 */
+  requestLabel?: string | null
 }
 
 export interface EventOutfit {

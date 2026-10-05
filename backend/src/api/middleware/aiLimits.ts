@@ -42,7 +42,7 @@ export const photoLimiter = createAiLimiter('photo')
 /** 말 입력(일정 문장, 코디 도우미) */
 export const textLimiter = createAiLimiter('text')
 
-/** 하루 사용량 한도: 최근 24시간 호출 수가 넘으면 막는다(가입 직후에는 더 넉넉하게). 기록을 못 읽으면 막지 않는다. */
+/** 실제 호출 직전의 공통 예약에 더해, 요청 앞단에서도 한도·조회 장애를 확인한다. */
 export const dailyQuota =
   (kind: AiLimitKind): RequestHandler =>
   async (req, res, next) => {
@@ -50,6 +50,7 @@ export const dailyQuota =
     const g = await getGlobalUsage()
     if (!g.open) return void res.status(503).json({ code: BUSY_CODE, message: busyMessage(kind) })
     const d = await checkQuota((req as AuthedRequest).userId, kind)
+    if (!d) return void res.status(503).json({ code: BUSY_CODE, message: busyMessage(kind) })
     if (d && !d.ok) return void res.status(429).json({ code: quotaCode(kind), message: quotaMessage(kind) })
     next()
   }

@@ -130,4 +130,23 @@ describe('AI 경로', () => {
     expect((await a.post('/api/ai/event-stylist').send({ eventId: '00000000-0000-4000-8000-000000000000', style: 'SMART' })).status).toBe(404)
     expect((await a.post('/api/ai/event-stylist').send({ eventId: '00000000-0000-4000-8000-000000000000' })).status).toBe(400)
   })
+  it('연박 날짜별 요청 저장·재조회·부분 수정·미리보기는 AI 없이 동작한다', async () => {
+    const d = (n: number) => new Date(Date.now() + n * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+    const ev = (await a.post('/api/events').send({ title: '날짜별 옷 여행', startDate: d(1), endDate: d(2), kind: '여행' })).body as { id: string }
+    const first = await a.post('/api/ai/event-stylist').send({ eventId: ev.id, text: '첫날은 밝게 둘째날은 어둡게' }).expect(200)
+    expect(first.body.applied[0].label).toContain('밝은 톤')
+    expect(first.body.applied[1].label).toContain('어두운 톤')
+    const o = await a.get(`/api/events/${ev.id}/outfit`).expect(200)
+    expect(o.body.days[0].requestLabel).toContain('밝은 톤')
+    expect(o.body.days[1].requestLabel).toContain('어두운 톤')
+    expect(first.body.outfit.items).toEqual(o.body.days[0].items)
+    await a.post('/api/ai/event-stylist').send({ eventId: ev.id, text: '첫날 밝게' }).expect(200)
+    const saved = (await prisma.event.findUniqueOrThrow({ where: { id: ev.id } })).outfitWish
+    await a.post('/api/ai/event-stylist').send({ eventId: ev.id, text: '둘째날 밝게', preview: true }).expect(200)
+    expect((await prisma.event.findUniqueOrThrow({ where: { id: ev.id } })).outfitWish).toEqual(saved)
+    const invalid = await a.post('/api/ai/event-stylist').send({ eventId: ev.id, text: '셋째날 밝게' }).expect(200)
+    expect(invalid.body.outfit).toBeNull()
+    expect((await prisma.event.findUniqueOrThrow({ where: { id: ev.id } })).outfitWish).toEqual(saved)
+    await agent().post('/api/ai/event-stylist').send({ eventId: ev.id, text: '첫날 밝게' }).expect(401)
+  })
 })

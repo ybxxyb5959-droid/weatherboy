@@ -4,10 +4,11 @@ import { eventKindMap } from '../config/mappings.js'
 import { styleGapHint, styleLabel, type OutfitStyle } from '../rules/outfitStyle.js'
 import { applySuit, applyWish, hasWishEffect, toEngineWish, type Wish } from '../rules/outfitWish.js'
 import type { OutingPoint } from '../rules/outfitEngine.js'
+import { checkWarmth } from '../rules/outfitCheck.js'
 import { kstDate } from '../utils/time.js'
 import type { StylistContext } from './ai/stylist.js'
 import { prisma } from '../db.js'
-import { compute } from './recommendationService.js'
+import { compute, dailyOutfits } from './recommendationService.js'
 
 /** 예: "최저 12° · 최고 21° · 비 소식 있음" */
 export function weatherText(points: OutingPoint[]): string {
@@ -72,25 +73,44 @@ export async function stylistOutfit(user: User, e: Event, style: OutfitStyle | n
   const c = await compute(user, e, e.startAt, e.endAt, new Date(), undefined, style ?? undefined, wish ? toEngineWish(wish) : undefined)
   if (!c) return null
   const r = c.result
+  const firstDay = dailyOutfits(user, e, c)[0]
+  if (firstDay) return {
+    style, styleLabel: style ? styleLabel[style] : null,
+    items: firstDay.items, alternatives: [], examples: firstDay.items.filter((i) => i.example).map((i) => i.label),
+    warn: firstDay.warmthShort ? '요청대로 바꾸면 날씨에 비해 보온이 부족해서 추울 수 있어요.' : null,
+    headline: firstDay.headline, sub: firstDay.sub, needUmbrella: firstDay.needUmbrella, needMask: firstDay.needMask,
+    styleMatched: r.styleMatched ?? false, insufficientWardrobe: r.insufficientWardrobe, gap: null, tabooReasons: firstDay.notes,
+  }
   let items = r.items
   const examples: string[] = []
-  if (style === 'FORMAL') {
-    const s = applySuit(items)
-    items = s.items
-    examples.push(...s.filled)
+  // 같은 요청(정장·원하는 옷)을 대안 조합에도 똑같이 적용한다: 안 그러면 "다른 조합"이 요청을 되돌린다
+  const restyle = (list: typeof items, sink?: string[]) => {
+    let out = list
+    if (style === 'FORMAL') {
+      const s = applySuit(out)
+      out = s.items
+      sink?.push(...s.filled)
+    }
+    if (wish) {
+      const w = applyWish(out, wish)
+      out = w.items
+      sink?.push(...w.applied)
+    }
+    return out
   }
-  if (wish) {
-    const w = applyWish(items, wish)
-    items = w.items
-    examples.push(...w.applied)
-  }
+  items = restyle(items, examples)
+  const alternatives = r.alternatives.map((a) => restyle(a))
+  // 옷을 바꾼 뒤 보온을 다시 센다: 엔진이 고른 코디는 날씨를 채웠어도, 겉옷을 빼거나 정장 예시로 바꾸면 모자랄 수 있다
+  const changed = items !== r.items
+  const check = changed ? checkWarmth(items, c.wardrobe, r.requiredWarmth) : null
+  const warn = check?.short ? '요청대로 바꾸면 날씨에 비해 보온이 부족해서 추울 수 있어요.' : wish?.noOuter && r.needOuter ? '날씨가 쌀쌀해서 겉옷 없이는 추울 수 있어요.' : null
   return {
     style,
     styleLabel: style ? styleLabel[style] : null,
     items,
     examples: [...new Set(examples)],
-    warn: wish?.noOuter && r.needOuter ? '날씨가 쌀쌀해서 겉옷 없이는 추울 수 있어요.' : null,
-    alternatives: r.alternatives,
+    warn,
+    alternatives,
     headline: r.headline,
     sub: r.sub,
     needUmbrella: r.needUmbrella,

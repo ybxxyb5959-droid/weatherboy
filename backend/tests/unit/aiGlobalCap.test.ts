@@ -31,9 +31,9 @@ describe('서버 전체 하루 상한', () => {
     await getGlobalUsage(1_000_000 + 31_000)
     expect(count).toHaveBeenCalledTimes(2)
   })
-  it('기록을 읽지 못하면 막지 않는다', async () => {
+  it('기록을 읽지 못하면 AI 를 닫는다', async () => {
     count.mockRejectedValue(new Error('db down'))
-    expect(await getGlobalUsage(5_000_000)).toMatchObject({ open: true })
+    expect(await getGlobalUsage(5_000_000)).toMatchObject({ open: false })
   })
   it('안내 문장: 사진은 직접 등록을 권한다', () => {
     expect(busyMessage('photo')).toContain('직접 등록')

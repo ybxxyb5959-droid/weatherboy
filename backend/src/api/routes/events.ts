@@ -19,6 +19,9 @@ eventsRouter.use(requireAuth)
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 const idParam = z.string().uuid()
+// 연박 돌려입기: 쿼리의 '1' 일 때만 켠다('0' 을 Boolean 으로 바꾸면 참이 되므로 직접 비교)
+const flag = z.enum(['0', '1']).optional().transform((v) => v === '1')
+const outfitQuery = z.object({ reuseTop: flag, reuseBottom: flag, examples: flag }).transform((q) => ({ top: q.reuseTop, bottom: q.reuseBottom, examples: q.examples }))
 const MAX_EVENTS = 1000 // 한 사람이 만들 수 있는 일정 수의 상한
 
 const createSchema = z.object({
@@ -198,10 +201,11 @@ eventsRouter.get(
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
     const waiting = (message: string) =>
       res.json({ status: 'waiting', forecastStage: 'WAITING', recommendation: null, message, weather: [], days: [], style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null })
+    const reuse = parse(outfitQuery, req.query)
     const c = await compute(user, e, e.startAt, e.endAt)
     if (!c) return waiting('아직 정확한 예보가 없어요.')
     const saved = await saveEventRecommendation(e, c)
     const stage = c.window.stage
-    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c), style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null, situationNotes: c.result.tabooReasons ?? [] })
+    res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c, new Date(), reuse), reuse, style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null, situationNotes: c.result.tabooReasons ?? [] })
   }),
 )
