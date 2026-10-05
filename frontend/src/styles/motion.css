@@ -815,20 +815,25 @@
   height: 15px;
   background: rgba(34, 34, 34, 0.06);
   border: 1.2px solid rgba(34, 34, 34, 0.28);
-  transform: rotate(-4deg);
+  transform: rotate(var(--tape-rot, -4deg));
   pointer-events: none;
 }
 .events-list .card-wrap:nth-child(2n) .box.card.note::before {
+  --tape-rot: 3deg;
   left: auto;
   right: 22%;
-  transform: rotate(3deg);
 }
 .fx-wrap {
   position: relative;
 }
+/* 구겨진 종이가 옆으로 밀려 나가도 목록에 가로 스크롤이 생기지 않게 */
+.events-list {
+  overflow-x: clip;
+}
 .fx-old,
 .fx-tool,
-.fx-border {
+.fx-tape2,
+.fx-wrinkle {
   display: none;
 }
 
@@ -853,37 +858,41 @@
     pointer-events: none;
     opacity: 0;
   }
-  .fx-border {
+  /* 새 일정: 종이가 툭 놓이고 -> 테이프 두 장이 철썩 붙은 뒤 -> 제목·날짜를 펜으로 슥삭슥삭 쓴다 */
+  .fx-created {
+    animation: fx-paper-in 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+  }
+  .fx-created::before {
+    animation: fx-tape-stick 0.55s cubic-bezier(0.3, 1.3, 0.5, 1) 0.5s backwards;
+  }
+  .fx-created .fx-tape2 {
     display: block;
     position: absolute;
-    inset: -2px;
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
+    top: -9px;
+    right: 14%;
+    width: 52px;
+    height: 15px;
+    background: rgba(34, 34, 34, 0.06);
+    border: 1.2px solid rgba(34, 34, 34, 0.28);
+    --tape-rot: 5deg;
+    transform: rotate(var(--tape-rot));
     pointer-events: none;
-    stroke-dasharray: 1;
-    z-index: 2;
+    animation: fx-tape-stick 0.55s cubic-bezier(0.3, 1.3, 0.5, 1) 0.85s backwards;
   }
-  .fx-border path {
-    stroke-dasharray: 1;
-    animation: fx-border-draw 0.85s ease-out both;
-  }
-
-  /* 새 일정: 테두리를 펜으로 그린 뒤, 제목·날짜를 슥삭슥삭 쓴다 */
-  .fx-created {
-    animation: fx-hide-border 0.85s backwards;
-  }
-  .fx-created::after,
-  .fx-created::before {
-    animation: fx-hide-border 0.85s backwards;
+  .events-list .card-wrap:nth-child(2n) .fx-created .fx-tape2,
+  .events-list .card-wrap:nth-child(2n) .fx-tape2 {
+    right: auto;
+    left: 16%;
+    --tape-rot: -4deg;
   }
   .fx-created .fx-write {
-    animation: fx-write 0.9s steps(16, end) 0.8s backwards;
+    animation: fx-write 0.9s steps(16, end) 1.5s backwards;
   }
   .fx-created .fx-pen {
-    animation: fx-pen-move 0.9s linear 0.8s both;
+    animation: fx-pen-move 0.9s linear 1.5s forwards;
   }
   .fx-created .fx-late {
-    animation: fx-fade-in 0.4s ease-out 1.6s backwards;
+    animation: fx-fade-in 0.4s ease-out 2.4s backwards;
   }
 
   /* 고친 일정: 지우개로 옛 글씨를 쓸어 지우고, 새 글씨를 펜으로 다시 쓴다 */
@@ -904,24 +913,31 @@
     /* 연출이 없는 카드는 그대로 */
   }
 
-  @keyframes fx-hide-border {
-    from,
-    to {
-      border-color: transparent;
+  @keyframes fx-paper-in {
+    from {
+      opacity: 0;
+      transform: translateY(-24px) rotate(-3deg) scale(1.05);
+    }
+    60% {
+      opacity: 1;
     }
   }
-  @keyframes fx-border-draw {
+  /* 테이프: 위에서 철썩 내려와 눌려 붙는다(찌그러졌다 펴짐) */
+  @keyframes fx-tape-stick {
     from {
-      stroke-dashoffset: 1;
-      opacity: 1;
+      opacity: 0;
+      transform: translateY(-30px) rotate(calc(var(--tape-rot, -4deg) - 16deg)) scale(1.5, 1.25);
     }
-    85% {
-      stroke-dashoffset: 0;
+    50% {
       opacity: 1;
+      transform: translateY(3px) rotate(var(--tape-rot, -4deg)) scale(0.9, 1.25);
+    }
+    75% {
+      transform: translateY(0) rotate(var(--tape-rot, -4deg)) scale(1.06, 0.9);
     }
     to {
-      stroke-dashoffset: 0;
-      opacity: 0;
+      opacity: 1;
+      transform: rotate(var(--tape-rot, -4deg));
     }
   }
   @keyframes fx-write {
@@ -975,30 +991,122 @@
     }
   }
 
-  /* 삭제: 종이를 구겨서(작고 찌그러지며) 옆으로 휙 던진다 */
+  /* 삭제: 포스트잇을 와락 구겨 공으로 만들고 -> 던져져 날아가고 -> 아래 카드가 올라와 빈자리를 닫는다 */
   .card-wrap.fx-crumple {
-    animation: fx-crumple 0.9s cubic-bezier(0.5, 0, 0.8, 0.5) forwards;
     pointer-events: none;
+    height: var(--h);
+    animation: fx-push 1.7s linear forwards, fx-collapse 1.7s ease-in-out forwards, fx-outline 1.7s linear forwards;
   }
-  @keyframes fx-crumple {
+  .card-wrap.fx-crumple .card-menu {
+    display: none;
+  }
+  .card-wrap.fx-crumple .box.card.note {
+    animation: fx-crumple-shape 1.7s linear forwards;
+  }
+  .card-wrap.fx-crumple .box.card.note::before {
+    animation: fx-tape-peel 0.45s ease-in forwards;
+  }
+  .card-wrap.fx-crumple .box.card.note::after {
+    animation: fx-fade-out 0.3s forwards;
+  }
+  .card-wrap.fx-crumple .fx-wrinkle {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 112px;
+    height: 112px;
+    margin: -56px 0 0 -56px;
+    pointer-events: none;
+    opacity: 0;
+    animation: fx-wrinkle-in 1.7s linear forwards;
+  }
+
+  @keyframes fx-crumple-shape {
     0% {
+      transform: none;
+      clip-path: polygon(0 0, 25% 0, 50% 0, 75% 0, 100% 0, 100% 50%, 100% 100%, 75% 100%, 50% 100%, 25% 100%, 0 100%, 0 50%);
+    }
+    8% {
+      transform: scale(0.97, 0.93) rotate(-1.5deg);
+    }
+    16% {
+      transform: scale(1.02, 1) rotate(1deg);
+      clip-path: polygon(0 0, 25% 0, 50% 0, 75% 0, 100% 0, 100% 50%, 100% 100%, 75% 100%, 50% 100%, 25% 100%, 0 100%, 0 50%);
+    }
+    30% {
+      transform: scale(0.86, 0.78) rotate(3deg);
+      clip-path: polygon(4% 10%, 24% 2%, 47% 14%, 76% 4%, 97% 12%, 92% 52%, 98% 94%, 72% 88%, 50% 99%, 26% 90%, 3% 96%, 8% 48%);
+    }
+    45% {
+      transform: scale(0.8) rotate(0deg);
+      clip-path: polygon(calc(50% + -33.9px) calc(50% + -33.9px), calc(50% + -13.5px) calc(50% + -50.2px), calc(50% + 11.9px) calc(50% + -44.4px), calc(50% + 35.4px) calc(50% + -35.4px), calc(50% + 51.2px) calc(50% + -13.7px), calc(50% + 45.4px) calc(50% + 12.2px), calc(50% + 36.1px) calc(50% + 36.1px), calc(50% + 11.6px) calc(50% + 43.5px), calc(50% + -13.5px) calc(50% + 50.2px), calc(50% + -33.9px) calc(50% + 33.9px), calc(50% + -48.3px) calc(50% + 12.9px), calc(50% + -44.4px) calc(50% + -11.9px));
+    }
+    100% {
+      transform: scale(0.8) rotate(760deg);
+      clip-path: polygon(calc(50% + -33.9px) calc(50% + -33.9px), calc(50% + -13.5px) calc(50% + -50.2px), calc(50% + 11.9px) calc(50% + -44.4px), calc(50% + 35.4px) calc(50% + -35.4px), calc(50% + 51.2px) calc(50% + -13.7px), calc(50% + 45.4px) calc(50% + 12.2px), calc(50% + 36.1px) calc(50% + 36.1px), calc(50% + 11.6px) calc(50% + 43.5px), calc(50% + -13.5px) calc(50% + 50.2px), calc(50% + -33.9px) calc(50% + 33.9px), calc(50% + -48.3px) calc(50% + 12.9px), calc(50% + -44.4px) calc(50% + -11.9px));
+    }
+  }
+  @keyframes fx-wrinkle-in {
+    0%, 12% {
+      opacity: 0;
+    }
+    32%, 100% {
+      opacity: 1;
+    }
+  }
+  @keyframes fx-tape-peel {
+    to {
+      opacity: 0;
+      transform: translateY(26px) rotate(40deg);
+    }
+  }
+  @keyframes fx-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  /* 공이 된 종이를 휙 던진다: 살짝 뒤로 젖혔다가 포물선을 그리며 옆으로 날아간다 */
+  @keyframes fx-push {
+    0%, 44% {
       transform: none;
       opacity: 1;
     }
-    22% {
-      transform: scale(0.95, 0.9) rotate(-2deg) skewX(2deg);
+    52% {
+      transform: translate(-7%, 6px);
     }
-    45% {
-      transform: scale(0.62, 0.5) rotate(7deg) skewX(-9deg);
-      opacity: 1;
+    66% {
+      transform: translate(48%, -52px);
     }
-    62% {
-      transform: scale(0.42, 0.4) rotate(-12deg) skewX(6deg);
+    82% {
+      transform: translate(104%, -14px);
+    }
+    94% {
+      transform: translate(150%, 44px);
       opacity: 1;
     }
     100% {
-      transform: translate(120%, -30px) scale(0.3) rotate(200deg);
+      transform: translate(160%, 64px);
       opacity: 0;
+    }
+  }
+  @keyframes fx-collapse {
+    0%, 62% {
+      height: var(--h);
+      margin-bottom: 0;
+    }
+    100% {
+      height: 0;
+      margin-bottom: -12px;
+    }
+  }
+  /* 구겨진 공에 윤곽선을 둘러 종이 뭉치처럼 보이게 한다 */
+  @keyframes fx-outline {
+    0%, 18% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    45%, 100% {
+      filter: drop-shadow(1.4px 0 0 #222) drop-shadow(-1.4px 0 0 #222) drop-shadow(0 1.4px 0 #222) drop-shadow(0 -1.4px 0 #222);
     }
   }
 }
@@ -1008,4 +1116,331 @@
   .fx-wait {
     opacity: 0;
   }
+}
+
+/* ---------- 로딩 화면: 잠든 서버를 졸라맨이 깨운다 (8초 한 바퀴, components/WakeScene.tsx) ----------
+   0~44% 콕콕 찌르기 / 46~60% 알람시계로 흔들기 / 62~86% 번쩍 눈 뜨고 하품, 불이 켜지고 만세 / 86~100% 다시 졸기
+   기본(움직임 줄이기)은 잠든 모습으로 가만히 있는다. */
+.wake-scene .ws-led {
+  fill: #d8d8d4;
+}
+.wake-scene .ws-eyes-open,
+.wake-scene .ws-yawn,
+.wake-scene .ws-bang,
+.wake-scene .ws-spark,
+.wake-scene .ws-ringlines {
+  opacity: 0;
+}
+.wake-scene .ws-yawn {
+  transform: scale(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wake-scene .ws-man {
+    animation: ws-man 8s ease-in-out infinite;
+  }
+  .wake-scene .ws-arm {
+    animation: ws-arm 8s ease-in-out infinite;
+  }
+  .wake-scene .ws-clock {
+    animation: ws-clock 8s linear infinite;
+  }
+  .wake-scene .ws-ringlines {
+    animation: ws-ringlines 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-bang {
+    animation: ws-bang 8s ease-out infinite;
+  }
+  .wake-scene .ws-server {
+    animation: ws-server 8s ease-in-out infinite;
+  }
+  .wake-scene .ws-breathe {
+    animation: ws-breathe 2.6s ease-in-out infinite;
+  }
+  .wake-scene .ws-eyes-closed,
+  .wake-scene .ws-mouth {
+    animation: ws-eyes-closed 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-eyes-open {
+    animation: ws-eyes-open 8s ease-in-out infinite;
+  }
+  .wake-scene .ws-yawn {
+    animation: ws-yawn 8s ease-in-out infinite;
+  }
+  .wake-scene .ws-l1 {
+    animation: ws-led1 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-l2 {
+    animation: ws-led2 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-l3 {
+    animation: ws-led3 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-zs {
+    animation: ws-zs 8s steps(1, end) infinite;
+  }
+  .wake-scene .ws-z {
+    animation: ws-z 2.6s ease-out infinite;
+  }
+  .wake-scene .ws-z2 {
+    animation-delay: -0.9s;
+  }
+  .wake-scene .ws-z3 {
+    animation-delay: -1.8s;
+  }
+  .wake-scene .ws-spark {
+    animation: ws-spark 8s ease-in-out infinite;
+  }
+
+  @keyframes ws-man {
+    0%, 66%, 100% {
+      transform: none;
+    }
+    69% {
+      transform: translateY(-6px);
+    }
+    72% {
+      transform: none;
+    }
+    75% {
+      transform: translateY(-6px);
+    }
+    78%, 86% {
+      transform: none;
+    }
+  }
+  /* 팔: 콕, 콕, 콕 -> 알람을 울리는 동안 쿡쿡 -> 만세 -> 내림 */
+  @keyframes ws-arm {
+    0%, 12%, 17%, 24%, 29%, 34%, 39%, 44% {
+      transform: none;
+    }
+    14%, 26% {
+      transform: translateX(7px);
+    }
+    36% {
+      transform: translateX(9px) rotate(3deg);
+    }
+    46%, 50%, 54%, 58% {
+      transform: translateX(8px);
+    }
+    48%, 52%, 56%, 60% {
+      transform: none;
+    }
+    66%, 84% {
+      transform: rotate(-78deg);
+    }
+    72%, 78% {
+      transform: rotate(-70deg);
+    }
+    90%, 100% {
+      transform: none;
+    }
+  }
+  @keyframes ws-clock {
+    0%, 44%, 61%, 100% {
+      transform: none;
+    }
+    46%, 48%, 50%, 52%, 54%, 56%, 58%, 60% {
+      transform: rotate(-10deg);
+    }
+    47%, 49%, 51%, 53%, 55%, 57%, 59% {
+      transform: rotate(10deg);
+    }
+  }
+  @keyframes ws-ringlines {
+    0%, 45%, 61%, 100% {
+      opacity: 0;
+    }
+    46%, 60% {
+      opacity: 1;
+    }
+  }
+  @keyframes ws-bang {
+    0%, 45%, 62%, 100% {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+    48% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+    51%, 60% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes ws-server {
+    0%, 13%, 17%, 25%, 29%, 35%, 39%, 44%, 100% {
+      transform: none;
+    }
+    15%, 27% {
+      transform: translateX(3px) rotate(1.5deg);
+    }
+    37% {
+      transform: translateX(4px) rotate(2deg);
+    }
+    46%, 50%, 54%, 58% {
+      transform: translateX(-2px) rotate(-2deg);
+    }
+    48%, 52%, 56%, 60% {
+      transform: translateX(2px) rotate(2deg);
+    }
+    62% {
+      transform: none;
+    }
+    64% {
+      transform: translateY(-9px) scale(1.04, 0.96);
+    }
+    67% {
+      transform: translateY(0) scale(0.97, 1.05);
+    }
+    70%, 98% {
+      transform: none;
+    }
+  }
+  @keyframes ws-breathe {
+    0%, 100% {
+      transform: scale(1, 1);
+    }
+    50% {
+      transform: scale(1.012, 1.035);
+    }
+  }
+  @keyframes ws-eyes-closed {
+    0%, 60% {
+      opacity: 1;
+    }
+    61%, 87% {
+      opacity: 0;
+    }
+    88%, 100% {
+      opacity: 1;
+    }
+  }
+  @keyframes ws-eyes-open {
+    0%, 60% {
+      opacity: 0;
+      transform: scaleY(1);
+    }
+    61%, 72% {
+      opacity: 1;
+      transform: scaleY(1.15);
+    }
+    74% {
+      transform: scaleY(1);
+    }
+    76% {
+      transform: scaleY(0.1);
+    }
+    78%, 82% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    85% {
+      opacity: 1;
+      transform: scaleY(0.35);
+    }
+    87%, 100% {
+      opacity: 0;
+    }
+  }
+  @keyframes ws-yawn {
+    0%, 61% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    63% {
+      opacity: 1;
+      transform: scale(0.3);
+    }
+    68% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+    76% {
+      opacity: 1;
+      transform: scale(0.95);
+    }
+    84% {
+      opacity: 1;
+      transform: scale(0.4);
+    }
+    86%, 100% {
+      opacity: 0;
+      transform: scale(0);
+    }
+  }
+  @keyframes ws-led1 {
+    0%, 64% {
+      fill: #d8d8d4;
+    }
+    65%, 88% {
+      fill: #5aa86a;
+    }
+    89%, 100% {
+      fill: #d8d8d4;
+    }
+  }
+  @keyframes ws-led2 {
+    0%, 67% {
+      fill: #d8d8d4;
+    }
+    68%, 88% {
+      fill: #f2cf4a;
+    }
+    89%, 100% {
+      fill: #d8d8d4;
+    }
+  }
+  @keyframes ws-led3 {
+    0%, 70% {
+      fill: #d8d8d4;
+    }
+    71%, 88% {
+      fill: #5aa86a;
+    }
+    89%, 100% {
+      fill: #d8d8d4;
+    }
+  }
+  @keyframes ws-zs {
+    0%, 44% {
+      opacity: 1;
+    }
+    45%, 89% {
+      opacity: 0;
+    }
+    90%, 100% {
+      opacity: 1;
+    }
+  }
+  @keyframes ws-z {
+    0% {
+      opacity: 0;
+      transform: translate(0, 6px) scale(0.7);
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(6px, -14px) scale(1.15);
+    }
+  }
+  @keyframes ws-spark {
+    0%, 65%, 90%, 100% {
+      opacity: 0;
+    }
+    70%, 80% {
+      opacity: 1;
+    }
+    75% {
+      opacity: 0.35;
+    }
+  }
+}
+
+.wake-scene .ws-z {
+  transform-box: fill-box;
+  transform-origin: center;
 }

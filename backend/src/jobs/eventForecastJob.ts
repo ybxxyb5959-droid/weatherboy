@@ -1,6 +1,6 @@
 import { notifyConfig } from '../config/ruleConfig.js'
 import { prisma } from '../db.js'
-import { compute, saveEventRecommendation } from '../services/recommendationService.js'
+import { compute, outfitWanted, saveEventRecommendation } from '../services/recommendationService.js'
 import { AppError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 import type { PushSender } from '../services/push/push.js'
@@ -12,7 +12,8 @@ import { pushNotificationJob } from './pushNotificationJob.js'
  */
 export async function eventForecastJob(now = new Date(), sender?: PushSender) {
   const until = new Date(now.getTime() + notifyConfig.eventLookaheadDays * 86400_000)
-  const events = await prisma.event.findMany({ where: { endAt: { gt: now }, startAt: { lt: until }, kind: { not: 'OTHER' }, needsOutfit: true }, include: { user: true }, orderBy: { startAt: 'asc' } })
+  // 옷 추천을 보여주는 일정만 점검한다(활동·기타는 추천을 저장하거나 알리지 않는다)
+  const events = (await prisma.event.findMany({ where: { endAt: { gt: now }, startAt: { lt: until } }, include: { user: true }, orderBy: { startAt: 'asc' } })).filter(outfitWanted)
   let processed = 0
   let failed = 0
   let skipped = 0

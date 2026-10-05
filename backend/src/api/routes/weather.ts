@@ -5,7 +5,7 @@ import { feelsLike } from '../../rules/feelsLike.js'
 import { regionOf, todayRecommendation } from '../../services/recommendationService.js'
 import { resolveTarget } from '../../services/placeTarget.js'
 import { deriveCondition, hourlyKind } from '../../services/weather/conditions.js'
-import { isNightAt } from '../../services/weather/sun.js'
+import { isNightAt, sunTimes } from '../../services/weather/sun.js'
 import { gridToLatLng } from '../../utils/grid.js'
 import { ensureMidTerm, ensureShortTerm, getAirQuality, getNowcast } from '../../services/weather/weatherService.js'
 import { AppError } from '../../utils/errors.js'
@@ -113,6 +113,7 @@ weatherRouter.get(
     res.json({
       daily: daily.slice(0, 6),
       hourly,
+      sun: sunTimes(today, lat, lng),
       location: target?.name ?? user.locationName,
       temp: Math.round(current.temp),
       // 지금 기온이 실제 관측값이면 관측 시각(정시), 예보값이면 null

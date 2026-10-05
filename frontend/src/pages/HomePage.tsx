@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import StickPerson from '../components/StickPerson'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton from '../components/DoodleButton'
@@ -7,12 +7,15 @@ import { blockLabels, useHomeLayout, type BlockId } from '../lib/homeLayout'
 import CommuteLine from '../components/CommuteLine'
 import GearDoodles, { type GearKind } from '../components/GearDoodles'
 import FeedbackCard from '../components/FeedbackCard'
+import WardrobeScene from '../components/WardrobeScene'
+import type { StagePhase } from '../components/EventStylist'
 import ReviewLetter from '../components/ReviewLetter'
 import { feedbackDueAt, firstSeenToday, getFeedbackDone, setFeedbackDone } from '../lib/feedbackTiming'
 import { Link } from 'react-router-dom'
 import { ShareIcon } from '../components/icons'
 import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
+import SunBar from '../components/SunBar'
 import DailyForecast from '../components/DailyForecast'
 import { WeatherDoodle } from '../components/DoodleWeather'
 import WeatherAmbience from '../components/WeatherAmbience'
@@ -87,10 +90,83 @@ export default function HomePage() {
   const [showWhy, setShowWhy] = useState(false)
   const [editing, setEditing] = useState(false)
   const layout = useHomeLayout()
+  // 홈 카드 편집 연출: 위아래로 옮기면 두 카드가 서로 자리를 바꾸며 미끄러지고(FLIP), 숨기면 서서히 사라지며 접힌다
+  const blockEls = useRef(new Map<string, HTMLElement>())
+  const prevTops = useRef(new Map<string, number>())
+  const layoutKey = useRef('')
+  const [moved, setMoved] = useState<string | null>(null) // 방금 옮긴 카드(잠깐 떠오른 듯 보인다)
+  const [leaving, setLeaving] = useState<Map<string, number>>(() => new Map()) // 편집을 끝내며 사라지는 카드(높이 포함)
+  const [fresh, setFresh] = useState<Set<string>>(() => new Set()) // 편집을 시작하며 다시 나타나는 숨긴 카드
+  const hiddenKey = layout.hidden.join(',')
+  useLayoutEffect(() => {
+    const key = `${layout.order.join(',')}|${hiddenKey}|${editing}`
+    const tops = new Map<string, number>()
+    blockEls.current.forEach((el, id) => tops.set(id, el.offsetTop))
+    if (layoutKey.current && layoutKey.current !== key && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      blockEls.current.forEach((el, id) => {
+        const before = prevTops.current.get(id)
+        const now = tops.get(id)
+        if (before == null || now == null || Math.abs(before - now) < 2) return
+        el.animate([{ transform: `translateY(${before - now}px)` }, { transform: 'translateY(0)' }], { duration: 440, easing: 'cubic-bezier(0.3, 0.8, 0.25, 1)' })
+      })
+    }
+    layoutKey.current = key
+    prevTops.current = tops
+  })
+  const moveBlock = (id: BlockId, dir: -1 | 1) => {
+    layout.move(id, dir)
+    setMoved(id)
+    window.setTimeout(() => setMoved((m) => (m === id ? null : m)), 650)
+  }
+  const toggleEditing = () => {
+    if (editing) {
+      // 편집을 끝내면 숨긴 카드는 갑자기 없어지지 않고 서서히 사라지며 접힌다
+      const gone = new Map<string, number>()
+      for (const id of layout.hidden) gone.set(id, blockEls.current.get(id)?.offsetHeight ?? 120)
+      if (gone.size) {
+        setLeaving(gone)
+        window.setTimeout(() => setLeaving(new Map()), 520)
+      }
+    } else if (layout.hidden.length) {
+      setFresh(new Set(layout.hidden))
+      window.setTimeout(() => setFresh(new Set()), 600)
+    }
+    setEditing((v) => !v)
+  }
   const [showDetail, setShowDetail] = useState(false)
   const [altIdx, setAltIdx] = useState(-1) // -1 = 기본 추천
+  // 다른 조합 보기: 졸라맨이 옷장으로 달려가 뒤적이고, 옷장 뒤에서 갈아입고 돌아온다(입는 건 내 캐릭터 그대로)
+  const [phase, setPhase] = useState<StagePhase>('idle')
+  const [runPx, setRunPx] = useState(150)
+  const lookRef = useRef<HTMLDivElement>(null)
+  const swapCombo = async (next: number) => {
+    if (phase !== 'idle') return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setAltIdx(next)
+      return
+    }
+    const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
+    setRunPx(Math.max(90, (lookRef.current?.offsetWidth ?? 340) - 150 - 76 - 8))
+    setPhase('run')
+    await sleep(450)
+    setPhase('dig')
+    await sleep(900)
+    setPhase('change')
+    setAltIdx(next) // 옷장 뒤에서 새 옷으로 바뀐다
+    await sleep(250)
+    setPhase('back')
+    await sleep(450)
+    setPhase('idle')
+  }
   const [feedback, setFeedback] = useState('')
   const [feedbackMsg, setFeedbackMsg] = useState('')
+  const [fbOpen, setFbOpen] = useState(() => new URLSearchParams(window.location.search).get('fb') === 'now')
+  useEffect(() => {
+    // 후기를 남기면 고맙다는 말을 잠깐 보여준 뒤 알림을 닫는다
+    if (!feedback || !fbOpen) return
+    const t = window.setTimeout(() => setFbOpen(false), 2400)
+    return () => window.clearTimeout(t)
+  }, [feedback, fbOpen])
   // 오늘 처음 확인한 시각에서 일정 시간이 지나야 후기 카드가 뜬다
   const [firstSeen] = useState(firstSeenToday)
   const [now, setNow] = useState(() => Date.now())
@@ -280,16 +356,35 @@ export default function HomePage() {
     }
   }
 
-  // 후기는 저장되는 추천(내 위치)에만 붙는다. 첫 확인 후 시간이 지났고 아직 안 남겼을 때만 뜬다. 숨김과 상관없이 추천 카드 앞에 붙는다.
-  const feedbackCard = (
+  // 후기는 저장되는 추천(내 위치)에만 붙는다. 첫 확인 후 시간이 지났고 아직 안 남겼을 때, 화면 오른쪽 위에 알림처럼 떠서 누르면 후기 카드가 열린다(푸시 알림을 누르고 들어와도 열린다).
+  const feedbackDue = !!recId && (!!feedback || now >= feedbackDueAt(firstSeen, settings.data?.routine)) && (!getFeedbackDone(recId) || !!feedback)
+  const feedbackNotice = feedbackDue && (!feedback || fbOpen) && (
     <>
-      {recId && (feedback || now >= feedbackDueAt(firstSeen, settings.data?.routine)) && (!getFeedbackDone(recId) || feedback) && (
-        <FeedbackCard selected={feedback} message={feedbackMsg} onPick={sendFeedback} />
+      {!fbOpen && (
+        <button type="button" className="fb-notice" onClick={() => setFbOpen(true)} aria-label="오늘 어땠나요? 후기 남기기">
+          <svg width="22" height="20" viewBox="0 0 22 20" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 3 C8 1 14 1.5 19 3 C20.5 7 20 11 18.5 14 C13 15.5 10 14.5 8 15 L4 18.5 L4.5 14 C2 11 1.5 7 3 3Z" fill="#f2cf4a" />
+            <path d="M8 8 l.1 0 M11.5 8 l.1 0 M15 8 l.1 0" strokeWidth="2.4" />
+          </svg>
+          <span>오늘 어땠나요?</span>
+          <i className="fb-notice-dot" />
+        </button>
+      )}
+      {fbOpen && (
+        <>
+          <div className="fb-scrim" onClick={() => setFbOpen(false)} />
+          <div className="fb-pop" role="dialog" aria-label="오늘 어땠나요?">
+            <button type="button" className="fb-pop-close" onClick={() => setFbOpen(false)} aria-label="닫기">
+              ✕
+            </button>
+            <FeedbackCard selected={feedback} message={feedbackMsg} onPick={sendFeedback} />
+          </div>
+        </>
       )}
     </>
   )
 
-  // 하루 패턴이 있으면 외출/귀가 시간을 시간대별 그래프에 표시한다. 외출하지 않는 요일은 제외.
+  // 하루 패턴이 있으면 외출/귀가 시간을 시간대별 칸에 표시한다. 외출하지 않는 요일은 제외.
   const routine = settings.data?.routine
   const commuteMarks: { hour: number; label: string }[] = []
   if (routine && routine.days.includes(new Date().getDay())) {
@@ -403,8 +498,15 @@ export default function HomePage() {
           </ul>
         )}
         {/* 졸라맨이 추천 조합을 입고 서 있고, 그 옆에 입을 옷이 한 줄씩 놓인다 */}
-        <div className="look">
-          <StickPerson mood="stand" size={150} wear={wear} umbrella={rainSoon} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+        <div ref={lookRef} className="look stylist-talk" data-phase={phase} style={{ ['--run' as string]: `${runPx}px` }}>
+          <div className="stage-figure">
+            <div className={phase === 'idle' ? undefined : 'stage-body'}>
+              <StickPerson mood="stand" size={150} wear={wear} umbrella={rainSoon && phase === 'idle'} persona={null} accessories={character?.unlocked ? character.config : undefined} />
+            </div>
+          </div>
+          {phase !== 'idle' ? (
+            <WardrobeScene phase={phase} />
+          ) : (
           <ul className="look-items" aria-label="오늘 입을 옷">
             {items.map((it, i) => (
               <li key={`${it.type}-${it.clothingId ?? it.label}-${i}`}>
@@ -413,6 +515,7 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
+          )}
         </div>
         {/* 외출·귀가 날씨: 졸라맨이 입은 옷 바로 아래. 외출 시간은 내 위치 기준이라 다른 지역을 구경 중일 땐 숨긴다 */}
         {target.kind === 'home' && <CommuteLine hourly={w.hourly ?? []} routine={routine} />}
@@ -428,7 +531,7 @@ export default function HomePage() {
           <DoodleButton seed={0} className="sketchy" selected={showWhy} onClick={() => setShowWhy((s) => !s)}>
             추천 이유
           </DoodleButton>
-          <DoodleButton seed={2} className="sketchy" onClick={() => setAltIdx((i) => (i + 1 >= rec.alternatives.length ? -1 : i + 1))}>
+          <DoodleButton seed={2} className="sketchy" disabled={phase !== 'idle'} onClick={() => void swapCombo(altIdx + 1 >= rec.alternatives.length ? -1 : altIdx + 1)}>
             다른 조합 보기
           </DoodleButton>
         </div>
@@ -456,10 +559,12 @@ export default function HomePage() {
       </section>
 
     ),
+    // 시간대별 날씨: 막대 그래프는 없애고 시간·기온·강수는 그대로, 그래프가 있던 자리에 오늘 일출·일몰(해가 지금 어디쯤인지도)
     hourly: w.hourly && w.hourly.length > 0 && (
-        <section className="section">
+        <section className="section home-sun">
           <h2>시간대별 날씨</h2>
           <HourlyChart data={w.hourly} marks={commuteMarks} />
+          {w.sun && <SunBar rise={w.sun.rise} set={w.sun.set} now={new Date()} />}
         </section>
       ),
     daily: w.daily && w.daily.length > 0 && <DailyForecast data={w.daily} today={{ tempMin: w.tempMin, tempMax: w.tempMax, condition: w.condition, rainChance: w.rainChance }} />,
@@ -467,25 +572,34 @@ export default function HomePage() {
 
   return (
     <main className="home">
+      {feedbackNotice}
       {header}
       {notice && <p role="alert">{notice}</p>}
 
       {layout.order.map((id, idx) => {
         const hidden = layout.hidden.includes(id)
-        if (hidden && !editing) return id === 'recommend' ? <div key={id}>{feedbackCard}</div> : null
+        const going = leaving.get(id)
+        if (hidden && !editing && going == null) return null
         return (
-          <div key={id} className={`${editing ? `edit-block${hidden ? ' off' : ''} ` : ''}rise`} style={{ '--i': idx } as React.CSSProperties}>
+          <div
+            key={id}
+            ref={(el) => {
+              if (el) blockEls.current.set(id, el)
+              else blockEls.current.delete(id)
+            }}
+            className={`${editing ? `edit-block${hidden ? ' off' : ''}${moved === id ? ' moved' : ''}${fresh.has(id) ? ' fresh' : ''} ` : ''}${going != null && !editing ? 'leaving ' : ''}rise`}
+            style={{ '--i': idx, ...(going != null && !editing ? { '--h': `${going}px` } : {}) } as React.CSSProperties}
+          >
             {editing && (
               <div className="edit-bar">
                 <span>{blockLabels[id]}</span>
                 <span className="row">
-                  <button type="button" className="mini" disabled={idx === 0} onClick={() => layout.move(id, -1)} aria-label={`${blockLabels[id]} 위로`}>▲</button>
-                  <button type="button" className="mini" disabled={idx === layout.order.length - 1} onClick={() => layout.move(id, 1)} aria-label={`${blockLabels[id]} 아래로`}>▼</button>
+                  <button type="button" className="mini" disabled={idx === 0} onClick={() => moveBlock(id, -1)} aria-label={`${blockLabels[id]} 위로`}>▲</button>
+                  <button type="button" className="mini" disabled={idx === layout.order.length - 1} onClick={() => moveBlock(id, 1)} aria-label={`${blockLabels[id]} 아래로`}>▼</button>
                   <button type="button" className="mini" onClick={() => layout.toggleHidden(id)}>{hidden ? '보이기' : '숨기기'}</button>
                 </span>
               </div>
             )}
-            {id === 'recommend' && feedbackCard}
             {blocks[id]}
           </div>
         )
@@ -497,7 +611,7 @@ export default function HomePage() {
             처음대로
           </button>
         )}
-        <DoodleButton seed={3} className="sketchy small" onClick={() => setEditing((v) => !v)}>
+        <DoodleButton seed={3} className="sketchy small" onClick={toggleEditing}>
           {editing ? '편집 완료' : '홈 카드 편집'}
         </DoodleButton>
       </div>

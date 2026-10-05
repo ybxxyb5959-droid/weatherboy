@@ -27,7 +27,11 @@ export function eventMood(kind: EventKind, waiting: boolean, title = '', place =
   if (kind === '여행') return 'travel'
   if (kind === '캠핑') return 'camp'
   if (kind === '등산') return 'hike'
-  if (kind === '야외활동') return 'outdoor'
+  if (kind === '야외활동') {
+    // 러닝·축구처럼 몸을 쓰는 활동은 종류가 야외활동이어도 제목에 맞는 운동 그림으로
+    const s = otherScene(`${title} ${place}`)
+    return s === 'run' || s === 'sport' ? s : 'outdoor'
+  }
   return otherScene(`${title} ${place}`) ?? (waiting ? 'wait' : 'trip')
 }
 

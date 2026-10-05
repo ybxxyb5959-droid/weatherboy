@@ -1,6 +1,7 @@
 import type { AuthIdentity, Clothing, Event, User } from '@prisma/client'
 import { clothingTypeMap, colorMap, eventKindMap, sensitivityMap, thicknessMap, patternMap } from '../config/mappings.js'
 import { bandsOf } from './feedbackBands.js'
+import { eventModeOf } from '../rules/eventMode.js'
 import { kstDate, kstTime } from '../utils/time.js'
 
 export function serializeSettings(u: User) {
@@ -52,6 +53,7 @@ export function serializeClothing(c: Clothing) {
 }
 
 export function serializeEvent(e: Event) {
+  const mode = eventModeOf(e.kind, e.title)
   const startDate = kstDate(e.startAt)
   const endDate = kstDate(e.endAt)
   return {
@@ -68,7 +70,9 @@ export function serializeEvent(e: Event) {
     forecastStage: e.forecastStage,
     locationResolved: e.gridNx != null,
     imported: e.calendarConnectionId != null,
-    /** false 면 옷차림 대신 그날 날씨만 보여준다(기타 종류는 항상 false) */
-    needsOutfit: e.kind !== 'OTHER' && e.needsOutfit,
+    /** 무엇을 보여줄까: outfit 옷차림 / activity 야외활동 점수 / weather 날씨만 (종류와 제목으로 정해진다) */
+    mode,
+    /** 예전 앱 호환: mode 가 outfit 일 때만 true */
+    needsOutfit: mode === 'outfit',
   }
 }

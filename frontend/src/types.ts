@@ -29,6 +29,8 @@ export interface ApiDaily {
 export interface ApiWeather {
   daily?: ApiDaily[]
   hourly?: ApiHourly[]
+  /** 오늘 일출·일몰(KST HH:MM). 위치를 모르면 없다 */
+  sun?: { rise: string; set: string } | null
   location: string
   temp: number
   /** 지금 기온이 기상청 실제 관측값이면 관측 시각(정시), 예보값이면 null */
@@ -119,9 +121,22 @@ export interface EventDayOutfit {
   requestLabel?: string | null
 }
 
+/** 하루의 야외활동 점수(0~100): 기온·비·바람·미세먼지 */
+export interface EventDayActivity {
+  date: string
+  score: number
+  grade: 'great' | 'good' | 'fair' | 'poor' | 'bad'
+  label: string
+  factors: Record<'temp' | 'rain' | 'wind' | 'air', { score: number | null; value: string }>
+  /** 그날 일출·일몰(HH:MM). 모르면 null */
+  sun: { rise: string; set: string } | null
+  tip: string
+}
+
 export interface EventOutfit {
-  /** weather_only: 옷차림이 필요 없는 일정이라 날씨만 온다 */
-  status: 'waiting' | 'ready' | 'weather_only'
+  /** weather_only: 날씨만 / activity: 러닝·등산 같은 야외 활동이라 옷 대신 야외활동 점수(activity)가 온다 */
+  status: 'waiting' | 'ready' | 'weather_only' | 'activity'
+  activity?: EventDayActivity[]
   weather?: EventDayWeather[]
   /** 1박 2일 이상일 때만 채워진다 */
   days?: EventDayOutfit[]

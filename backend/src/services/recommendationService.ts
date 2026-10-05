@@ -3,6 +3,7 @@ import { prisma } from '../db.js'
 import { recommend, type EngineResult, type OutingPoint, type WardrobeItem } from '../rules/outfitEngine.js'
 import { impliedStyle, situationOf, type OutfitStyle } from '../rules/outfitStyle.js'
 import { checkWarmth } from '../rules/outfitCheck.js'
+import { eventModeOf } from '../rules/eventMode.js'
 import { applySuit, applyWish, hasWishEffect, roleOf, toEngineWish, type EngineWish } from '../rules/outfitWish.js'
 import { conditionForDate, conditionLabel, savedEventWish, wishOfCondition } from '../rules/eventWish.js'
 import { AppError } from '../utils/errors.js'
@@ -15,8 +16,8 @@ import { forecastForWindow, getAirQuality, type Region, type WindowForecast } fr
 
 export const TODAY_OUTING = { start: '07:00', end: '22:00' }
 
-/** 이 일정에 옷차림 추천을 보여줄까. 기타 종류는 항상 아니고, 나머지는 사용자가 "코디 필요"를 끄지 않은 일정만 */
-export const outfitWanted = (e: Pick<Event, 'kind' | 'needsOutfit'>): boolean => e.kind !== 'OTHER' && e.needsOutfit
+/** 이 일정에 옷차림 추천을 보여줄까. 종류와 제목으로 정해진다(rules/eventMode.ts): 활동(러닝·등산 등)과 기타는 옷 대신 점수/날씨만 */
+export const outfitWanted = (e: Pick<Event, 'kind' | 'title'>): boolean => eventModeOf(e.kind, e.title) === 'outfit'
 
 export function regionOf(u: Pick<User, 'gridNx' | 'gridNy' | 'regionSido' | 'regionDistrict'>, e?: Pick<Event, 'gridNx' | 'gridNy' | 'regionSido' | 'regionDistrict'> | null): Region | null {
   const src = e && e.gridNx != null && e.gridNy != null ? e : u

@@ -5,9 +5,8 @@ import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import DatePicker from '../components/DatePicker'
 import TimePicker from '../components/TimePicker'
 import SayBox from '../components/SayBox'
-import { eventKinds, formatRange, outfitKinds } from '../mocks/events'
+import { eventKinds, formatRange } from '../mocks/events'
 import { markEventFx } from '../lib/eventFx'
-import DoodleCheck from '../components/DoodleCheck'
 import type { EventKind, PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
 import type { EventSuggestion } from '../lib/ai'
@@ -59,8 +58,6 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const [place, setPlace] = useState(event?.place ?? '')
   const [startTime, setStartTime] = useState(event?.startTime ?? '09:00')
   const [endTime, setEndTime] = useState(event?.endTime ?? '18:00')
-  // 옷차림(코디) 추천이 필요한가: 여행·캠핑·등산·야외활동은 처음부터 체크. 기타는 항목 자체가 없고 날씨만 알려준다.
-  const [needsOutfit, setNeedsOutfit] = useState(event?.needsOutfit ?? true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [say, setSay] = useState('')
@@ -75,11 +72,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const [touched, setTouched] = useState<Set<Field>>(() => new Set())
   const touch = (f: Field) => setTouched((t) => (t.has(f) ? t : new Set(t).add(f)))
 
-  // 종류를 바꾸면 옷차림 필요 체크가 다시 켜진다(여행·캠핑·등산·야외활동). 기타는 체크 항목이 없다.
-  const changeKind = (k: EventKind) => {
-    if (k !== kind && outfitKinds.includes(k)) setNeedsOutfit(true)
-    setKind(k)
-  }
+  const changeKind = (k: EventKind) => setKind(k)
 
   // 해석한 결과를 칸에 넣는다(직접 고친 칸은 그대로). 제안일 뿐이라 사용자가 확인하고 저장한다.
   const apply = (d: Filled) => {
@@ -148,7 +141,6 @@ export function EventForm({ event }: { event?: PlanEvent }) {
         startDate: date,
         place: place.trim(),
         kind,
-        needsOutfit: outfitKinds.includes(kind) ? needsOutfit : false, // 기타는 항상 날씨만
         // 며칠 가는 일정은 첫날 아침부터 마지막 날 저녁까지로 본다
         ...(multi ? { startTime: '09:00', endTime: '18:00', ...(endDate > date ? { endDate } : {}) } : { startTime, endTime }),
       }
@@ -192,12 +184,6 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       <div className="field" style={event ? { marginTop: 0 } : undefined}>
         <div className="name">일정 유형</div>
         <ChoiceRow options={eventKinds} value={kind} onChange={(k) => { touch('kind'); changeKind(k) }} />
-        {outfitKinds.includes(kind) && (
-          <div style={{ marginTop: 10 }}>
-            <DoodleCheck checked={needsOutfit} onChange={setNeedsOutfit}>코디 필요</DoodleCheck>
-            {!needsOutfit && <p className="tiny">체크를 풀면 옷차림 없이 그날 날씨만 알려드려요.</p>}
-          </div>
-        )}
       </div>
       <div className="field">
         <label className="name" htmlFor="title">제목 (필수)</label>

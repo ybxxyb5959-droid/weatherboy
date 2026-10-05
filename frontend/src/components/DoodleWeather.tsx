@@ -308,13 +308,14 @@ export function WeatherDoodle({ kind, size = 80, animate = false }: { kind: Weat
     )
   }
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" {...common} className={cls(animate)} aria-label={kind} role="img">
+    <svg width={size} height={size} viewBox="0 0 64 64" {...common} className={cls(animate)} aria-label={kind} role="img" overflow="visible">
       {(kind === 'partly' || kind === 'shower') && (
         <g>
           <path className="wx-sunbody" d="M18 8 C27 6 32 15 29 22 C25 30 12 30 8 22 C5 14 10 9 18 8Z" fill="#f2cf4a" />
           <path d="M13 17 l.1 0 M22 16 l.1 0" strokeWidth="2.6" />
           <path d="M15 22 Q18 25 21 22" strokeWidth="1.6" />
-          <path className="wx-rays" style={{ transformOrigin: '18px 15px' }} d="M18 0 V3 M2 15 H5 M5 4 L8 7 M31 4 L28 7" strokeWidth="2" />
+          {/* 햇살은 해 둘레 8방향. 돌리면 구름 뒤로 숨거나 그림 밖으로 잘려 해가 대머리처럼 보여서, 제자리에서 숨 쉬듯 커졌다 작아진다 */}
+          <path className="wx-pulse" style={{ transformOrigin: '18px 15px' }} d="M33 15 H37 M28.6 25.6 L31.4 28.4 M18 30 V34 M7.4 25.6 L4.6 28.4 M3 15 H-1 M7.4 4.4 L4.6 1.6 M18 0 V-4 M28.6 4.4 L31.4 1.6" strokeWidth="2" />
         </g>
       )}
       {kind === 'windy' ? (

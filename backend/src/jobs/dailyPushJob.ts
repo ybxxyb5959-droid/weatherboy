@@ -148,7 +148,7 @@ async function processUser(user: User, now: Date, sender: PushSender | undefined
   if (user.notifyFeedback && plan.returnFeedback) {
     const rec = await prisma.recommendation.findFirst({ where: { userId: user.id, eventId: null, targetStartAt: kstStartOfDay(now) }, orderBy: { version: 'desc' }, select: { id: true } })
     if (rec && !(await prisma.feedback.findFirst({ where: { userId: user.id, recommendation: { targetStartAt: kstStartOfDay(now), eventId: null } }, select: { id: true } }))) {
-      await send('FEEDBACK', 'FEEDBACK', '오늘 어땠나요?', '입은 옷이 어땠는지 알려주세요. 다음 추천이 더 정확해져요.', '/home?fb=now')
+      await send('FEEDBACK', 'FEEDBACK', '오늘 어땠나요?', '평가를 해주시면 다음에 더 잘 맞출게요', '/home?fb=now')
     }
   }
 

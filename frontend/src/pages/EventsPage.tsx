@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import HandText from '../components/HandText'
 import Toast, { useToast } from '../components/Toast'
@@ -7,7 +7,7 @@ import { eventMood, isSceneMood } from '../lib/eventMood'
 import EventMenu from '../components/EventMenu'
 import MonthCalendar, { type MonthView } from '../components/MonthCalendar'
 import StickPerson from '../components/StickPerson'
-import { EraserTool, FxBorder, PenTool } from '../components/NoteFx'
+import { EraserTool, FxTape, FxWrinkle, PenTool } from '../components/NoteFx'
 import { clearEventFx, peekEventFx, type EventFx } from '../lib/eventFx'
 import { formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
@@ -61,14 +61,16 @@ export default function EventsPage() {
     return () => window.clearTimeout(t)
   }, [fxReady])
   // 지운 일정은 구겨서 옆으로 던지는 연출을 보여준 뒤 목록을 다시 불러온다("움직임 줄이기"면 바로)
-  const [crumpling, setCrumpling] = useState<string | null>(null)
+  const [crumpling, setCrumpling] = useState<{ id: string; h: number } | null>(null)
   const crumple = (id: string) => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       reload()
       return
     }
-    setCrumpling(id)
-    window.setTimeout(reload, 900)
+    // 구겨 굴러간 뒤 빈자리가 닫히도록 카드 높이를 재 둔다
+    const h = (document.querySelector(`[data-ev="${id}"]`) as HTMLElement | null)?.offsetHeight ?? 100
+    setCrumpling({ id, h })
+    window.setTimeout(reload, 1800)
   }
   const conns = useAsync(() => api<CalendarConn[]>('GET', '/api/calendar'))
   const [connecting, setConnecting] = useState(false)
@@ -147,9 +149,10 @@ export default function EventsPage() {
         {monthEvents.map((e, i) => {
           const f = fx.get(e.id)
           return (
-            <div key={e.id} data-ev={e.id} className={`card-wrap${f ? ' fx-new' : ''}${crumpling === e.id ? ' fx-crumple' : ''}`}>
+            <div key={e.id} data-ev={e.id} className={`card-wrap${f ? ' fx-new' : ''}${crumpling?.id === e.id ? ' fx-crumple' : ''}`} style={crumpling?.id === e.id ? ({ '--h': `${crumpling.h}px` } as CSSProperties) : undefined}>
               <Link to={`/events/${e.id}`} className={`box card note w${i % 4}${f ? (fxReady ? ` fx-${f.kind}` : ' fx-wait') : ''}`}>
-                {f?.kind === 'created' && <FxBorder />}
+                {f?.kind === 'created' && <FxTape />}
+                {crumpling?.id === e.id && <FxWrinkle />}
                 <div className="row between">
                   <div className="fx-wrap">
                     {f?.kind === 'edited' && (
@@ -162,11 +165,11 @@ export default function EventsPage() {
                       <div className="title">{e.title}{e.imported && <span className="tiny"> · 📅 연동</span>}</div>
                       <div>{formatRange(e)}</div>
                     </div>
-                    <div className="tiny fx-late">{e.needsOutfit === false ? '날씨만 알려드려요' : statusLabel[e.status]}</div>
+                    <div className="tiny fx-late">{e.mode === 'activity' ? '야외활동 점수로 알려드려요' : e.mode === 'weather' || e.needsOutfit === false ? '날씨만 알려드려요' : statusLabel[e.status]}</div>
                     {f?.kind === 'edited' && <EraserTool />}
                     {f && <PenTool />}
                   </div>
-                  <div className="fx-late">
+                  <div className="fx-late card-pic">
                     <StickPerson mood={eventMood(e.kind, e.status === 'waiting', e.title, e.place)} size={isSceneMood(eventMood(e.kind, false, e.title, e.place)) ? 84 : 64} />
                   </div>
                 </div>

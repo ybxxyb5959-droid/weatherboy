@@ -20,6 +20,26 @@ export function solarElevation(at: Date, lat: number, lng: number): number {
 /** 일출·일몰의 기준: 태양 윗부분이 지평선에 걸릴 때(대기 굴절 포함) 고도 -0.833° */
 export const SUNRISE_SUNSET_ELEVATION = -0.833
 
+/** 그 날(KST)의 일출·일몰 시각(KST HH:MM). 1분 간격으로 태양 고도가 지평선(-0.833°)을 넘는 때를 찾는다. 백야·극야처럼 뜨거나 지지 않는 날은 null */
+export function sunTimes(kstYmd: string, lat: number, lng: number): { rise: string; set: string } | null {
+  const start = new Date(`${kstYmd}T00:00:00+09:00`).getTime()
+  const hm = (ms: number) => {
+    const k = new Date(ms + 9 * 3600_000)
+    return `${String(k.getUTCHours()).padStart(2, '0')}:${String(k.getUTCMinutes()).padStart(2, '0')}`
+  }
+  let rise: string | null = null
+  let set: string | null = null
+  let prev = solarElevation(new Date(start), lat, lng) >= SUNRISE_SUNSET_ELEVATION
+  for (let m = 1; m < 1440; m++) {
+    const t = start + m * 60_000
+    const up = solarElevation(new Date(t), lat, lng) >= SUNRISE_SUNSET_ELEVATION
+    if (up && !prev && !rise) rise = hm(t)
+    if (!up && prev && !set) set = hm(t)
+    prev = up
+  }
+  return rise && set ? { rise, set } : null
+}
+
 /** 그 시각에 해가 졌는가(일몰~일출 사이) */
 export function isNightAt(at: Date, lat: number, lng: number): boolean {
   return solarElevation(at, lat, lng) < SUNRISE_SUNSET_ELEVATION

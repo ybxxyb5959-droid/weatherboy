@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
-import EventStylist from '../components/EventStylist'
+import ActivityScore from '../components/ActivityScore'
 import { feel } from '../lib/styleText'
 import HandText from '../components/HandText'
 import ClothingDoodle from '../components/ClothingDoodle'
@@ -86,26 +86,16 @@ function EventWeather({ days, approx }: { days: EventDayWeather[]; approx: boole
 }
 
 /** 며칠짜리 일정: 날마다 그날 날씨에 맞춰 다른 옷으로 고른 코디 */
-function DayOutfits({ days, reuse, onReuse, examples, onExamples, busy }: { days: EventDayOutfit[]; reuse: { top: boolean; bottom: boolean }; onReuse: (r: { top: boolean; bottom: boolean }) => void; examples: boolean; onExamples: (on: boolean) => void; busy: boolean }) {
+function DayOutfits({ days, examples, onExamples, busy }: { days: EventDayOutfit[]; examples: boolean; onExamples: (on: boolean) => void; busy: boolean }) {
   const needExamples = days.some((d) => d.canViewExamples)
   // 실제로 겹친 날이 있으면 "다르게 골랐어요"라고만 말하지 않는다
   const overlapped = days.some((d) => (d.overlapSlots?.length ?? 0) > 0)
-  const reusing = reuse.top || reuse.bottom
   return (
     <section className="section">
       <h2>날짜별 코디</h2>
       <p className="tiny">
-        {overlapped ? '옷장에 옷이 적어서 겹치는 옷이 있어요. 아래 날짜별 안내를 확인해 보세요.' : reusing ? '고른 자리는 같은 옷을 다시 입을 수 있게 골랐어요.' : '날마다 다른 옷으로 골랐어요.'}
+        {overlapped ? '옷장에 옷이 적어서 겹치는 옷이 있어요. 아래 날짜별 안내를 확인해 보세요.' : '날마다 다른 옷으로 골랐어요.'}
       </p>
-      <div className="row wrap" style={{ marginTop: 6 }}>
-        <span className="tiny">옷 돌려입기</span>
-        <DoodleButton seed={0} className="small" selected={reuse.top} disabled={busy} onClick={() => onReuse({ ...reuse, top: !reuse.top })}>
-          상의
-        </DoodleButton>
-        <DoodleButton seed={1} className="small" selected={reuse.bottom} disabled={busy} onClick={() => onReuse({ ...reuse, bottom: !reuse.bottom })}>
-          하의
-        </DoodleButton>
-      </div>
       {(needExamples || examples) && (
         <div className="row wrap" style={{ marginTop: 6 }}>
           <span className="tiny">{examples ? '예시 옷으로 입어본 모습이에요.' : '내 옷만으로는 날씨에 모자란 날이 있어요.'}</span>
@@ -163,16 +153,12 @@ function EventDetail({ id }: { id: string }) {
   const nav = useNavigate()
   const justSaved = (useLocation().state as { saved?: 'created' | 'edited' } | null)?.saved
   const ev = useAsync(() => api<PlanEvent>('GET', `/api/events/${id}`))
-  // 연박: 눌렀을 때만 그 자리의 옷을 날짜 사이에 다시 입을 수 있게 한다(겉옷은 항상 겹침을 피한다)
-  const [reuse, setReuse] = useState({ top: false, bottom: false })
   const [examples, setExamples] = useState(false) // [예시로 보기]: 내 옷이 날씨에 부족할 때만 보인다
-  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit?reuseTop=${reuse.top ? 1 : 0}&reuseBottom=${reuse.bottom ? 1 : 0}&examples=${examples ? 1 : 0}`).catch((e) => {
+  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit?examples=${examples ? 1 : 0}`).catch((e) => {
     if (e instanceof ApiError && e.status === 404) return null
     throw e
-  }), `${reuse.top}${reuse.bottom}${examples}`)
+  }), `${examples}`)
   const e = ev.data
-  const [stylistOn, setStylistOn] = useState<boolean | null>(null) // 코디 도우미가 이 일정에 나오는가(모르면 null)
-  const [stylistBase, setStylistBase] = useState(false) // 코디 도우미가 코디 카드를 직접 보여주는 중인가(느낌을 고른 뒤)
 
   if (ev.loading) return <main><p>불러오는 중…</p></main>
   if (!e) {
@@ -191,18 +177,17 @@ function EventDetail({ id }: { id: string }) {
   const waiting = !rec
   // 요청이 실패한 것과 예보가 아직 없는 것은 다르다: 실패하면 재시도를 안내한다
   const failed = waiting && !!outfit.error && !outfit.data
-  // 예보가 아직 없다고 확정된 상태(불러오는 중·실패는 아님): 코디 도우미(캐릭터·칩·입력창)는 숨기고 예보가 열린 뒤에 보여준다
-  // 옷차림이 필요 없는 일정(기타 종류, '코디 필요'를 끈 일정): 추천 카드·코디 도우미 없이 그날 날씨만 보여준다
-  const noOutfit = outfit.data?.status === 'weather_only' || e.needsOutfit === false
+  // 옷차림을 안 보여주는 일정: 기타는 그날 날씨만, 러닝·등산 같은 야외 활동은 야외활동 점수(옷은 기능성 운동복이라 추천하지 않는다)
+  const isActivity = outfit.data?.status === 'activity'
+  const noOutfit = outfit.data?.status === 'weather_only' || isActivity || e.needsOutfit === false
+  const weatherShown = outfit.data?.status === 'weather_only' || isActivity
   const forecastWaiting = waiting && !outfit.loading && !failed && !noOutfit
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
   const days = outfit.data?.days ?? []
-  // 하루 일정은 추천 옷 목록을 항상 보여준다: 도우미가 없거나, 도우미가 아직 카드를 안 펼쳤을 때(느낌을 고르기 전)
-  const showPlainOutfit = !waiting && days.length < 2 && (stylistOn === false || (stylistOn === true && !stylistBase))
+  // 하루 일정은 추천 옷 목록을 보여주고, 며칠짜리는 아래 날짜별 코디로 보여준다
+  const showPlainOutfit = !waiting && days.length < 2
   const styleLabel = outfit.data?.styleLabel ?? null
-  // 코디 도우미의 캐릭터가 입는 옷: 지금 일정에 보이는 코디
-  const stylistItems = rec ? rec.items.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) })) : []
 
   return (
     <main>
@@ -235,7 +220,7 @@ function EventDetail({ id }: { id: string }) {
       <div className="box w1">
         <div className="row between">
           <div>
-            <h2>{failed ? '불러오지 못했어요' : noOutfit && outfit.data?.status === 'weather_only' ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
+            <h2>{failed ? '불러오지 못했어요' : isActivity ? '야외활동이 적합한지 확인해보세요' : weatherShown ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
             {failed ? (
               <>
                 <p>{outfit.error}</p>
@@ -244,9 +229,9 @@ function EventDetail({ id }: { id: string }) {
                   다시 시도
                 </DoodleButton>
               </>
-            ) : noOutfit && outfit.data?.status === 'weather_only' ? (
+            ) : weatherShown ? (
               <>
-                <p>이 일정은 옷차림 없이 그날 날씨만 알려드려요.</p>
+                <p>{isActivity ? '날씨가 예측되었어요. 바뀔 수 있어요.' : '이 일정은 옷차림 없이 그날 날씨만 알려드려요.'}</p>
                 {approx && <p className="tiny">아직 먼 날짜라 대략적인 예보예요. 가까워지면 다시 맞춰줄게요.</p>}
               </>
             ) : waiting ? (
@@ -265,6 +250,8 @@ function EventDetail({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* 예보 시작 → 상세 예보 → 최종 확인 안내는 아직 먼 일정에서만(3일 안으로 다가오면 필요 없다) */}
+      {left > 3 && (
       <section className="section">
         <div className="timeline">
           {steps.map((s, i) => (
@@ -282,10 +269,13 @@ function EventDetail({ id }: { id: string }) {
           ))}
         </div>
       </section>
+      )}
 
       <hr className="scribble" />
 
-      {(!waiting || (noOutfit && outfit.data?.status === 'weather_only')) && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
+      {isActivity && outfit.data?.activity && outfit.data.activity.length > 0 && <ActivityScore days={outfit.data.activity} approx={approx} />}
+
+      {(!waiting || weatherShown) && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
       {(forecastWaiting || showPlainOutfit) && (
       <section className="section">
@@ -334,9 +324,7 @@ function EventDetail({ id }: { id: string }) {
       </section>
       )}
 
-      {!waiting && <EventStylist eventId={e.id} rec={rec ? { ...rec, items: stylistItems } : null} style={outfit.data?.style ?? null} styleLabel={outfit.data?.styleLabel ?? null} notes={outfit.data?.situationNotes} onApplicable={setStylistOn} onBase={setStylistBase} topRule={!waiting && (outfit.data?.weather?.length ?? 0) > 0} multiDay={days.length >= 2} fillItems={(its) => its.map((it) => (it.owned || it.example ? it : { ...it, color: genericColor(it.type, e.startDate) }))} onChanged={outfit.reload} />}
-
-      {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} reuse={reuse} onReuse={setReuse} examples={examples} onExamples={setExamples} busy={outfit.loading} />}
+      {!waiting && days.length >= 2 && <DayOutfits key={outfit.data?.style ?? 'none'} days={days} examples={examples} onExamples={setExamples} busy={outfit.loading} />}
     </main>
   )
 }

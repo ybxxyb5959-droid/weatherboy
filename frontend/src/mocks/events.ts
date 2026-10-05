@@ -14,14 +14,12 @@ export interface PlanEvent {
   status: EventStatus
   /** 외부 캘린더에서 가져온 일정 */
   imported?: boolean
-  /** false 면 옷차림 대신 그날 날씨만 보여준다(기타 종류는 항상 false). 예전 응답에는 없을 수 있다 */
+  /** 무엇을 보여줄까: outfit 옷차림 / activity 야외활동 점수(러닝·등산 등) / weather 날씨만. 종류와 제목으로 서버가 정한다 */
+  mode?: 'outfit' | 'activity' | 'weather'
   needsOutfit?: boolean
   /** 장소의 위치(날씨 지역)를 찾았는가. false 면 내 기본 지역 날씨로 보여준다 */
   locationResolved?: boolean
 }
-
-/** 옷차림 추천이 필요한 종류(여행·캠핑·등산·야외활동). 기타는 날씨만 알려준다 */
-export const outfitKinds: EventKind[] = ['여행', '캠핑', '등산', '야외활동']
 
 export const eventKinds: EventKind[] = ['여행', '캠핑', '등산', '야외활동', '기타']
 

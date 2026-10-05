@@ -2490,7 +2490,7 @@ a.card {
   font-size: 24px;
   font-weight: 700;
   line-height: 1;
-  color: #8a8a86;
+  color: #222;
   background: transparent;
   border: 0;
   border-radius: 8px;
@@ -4396,9 +4396,6 @@ dd,
   min-height: calc(100dvh - 120px);
   text-align: center;
 }
-.splash .hello {
-  margin: 0;
-}
 .splash-note {
   max-width: 280px;
   margin: 0;
@@ -4423,4 +4420,391 @@ dd,
   margin: 10px 0 0;
   text-align: center;
   opacity: 0.8;
+}
+
+/* 일정 카드 그림이 오른쪽 위 "⋯" 버튼을 가리지 않게 왼쪽으로 당긴다 */
+.events-list .card-pic {
+  margin-right: 22px;
+}
+
+/* ---------- 야외활동 점수 카드(러닝·등산 등): 손그림 반원 게이지 + 줄무늬 요인 막대 + 시간대 막대 ---------- */
+.act-days {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.act-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+.act-meter {
+  position: relative;
+  flex: none;
+  width: 132px;
+}
+.act-gauge {
+  display: block;
+}
+.act-num {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+.act-num span {
+  margin-left: 2px;
+  font-size: 14px;
+}
+.act-factors {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.act-row {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.act-name {
+  font-size: 14px;
+}
+.act-track {
+  position: relative;
+  display: block;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 7px 4px 8px 5px / 5px 7px 4px 8px;
+  overflow: hidden;
+}
+.act-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(-45deg, var(--c) 0 4px, color-mix(in srgb, var(--c) 55%, #fff) 4px 7px);
+  border-right: 2px solid var(--ink);
+}
+.act-val {
+  min-width: 52px;
+  text-align: right;
+  white-space: nowrap;
+}
+.act-sun {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 2px dashed rgba(34, 34, 34, 0.35);
+}
+.act-suntimes {
+  display: grid;
+  grid-template-columns: 22% 1fr 22%; /* 양쪽 칸은 지평선의 해(가로 11% / 89%) 바로 아래에 가운데 정렬 */
+  align-items: start;
+  margin-top: 4px;
+}
+.act-sunlabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+.act-sunlabel b {
+  font-size: 18px;
+}
+.act-daylen {
+  padding-top: 14px;
+  text-align: center;
+}
+.act-tip {
+  margin-top: 10px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .act-arc {
+    animation: act-draw 0.9s ease-out backwards;
+  }
+  .act-fill {
+    transform-origin: left center;
+    animation: act-grow 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s backwards;
+  }
+  .act-sunbody {
+    animation: act-sun-bob 4s ease-in-out infinite;
+  }
+  .act-days .act-day {
+    animation: rise-in 0.4s ease-out calc(var(--i, 0) * 80ms) backwards;
+  }
+  @keyframes act-draw {
+    from {
+      stroke-dasharray: 0.01 100;
+    }
+  }
+  @keyframes act-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes act-sun-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+}
+
+/* ---------- 홈 카드 편집 연출: 옮길 때 떠오르고, 숨길 때 서서히 사라지며 접힌다 ---------- */
+.edit-block {
+  transition: box-shadow 0.35s ease, background-color 0.35s ease, border-color 0.35s ease;
+}
+.edit-block > :not(.edit-bar) {
+  transition: opacity 0.45s ease, filter 0.45s ease, transform 0.45s cubic-bezier(0.3, 0.8, 0.25, 1);
+  transform-origin: top center;
+}
+.edit-block.off > :not(.edit-bar) {
+  filter: grayscale(1);
+  transform: scale(0.97);
+}
+.edit-block.off {
+  border-style: dotted;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .edit-block.moved {
+    z-index: 2;
+    animation: block-lift 0.6s cubic-bezier(0.3, 0.8, 0.25, 1);
+  }
+  .edit-block.fresh {
+    animation: block-fresh 0.5s ease-out backwards;
+  }
+  .leaving {
+    overflow: hidden;
+    animation: block-out 0.5s cubic-bezier(0.4, 0, 0.6, 1) forwards !important;
+  }
+  @keyframes block-lift {
+    35% {
+      transform: scale(1.015);
+      box-shadow: 0 8px 0 rgba(34, 34, 34, 0.14);
+      background-color: rgba(242, 207, 74, 0.1);
+    }
+  }
+  @keyframes block-fresh {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.97);
+    }
+  }
+  @keyframes block-out {
+    from {
+      opacity: 1;
+      max-height: var(--h, 200px);
+    }
+    to {
+      opacity: 0;
+      max-height: 0;
+      transform: translateY(-8px) scale(0.97);
+    }
+  }
+}
+
+/* 홈의 일출·일몰 카드: 점수 카드와 같은 해 길을 쓰되 윗 구분선은 없다 */
+.home-sun .act-sun {
+  margin-top: 4px;
+  padding-top: 0;
+  border-top: 0;
+}
+.act-status {
+  margin-top: 2px;
+  text-align: center;
+}
+
+/* 시간대별 날씨(막대 없이): 지금 칸은 노란 형광펜으로 표시 */
+.hcol.now {
+  background: rgba(242, 207, 74, 0.32);
+  border-radius: 10px 14px 9px 12px / 12px 9px 13px 10px;
+}
+.hcol.now .htemp {
+  color: #222;
+}
+.home-sun .hourly {
+  padding-bottom: 2px;
+}
+.home-sun .hourly + .act-sun {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 2px dashed rgba(34, 34, 34, 0.3);
+}
+
+/* ---------- 오늘 어땠나요: 화면 오른쪽 위 알림 ---------- */
+.fb-notice {
+  position: fixed;
+  top: 12px;
+  right: max(12px, calc((100vw - 460px) / 2 + 12px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px 8px 10px;
+  font-family: 'Poor Story', var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2.2px solid var(--ink);
+  border-radius: 14px 7px 15px 9px / 9px 15px 8px 14px;
+  box-shadow: 0 4px 0 rgba(34, 34, 34, 0.16);
+  cursor: pointer;
+}
+.fb-notice-dot {
+  position: absolute;
+  top: -5px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background: #e05a5a;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+.fb-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(34, 34, 34, 0.18);
+}
+.fb-pop {
+  position: fixed;
+  top: 12px;
+  right: max(12px, calc((100vw - 460px) / 2 + 12px));
+  z-index: 61;
+  width: min(calc(100vw - 24px), 436px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 8px 8px 4px;
+  background: var(--paper);
+  border: 2.2px solid var(--ink);
+  border-radius: 12px 18px 11px 16px / 16px 10px 17px 12px;
+  box-shadow: 0 8px 0 rgba(34, 34, 34, 0.18);
+  transform-origin: top right;
+}
+.fb-pop .feedback-card {
+  margin-top: 0;
+}
+.fb-pop-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fb-notice {
+    animation: fb-notice-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards, fb-notice-nudge 4.5s ease-in-out 1.2s infinite;
+  }
+  .fb-notice-dot {
+    animation: fb-dot 1.6s ease-in-out infinite;
+  }
+  .fb-scrim {
+    animation: fade-in-soft 0.25s ease-out;
+  }
+  .fb-pop {
+    animation: fb-pop-in 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  }
+  @keyframes fb-notice-in {
+    from {
+      opacity: 0;
+      transform: translateX(120%);
+    }
+  }
+  @keyframes fb-notice-nudge {
+    0%, 86%, 100% {
+      transform: none;
+    }
+    90% {
+      transform: rotate(-2.5deg) translateY(-2px);
+    }
+    94% {
+      transform: rotate(2deg);
+    }
+  }
+  @keyframes fb-dot {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.25);
+    }
+  }
+  @keyframes fb-pop-in {
+    from {
+      opacity: 0;
+      transform: translate(14px, -10px) scale(0.92);
+    }
+  }
+  @keyframes fade-in-soft {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+.look > .stage-figure {
+  flex: none;
+}
+
+/* 시간대별 날씨는 옆으로 밀어 볼 수 있지만 스크롤 바는 숨긴다 */
+.hourly {
+  scrollbar-width: none;
+}
+.hourly::-webkit-scrollbar {
+  display: none;
+}
+
+/* 오늘 추천 영역: 옷이 2벌이든 3벌이든, 옷장 연출 중이든 같은 높이로 두어 아래 내용이 늘었다 줄었다 하지 않게 한다 */
+.look {
+  min-height: 186px;
+}
+.look > .stage-figure svg {
+  display: block; /* 인라인 그림 아래 여백(약 8px)이 높이를 키우지 않게 */
+}
+
+/* 일정(야외활동 점수 카드)의 일출·일몰: 위쪽 점선에 해가 가려지지 않게 칸을 넉넉히 늘린다(홈은 그대로) */
+.act-day .act-sun {
+  margin-top: 18px;
+  padding-top: 24px;
+}
+.act-day .act-sun svg {
+  overflow: visible;
+}
+
+/* 홈 오늘 추천(.look)이 옷장 연출을 위해 .stylist-talk 클래스를 함께 쓰므로, 그쪽의 아래 정렬이 옷 목록을 아래로 밀지 않게 가운데 정렬로 되돌린다 */
+.look.stylist-talk {
+  align-items: center;
+  gap: 8px;
+}
+
+/* 시간대별 날씨: 칸을 넓혀 읽기 편하게(옆으로 밀어서 본다) */
+.hourly {
+  gap: 8px;
+  padding: 8px 4px 8px;
+  scroll-snap-type: x proximity;
+}
+.hcol {
+  flex: 0 0 58px;
+  gap: 6px;
+  scroll-snap-align: start;
+}
+.hcol .htemp {
+  font-size: 17px;
 }
