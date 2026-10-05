@@ -4808,3 +4808,55 @@ dd,
 .hcol .htemp {
   font-size: 17px;
 }
+
+/* 지금 날씨를 살아 있는 값처럼: 확인 시각, 추정 표시, 숫자가 바뀔 때의 움직임 */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 2px;
+  background: #5aa86a;
+  border: 1.6px solid var(--ink);
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.big .dec {
+  font-size: 0.6em;
+  font-weight: 700;
+}
+.est-tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  vertical-align: 14px;
+  background: rgba(242, 207, 74, 0.45);
+  border-radius: 8px 10px 7px 9px / 9px 7px 10px 8px;
+}
+.num-tick {
+  display: inline-block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: live-dot 2.4s ease-in-out infinite;
+  }
+  .num-tick {
+    animation: num-tick 0.5s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  @keyframes live-dot {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.35);
+      opacity: 0.55;
+    }
+  }
+  @keyframes num-tick {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}

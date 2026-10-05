@@ -17,6 +17,7 @@ import { ShareIcon } from '../components/icons'
 import LocationBar from '../components/LocationBar'
 import HourlyChart from '../components/HourlyChart'
 import SunBar from '../components/SunBar'
+import { estimateTemp } from '../lib/estimateTemp'
 import DailyForecast from '../components/DailyForecast'
 import { WeatherDoodle } from '../components/DoodleWeather'
 import WeatherAmbience from '../components/WeatherAmbience'
@@ -60,6 +61,40 @@ export default function HomePage() {
   // 보고 있는 지역에 따라 날씨/추천 요청의 쿼리가 달라진다 (기본 위치면 쿼리 없음)
   const qs = target.kind === 'fav' ? `?favoriteId=${target.id}` : target.kind === 'place' ? `?place=${encodeURIComponent(target.name)}` : ''
   const weather = useAsync(() => api<ApiWeather>('GET', `/api/weather/today${qs}`), qs)
+  // 앱을 보고 있는 동안 날씨를 조용히 다시 확인한다(5분마다, 탭/앱으로 돌아올 때, 네트워크가 돌아올 때). 로딩 화면을 다시 띄우지 않고 값만 바꾼다.
+  const [liveW, setLiveW] = useState<{ qs: string; data: ApiWeather } | null>(null)
+  const [checkedAt, setCheckedAt] = useState<number | null>(null) // 서버에 마지막으로 확인한 시각
+  const checkedRef = useRef(0)
+  useEffect(() => {
+    if (weather.data) {
+      checkedRef.current = Date.now()
+      setCheckedAt(checkedRef.current)
+    }
+  }, [weather.data])
+  useEffect(() => {
+    let alive = true
+    const refresh = (minGapMs: number) => {
+      if (document.visibilityState === 'hidden' || Date.now() - checkedRef.current < minGapMs) return
+      api<ApiWeather>('GET', `/api/weather/today${qs}`)
+        .then((d) => {
+          if (!alive) return
+          checkedRef.current = Date.now()
+          setCheckedAt(checkedRef.current)
+          setLiveW({ qs, data: d })
+        })
+        .catch(() => undefined) // 실패하면 가진 값을 그대로 보여준다
+    }
+    const timer = window.setInterval(() => refresh(4 * 60_000), 60_000)
+    const onBack = () => refresh(60_000)
+    document.addEventListener('visibilitychange', onBack)
+    window.addEventListener('online', onBack)
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onBack)
+      window.removeEventListener('online', onBack)
+    }
+  }, [qs])
   const recommendation = useAsync(() => api<ApiRecommendation>('GET', `/api/recommendations/today${qs}`), qs)
   const settings = useAsync(() => api<{ location: string; routine?: Routine }>('GET', '/api/settings'))
   const favorites = useAsync(() => api<Favorite[]>('GET', '/api/favorites'))
@@ -238,7 +273,9 @@ export default function HomePage() {
     </div>
   )
 
-  const w = weather.data
+  const w = (liveW && liveW.qs === qs ? liveW.data : null) ?? weather.data
+  const est = w ? estimateTemp(w, now) : null
+  const feelsShown = w ? (est != null ? Math.round(w.feels + (est - w.temp)) : w.feels) : 0 // 정시 관측과 다음 예보 사이로 짐작한 지금 기온(소수점 한 자리)
   // 지역을 바꾸는 중에 이전 지역의 추천이 남아 보이지 않게, 불러오는 동안은 비운다
   const rec = recommendation.loading ? null : recommendation.data
 
@@ -417,9 +454,24 @@ export default function HomePage() {
           <div className="tiny">
             {w.location}
             {w.observedAt && <span className="obs-at"> · {new Date(w.observedAt).getHours()}시 관측</span>}
+            {checkedAt != null && (
+              <span className="obs-at live-at">
+                {" · "}<i className="live-dot" /> {now - checkedAt < 90_000 ? '방금 확인' : `${Math.floor((now - checkedAt) / 60_000)}분 전 확인`}
+              </span>
+            )}
           </div>
-          <div className="big">{w.temp}°C</div>
-          <div>지금 체감 {w.feels}°C</div>
+          <div className="big">
+            <span key={est ?? w.temp} className="num-tick">
+              {est == null ? w.temp : (
+                <>
+                  {Math.trunc(est)}
+                  <span className="dec">.{Math.abs(Math.round((est % 1) * 10))}</span>
+                </>
+              )}
+            </span>
+            °C{est != null && <span className="est-tag">추정</span>}
+          </div>
+          <div>지금 체감 <span key={feelsShown} className="num-tick">{feelsShown}</span>°C</div>
           <ul>
             <li>비 {w.rainChance}%</li>
             <li>바람 {w.wind.label}</li>
@@ -624,3 +676,4 @@ export default function HomePage() {
     </main>
   )
 }
+
