@@ -4,6 +4,7 @@ import { env, isProd } from '../../config/env.js'
 import { prisma } from '../../db.js'
 import { AppError, badRequest, forbidden, unauthorized } from '../../utils/errors.js'
 import { logger } from '../../utils/logger.js'
+import { notifyServerError } from '../../services/review/notifyOwner.js'
 
 declare module 'express-session' {
   interface SessionData {
@@ -80,5 +81,6 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     return
   }
   logger.error({ err: err instanceof Error ? { name: err.name, message: err.message, stack: isProd ? undefined : err.stack } : String(err), path: req.path }, 'unhandled error')
+  void notifyServerError({ method: req.method, path: req.path, name: err instanceof Error ? err.name : 'Error', code: (err as { code?: string })?.code })
   res.status(500).json({ code: 'INTERNAL_ERROR', message: '서버에 문제가 생겼어요. 잠시 후 다시 시도해주세요.' })
 }

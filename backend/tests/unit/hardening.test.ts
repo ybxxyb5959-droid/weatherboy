@@ -86,3 +86,19 @@ describe('접속자 IP 를 읽는 프록시 단계', () => {
     expect(trustProxyHops(3, false)).toBe(3)
   })
 })
+
+describe('서버 오류 알림 제한', () => {
+  it('같은 오류는 10분에 한 번, 시간당 20건까지, 경로의 id 는 가린다', async () => {
+    const { shouldAlertError, resetErrorAlerts, routeLabel } = await import('../../src/services/review/notifyOwner.js')
+    resetErrorAlerts()
+    expect(shouldAlertError('a', 0)).toBe(true)
+    expect(shouldAlertError('a', 5 * 60_000)).toBe(false)
+    expect(shouldAlertError('a', 11 * 60_000)).toBe(true)
+    resetErrorAlerts()
+    for (let i = 0; i < 20; i++) expect(shouldAlertError(`k${i}`, i)).toBe(true)
+    expect(shouldAlertError('another', 100)).toBe(false)
+    expect(shouldAlertError('another', 61 * 60_000)).toBe(true)
+    expect(routeLabel('/api/events/3f2b8c1e-1111-4a2b-9c3d-123456789abc/outfit')).toBe('/api/events/:id/outfit')
+    expect(routeLabel('/api/clothes/123')).toBe('/api/clothes/:n')
+  })
+})

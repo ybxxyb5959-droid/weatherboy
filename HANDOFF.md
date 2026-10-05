@@ -109,6 +109,15 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 접속 IP 한 번 더 수정(4단계) + 서버 오류 디스코드 알림 (작성: Claude Code)
+- 접속 IP: 운영 /api/net-check 로 Vercel 경유 요청의 x-forwarded-for 가 [방문자, Vercel, Cloudflare, Render 내부] 4단계임을 확인 -> Render 에서 믿는 단계 4. 확인: net-check 의 ip 가 방문자 IP, RateLimit 남은 횟수가 19,18,17,16 으로 줄고 Render 직접 호출과 같은 카운터. (/api/net-check 는 로그인 없이 방문자 자신의 가려진 IP 체인과 배포 커밋만 돌려줌)
+- 서버 오류 알림: 처리되지 않은 500 오류가 나면 DISCORD_WEBHOOK_URL 로 한 줄 알림(경로의 id 는 :id 로 가림, 오류 이름·코드만, 메시지 제외). 같은 오류는 10분에 한 번, 시간당 20건 상한. 웹훅이 없으면 보내지 않음.
+- 변경 파일: backend/src/utils/trustProxy.ts, backend/src/services/review/notifyOwner.ts(notifyServerError 등), backend/src/api/middleware/common.ts(errorHandler 에서 호출), backend/tests/unit/hardening.test.ts
+- 프론트 연결 사항: 없음
+- 검증 결과: backend typecheck 통과, lint 오류 없음, hardening 단위 테스트 13개 통과. 실제 디스코드 전송은 못 봄(웹훅 설정 여부 모름). 통합 테스트 못 함.
+- 남은 일 / 상대에게 요청: UptimeRobot 이 5분마다 /health 를 호출 중(사용자 확인) -> 무료 서버 잠듦은 베타 동안 문제없음. 정식 출시 때 Render 유료 플랜 검토.
+- 적용한 규칙 번호: B-5
+
 ### 2026-10-06 Vercel 경유 접속 IP 문제 수정(trust proxy 2단계) + 게스트 가입 서버 전체 상한 (작성: Claude Code)
 - 수정 목적: Vercel 이 /api 를 Render 로 넘겨서 서버가 보는 접속 IP 가 Vercel 서버 IP 였음(실측: 로그인 없이 되는 /api/auth/kakao 의 RateLimit 남은 횟수를 Vercel 경유 4회와 Render 직접 1회로 비교 -> 19,19,18,18 vs 19, 즉 사용자 IP 가 아니라 Vercel IP 로 묶임). IP 기준 요청 제한(게스트 20/분, 카카오 20/분 등)을 모든 사용자가 나눠 쓰게 되는 문제.
 - 변경 파일:
