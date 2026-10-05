@@ -62,7 +62,7 @@ export function tasteWear(t: { kind?: string; value?: string; category?: string 
   if (t.kind === 'color') {
     return { top: { type: v === '검정' ? '후드티' : '니트', color: v }, bottom: { type: '바지', color: v } }
   }
-  if (t.kind === 'pattern') return { top: { type: '셔츠', color: '하늘색', pattern: v }, bottom: { type: '바지', color: '회색' } }
+  if (t.kind === 'pattern') return { top: { type: '셔츠', color: '하늘색', pattern: v }, bottom: { type: '바지', color: '하늘색', pattern: v } }
   if (t.kind === 'type') {
     if (t.category === 'BOTTOM') return { top: { type: '반팔', color: '흰색' }, bottom: { type: v, color: '네이비' } }
     if (t.category === 'OUTER') return { top: { type: '긴팔', color: '흰색' }, bottom: { type: '바지', color: '검정' }, outer: { type: v, color: '베이지' } }
