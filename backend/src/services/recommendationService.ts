@@ -351,7 +351,6 @@ export function reliabilityOf(w: WindowForecast, now: Date): RecommendationBasis
     if (hours >= 9) notes.push(`예보가 ${hours}시간 전에 발표된 거라 조금 오래됐어요`)
   }
   if (w.usedMid) notes.push('일부 시간은 중기예보(하루 최저·최고 기온)로 계산해서 덜 정확해요')
-  else if (w.expectedCount > 0 && w.shortCount / w.expectedCount < 0.7) notes.push(`외출 시간 중 ${w.shortCount}/${w.expectedCount}시간 분량의 예보만 있어요`)
   return { level: notes.length ? 'CAUTION' : 'OK', notes }
 }
 

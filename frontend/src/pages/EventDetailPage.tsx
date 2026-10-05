@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Loading } from '../components/LoadingScene'
-import WakeScene from '../components/WakeScene'
+import CheckScene from '../components/CheckScene'
+import PastScene from '../components/PastScene'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
 import ActivityScore from '../components/ActivityScore'
@@ -153,13 +154,7 @@ export default function EventDetailPage() {
 
 function EventDetail({ id }: { id: string }) {
   const nav = useNavigate()
-  const justSaved = (useLocation().state as { saved?: 'created' | 'edited' } | null)?.saved
   const ev = useAsync(() => api<PlanEvent>('GET', `/api/events/${id}`))
-  const [examples, setExamples] = useState(false) // [예시로 보기]: 내 옷이 날씨에 부족할 때만 보인다
-  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit?examples=${examples ? 1 : 0}`).catch((e) => {
-    if (e instanceof ApiError && e.status === 404) return null
-    throw e
-  }), `${examples}`)
   const e = ev.data
 
   if (ev.loading) return <main><Loading kind="note" label="일정 펼치는 중…" /></main>
@@ -174,6 +169,42 @@ function EventDetail({ id }: { id: string }) {
       </main>
     )
   }
+  // 이미 끝난 일정은 예보를 받아오지 않고 안내만 보여준다
+  if (dDay(e.endDate && e.endDate >= e.startDate ? e.endDate : e.startDate) < 0) {
+    return (
+      <main>
+        <BackButton to="/events" label="일정 목록으로" />
+        <div className="page-head detail-head">
+          <div>
+            <h1>{e.title}</h1>
+            <p style={{ marginTop: 6 }}>
+              {formatRange(e)}
+              {e.place && <> · {e.place}</>}
+            </p>
+            <p className="tiny">
+              {e.startTime} ~ {e.endTime} · {e.kind}
+            </p>
+          </div>
+          <EventMenu event={e} onDeleted={() => nav('/events', { replace: true })} />
+        </div>
+        <div className="past-note">
+          <h2>이미 지난 일정이에요</h2>
+          <PastScene size={230} />
+        </div>
+      </main>
+    )
+  }
+  return <EventBody e={e} id={id} />
+}
+
+function EventBody({ e, id }: { e: PlanEvent; id: string }) {
+  const nav = useNavigate()
+  const justSaved = (useLocation().state as { saved?: 'created' | 'edited' } | null)?.saved
+  const [examples, setExamples] = useState(false) // [예시로 보기]: 내 옷이 날씨에 부족할 때만 보인다
+  const outfit = useAsync(() => api<EventOutfit>('GET', `/api/events/${id}/outfit?examples=${examples ? 1 : 0}`).catch((err) => {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }), `${examples}`)
 
   const rec = outfit.data?.status === 'ready' ? outfit.data.recommendation : null
   const waiting = !rec
@@ -224,10 +255,8 @@ function EventDetail({ id }: { id: string }) {
       <div className="box w1">
         <div className="row between">
           <div>
-            <h2>{checking ? '예보 확인하는 중…' : failed ? '불러오지 못했어요' : isActivity ? '야외활동이 적합한지 확인해보세요' : weatherShown ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
-            {checking ? (
-              <p>서버가 잠들어 있었다면 깨우는 중이에요. 잠깐만 기다려 주세요.</p>
-            ) : failed ? (
+            <h2>{checking ? '로딩중...' : failed ? '불러오지 못했어요' : isActivity ? '야외활동이 적합한지 확인해보세요' : weatherShown ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
+            {checking ? null : failed ? (
               <>
                 <p>{outfit.error}</p>
                 <p>예보가 없는 게 아니라 서버에서 못 받아왔어요.</p>
@@ -252,7 +281,7 @@ function EventDetail({ id }: { id: string }) {
               </>
             )}
           </div>
-          {checking ? <WakeScene size={130} /> : <StickPerson mood={eventMood(e.kind, waiting, e.title, e.place)} size={96} />}
+          {checking ? <CheckScene size={120} /> : <StickPerson mood={eventMood(e.kind, waiting, e.title, e.place)} size={96} />}
         </div>
       </div>
 

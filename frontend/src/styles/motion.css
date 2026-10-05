@@ -9,8 +9,6 @@
     animation: wx-spin 26s linear infinite;
   }
   .wx .wx-sunbody {
-    transform-box: fill-box;
-    transform-origin: center;
     animation: wx-breathe 3.4s ease-in-out infinite;
   }
   .wx .wx-pulse {
@@ -2291,4 +2289,57 @@
 /* 거울 유리도 다른 그림처럼 손으로 그은 듯 살짝 일렁이게 */
 .ls-glass {
   filter: url(#wobble);
+}
+
+/* 지난 일정 그림(PastScene): 들어올 때 한 번만 달력의 지난 장을 뜯는다. 움직임 줄이기에서는 뜯고 난 뒤 모습 그대로. */
+.past-scene .ps-sheet,
+.past-scene .ps-puff {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .past-scene .ps-sheet {
+    animation: ps-sheet 3.4s ease-in-out 0.3s 1 both;
+  }
+  .past-scene .ps-arm {
+    animation: ps-arm 3.4s ease-in-out 0.3s 1 both;
+  }
+  .past-scene .ps-puff {
+    animation: ps-puff 3.4s ease-out 0.3s 1 both;
+  }
+  .past-scene .ps-bit {
+    animation: ps-bit 3.4s ease-in 0.3s 1 both;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .past-scene .ps-b2 {
+    animation-delay: 0.45s;
+  }
+  .past-scene .ps-b3 {
+    animation-delay: 0.6s;
+  }
+}
+@keyframes ps-arm {
+  0% { transform: rotate(70deg); }
+  26% { transform: rotate(0deg); }
+  38% { transform: rotate(-3deg) translate(-2px, 2px); }
+  54% { transform: rotate(5deg) translate(-4px, 7px); }
+  64% { transform: rotate(2deg) translate(-1px, 2px); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes ps-sheet {
+  0%, 30% { opacity: 1; transform: none; }
+  46% { opacity: 1; transform: translate(-5px, 1px) rotate(-5deg) scale(1, 0.9); }
+  58% { opacity: 1; transform: translate(-12px, 6px) rotate(-14deg) scale(0.96, 0.62); }
+  82% { opacity: 1; transform: translate(-22px, 52px) rotate(-30deg) scale(0.8, 0.42); }
+  100% { opacity: 0; transform: translate(-28px, 84px) rotate(-52deg) scale(0.6, 0.3); }
+}
+@keyframes ps-puff {
+  0%, 44% { opacity: 0; transform: scale(0.6); }
+  54% { opacity: 1; transform: scale(1); }
+  74%, 100% { opacity: 0; transform: scale(1.15); }
+}
+@keyframes ps-bit {
+  0%, 52% { opacity: 0; transform: translateY(-40px); }
+  64% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
 }

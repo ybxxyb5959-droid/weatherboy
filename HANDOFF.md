@@ -109,6 +109,20 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 지난 일정 상세 안내(달력 뜯는 그림) + 일정 로딩 그림(클립보드 체크) + 신뢰도 문구 제거 (작성: Claude Code)
+- 수정 목적: 날짜가 지난 일정을 상세에서 열면 "날씨 대기중/예보가 열리면…"처럼 앞으로 예보가 열릴 것처럼 보이던 문제. 일정 상세 로딩이 모드와 상관없이 "서버 깨우는 중"으로 보이던 것 정리. 홈의 "외출 시간 중 3/5시간 분량의 예보만 있어요"는 사용자가 의미를 알기 어려워 제거.
+- 변경 파일:
+  - frontend/src/pages/EventDetailPage.tsx — 끝난 날짜(endDate ?? startDate < 오늘)면 /outfit 요청 없이 "이미 지난 일정이에요" + 그림만(박스 없이 가운데). 본문은 EventBody 로 분리. 로딩 문구는 "로딩중..." + CheckScene
+  - frontend/src/components/PastScene.tsx — 새 파일. 졸라맨이 달력의 지난 장을 뜯는 그림, 진입 시 한 번만 재생(CSS)
+  - frontend/src/components/CheckScene.tsx — 새 파일. 클립보드에 연필이 ✓ 하나씩(SMIL). 1초 안에 응답이 오면 다 체크된 정적 모습, 넘으면 움직임. 움직임 줄이기에서는 계속 정적
+  - frontend/src/styles/motion.css, global.css — .ps-*(지난 일정 애니메이션), .past-note
+  - backend/src/services/recommendationService.ts — reliabilityOf 에서 시간별 예보 부족 문구 제거(중기예보·저장 예보·오래된 예보 안내는 유지)
+  - backend/tests/integration/reliability.test.ts — 위 변경에 맞춰 수정
+- 프론트 연결 사항: 없음(목록 화면은 그대로, 지난 일정도 목록에 계속 보임)
+- 검증 결과: frontend tsc 통과, backend typecheck 통과. 브라우저에서 가짜 API 응답으로 지난 일정 화면과 로딩 그림 확인(애니메이션은 멈춘 장면만). 린트·빌드·백엔드 테스트는 못 함(테스트는 DB 필요).
+- 남은 일 / 상대에게 요청: WakeScene 은 앱 시작 스플래시에만 남음. 지난 일정의 "그날 입은 옷" 기록 표시는 안 함.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-05 옷장 사진 등록 가이드(처음 한 번 3장, 손그림) (작성: Claude Code)
 - 사용자 요청: 신규 가입자 사진 등록 가이드를 우리 디자인으로. 구성: ① 상의·하의 따로(선택 칩) ② 밝은 곳·겹치지 않게(걸린 옷 프레임) ③ 틀린 옷은 수정·체크 해제. 막지 않고 "건너뛰기" 가능, 본 뒤엔 `localStorage` `wb-closet-guide-seen` 로 기억, 화면의 "촬영 팁 보기"로 다시 봄.
 - 변경: 새 `components/ClosetGuide.tsx`, `ScanClosetPage.tsx`, `global.css`(.cg-*). 서버·AI 호출 변화 없음. 홈 빈 옷장 카드 문구 개선은 아직 안 함.

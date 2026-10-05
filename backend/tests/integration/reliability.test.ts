@@ -69,10 +69,8 @@ describe('예보 신뢰도 문구', () => {
   it('충분하고 최신이면 OK', () => {
     expect(reliabilityOf(base, now)).toEqual({ level: 'OK', notes: [] })
   })
-  it('시간별 예보가 일부만 있으면 부족하다고 알려준다', () => {
-    const r = reliabilityOf({ ...base, shortCount: 4 }, now)
-    expect(r.level).toBe('CAUTION')
-    expect(r.notes.join(' ')).toContain('4/10')
+  it('시간별 예보가 일부만 있어도 사용자에게 따로 알리지 않는다', () => {
+    expect(reliabilityOf({ ...base, shortCount: 4 }, now)).toEqual({ level: 'OK', notes: [] })
   })
   it('중기예보가 섞이면 덜 정확하다고 알려준다', () => {
     expect(reliabilityOf({ ...base, usedMid: true }, now).notes.join(' ')).toContain('중기예보')

@@ -5026,3 +5026,13 @@ dd,
     to { opacity: 1; transform: none; }
   }
 }
+
+/* 지난 일정 상세: 박스 없이 가운데에 문구와 그림만 */
+.past-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 36px;
+  text-align: center;
+}
