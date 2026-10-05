@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import HandText from '../components/HandText'
 import Toast, { useToast } from '../components/Toast'
@@ -7,6 +7,8 @@ import { eventMood, isSceneMood } from '../lib/eventMood'
 import EventMenu from '../components/EventMenu'
 import MonthCalendar, { type MonthView } from '../components/MonthCalendar'
 import StickPerson from '../components/StickPerson'
+import { EraserTool, FxBorder, PenTool } from '../components/NoteFx'
+import { clearEventFx, peekEventFx, type EventFx } from '../lib/eventFx'
 import { formatRange, statusLabel } from '../mocks/events'
 import type { PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
@@ -27,6 +29,47 @@ export default function EventsPage() {
   const monthEvents = events
     .filter((e) => e.startDate <= monthEnd && (e.endDate && e.endDate >= e.startDate ? e.endDate : e.startDate) >= monthStart)
     .sort((a, b) => (a.startDate + a.startTime).localeCompare(b.startDate + b.startTime))
+  // 방금 만들거나 고친 일정은 쪽지에 펜으로 쓰는(고친 건 지우개로 지우고 다시 쓰는) 연출로 나타난다. 잠깐 뒤에는 평소 카드로 돌아간다.
+  const [fx, setFx] = useState<Map<string, EventFx>>(() => peekEventFx())
+  const [fxReady, setFxReady] = useState(false) // 그 카드가 화면에 보이는 자리에 온 뒤에 연출을 시작한다
+  useEffect(() => {
+    clearEventFx()
+  }, [])
+  const fxFirst = [...fx.keys()][0]
+  const fxEvent = fxFirst ? events.find((x) => x.id === fxFirst) : undefined
+  useEffect(() => {
+    if (!fxEvent || fxReady) return
+    // 방금 만든 일정이 다른 달이면 그 달로 넘어가고, 목록 아래쪽이면 카드가 보이게 스크롤한 다음 연출을 시작한다
+    const y = Number(fxEvent.startDate.slice(0, 4))
+    const m = Number(fxEvent.startDate.slice(5, 7)) - 1
+    if (y !== view.y || m !== view.m) {
+      setView({ y, m })
+      return
+    }
+    const t = window.setTimeout(() => {
+      document.querySelector(`[data-ev="${fxEvent.id}"]`)?.scrollIntoView({ block: 'center' })
+      setFxReady(true)
+    }, 150)
+    return () => window.clearTimeout(t)
+  }, [fxEvent, fxReady, view])
+  useEffect(() => {
+    if (!fxReady) return
+    const t = window.setTimeout(() => {
+      setFx(new Map())
+      setFxReady(false)
+    }, 3200)
+    return () => window.clearTimeout(t)
+  }, [fxReady])
+  // 지운 일정은 구겨서 옆으로 던지는 연출을 보여준 뒤 목록을 다시 불러온다("움직임 줄이기"면 바로)
+  const [crumpling, setCrumpling] = useState<string | null>(null)
+  const crumple = (id: string) => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      reload()
+      return
+    }
+    setCrumpling(id)
+    window.setTimeout(reload, 900)
+  }
   const conns = useAsync(() => api<CalendarConn[]>('GET', '/api/calendar'))
   const [connecting, setConnecting] = useState(false)
   const [notice, setNotice] = useState('')
@@ -101,21 +144,37 @@ export default function EventsPage() {
         </div>
       )}
       <div className="col">
-        {monthEvents.map((e, i) => (
-          <div key={e.id} className="card-wrap">
-          <Link to={`/events/${e.id}`} className={`box card w${i % 4}`}>
-              <div className="row between">
-                <div>
-                  <div className="title">{e.title}{e.imported && <span className="tiny"> · 📅 연동</span>}</div>
-                  <div>{formatRange(e)}</div>
-                  <div className="tiny">{e.needsOutfit === false ? '날씨만 알려드려요' : statusLabel[e.status]}</div>
+        {monthEvents.map((e, i) => {
+          const f = fx.get(e.id)
+          return (
+            <div key={e.id} data-ev={e.id} className={`card-wrap${f ? ' fx-new' : ''}${crumpling === e.id ? ' fx-crumple' : ''}`}>
+              <Link to={`/events/${e.id}`} className={`box card note w${i % 4}${f ? (fxReady ? ` fx-${f.kind}` : ' fx-wait') : ''}`}>
+                {f?.kind === 'created' && <FxBorder />}
+                <div className="row between">
+                  <div className="fx-wrap">
+                    {f?.kind === 'edited' && (
+                      <div className="fx-old" aria-hidden="true">
+                        <div className="title">{f.oldTitle}</div>
+                        <div>{f.oldRange}</div>
+                      </div>
+                    )}
+                    <div className="fx-write">
+                      <div className="title">{e.title}{e.imported && <span className="tiny"> · 📅 연동</span>}</div>
+                      <div>{formatRange(e)}</div>
+                    </div>
+                    <div className="tiny fx-late">{e.needsOutfit === false ? '날씨만 알려드려요' : statusLabel[e.status]}</div>
+                    {f?.kind === 'edited' && <EraserTool />}
+                    {f && <PenTool />}
+                  </div>
+                  <div className="fx-late">
+                    <StickPerson mood={eventMood(e.kind, e.status === 'waiting', e.title, e.place)} size={isSceneMood(eventMood(e.kind, false, e.title, e.place)) ? 84 : 64} />
+                  </div>
                 </div>
-                <StickPerson mood={eventMood(e.kind, e.status === 'waiting', e.title, e.place)} size={isSceneMood(eventMood(e.kind, false, e.title, e.place)) ? 84 : 64} />
-              </div>
-            </Link>
-            <EventMenu event={e} onDeleted={reload} />
-          </div>
-        ))}
+              </Link>
+              <EventMenu event={e} onDeleted={() => crumple(e.id)} />
+            </div>
+          )
+        })}
       </div>
       </div>
 

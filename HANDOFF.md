@@ -109,6 +109,65 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 로그인 화면 졸라맨 그리기 + 터치하면 잘못 그려 지우고 다시 그리기, 약관 링크 정리, 소개 3컷 설명 문구 (작성: Claude Code)
+- 수정 목적(사용자 요청): 로그인(`/start`) 화면도 소개 페이지처럼 졸라맨을 그리는 애니메이션으로. 그리는 중에 터치하면 펜을 건드려 선이 삐져나가고, 지우개로 지운 뒤 그 획을 다시 그림. 게스트 로그인 아래 문구는 `이용약관 • 개인정보 처리방침` 링크만. 소개 3컷 설명 문구 변경.
+- 변경 파일:
+  - `frontend/src/components/GreetingFigure.tsx` — `oops` prop 추가. 터치(pointerdown) 시 현재 긋는 획 끝에서 삐져나온 선(0.22s) → 펜 떨림(0.5s) → 지우개로 선과 그 획을 처음까지 지움(0.7s) → 그 획부터 다시 그림. 한 번 그리는 동안 최대 3번, 점·색칠 단계는 다음 획에서 반응. `oops` 가 없으면(소개 페이지) 기존처럼 터치하면 바로 완성
+  - `frontend/src/pages/IntroPage.tsx` — `IntroFigure` 대신 `GreetingFigure oops`, 동의 문구("시작하면 동의한 것으로 봐요. 만 14세 이상…") 대신 약관·처리방침 링크만
+  - `frontend/src/components/comic/HowToComic.tsx` — 3컷 설명 "일정을 등록하고 정보를 확인 할 수 있어요."
+- 프론트 연결 사항: 없음.
+- 검증 결과: frontend tsc 통과, lint 기존 경고만. 소개 페이지에 잠깐 `oops` 를 붙여 삐져나온 선·지우개·다시 그리기가 도는 것은 확인(원복함). 실제 `/start` 화면은 로그인 상태라 못 봄.
+- 남은 일 / 상대에게 요청: 만 14세 이상 안내 문구를 로그인 화면에서 뺐음 — 법적으로 필요하면 다시 넣을 것. `IntroFigure.tsx` 는 이제 로그인 화면에서 안 쓰임(`FigureBody` 다른 곳 사용 여부 확인 후 정리 가능).
+- 적용한 규칙 번호: A-2
+
+### 2026-10-05 일정 카드 쪽지 연출: 펜으로 쓰기 / 지우개로 지우고 다시 쓰기 / 구겨서 던지기 (작성: Claude Code)
+- 수정 목적(사용자 아이디어): 새 일정은 일정 탭에서 펜으로 슥삭슥삭 나타나고, 고쳐서 저장하면 지우개로 지웠다가 다시 펜으로 쓰고, 지우면 구겨서 옆으로 던진다. "한번에 다 해보자"로 세 가지를 함께 구현. 일정 **목록 카드**를 테이프 붙인 쪽지 모양으로 바꿈(등록·편집 화면 자체를 노트로 바꾸는 것은 안 함).
+- 변경 파일:
+  - `frontend/src/lib/eventFx.ts`(신규) — 저장 화면이 일정 탭에 "어떤 카드를 어떻게 보여줄지"를 잠깐 적어 두는 보관함(`markEventFx`/`peekEventFx`/`clearEventFx`)
+  - `frontend/src/components/NoteFx.tsx`(신규) — `FxBorder`(테두리를 그리는 펜 선), `PenTool`, `EraserTool`
+  - `frontend/src/pages/NewEventPage.tsx` — 등록 저장 시 `created`, 수정 저장 시 `edited`(옛 제목·기간 포함)를 기록
+  - `frontend/src/pages/EventsPage.tsx` — 해당 카드에 `fx-*` 클래스(4초 뒤 평소 카드로), 삭제는 구기는 연출 0.9초 뒤 목록 다시 불러오기
+  - `frontend/src/styles/motion.css` — 쪽지 카드(테이프), 연출. 전부 `prefers-reduced-motion: no-preference` 안(움직임 줄이기면 연출 없이 바로 보임, 삭제도 바로)
+- 보완(같은 날, 사용자 제보 "일정 보기로 돌아갔는데 슥삭 효과가 없다"): 새 일정이 **다른 달이거나 목록 아래쪽**이라 연출이 화면 밖에서 끝났을 가능성 → 일정 탭이 그 일정의 달로 넘어가고 카드가 보이게 스크롤한 **뒤에** 연출을 시작(`fxReady`), 그 전에는 카드를 숨김(`.fx-wait`). 연출 정리 타이머도 시작 시점부터 3.2초로 변경(예전엔 화면에 들어온 직후 4초라 느린 서버에서 먼저 끝날 수 있었음).
+- 프론트 연결 사항: 없음.
+- 검증 결과: frontend tsc/build 통과, lint 기존 경고만. **실제 움직임은 못 봄**(로그인·일정 필요) — 일정을 등록·수정·삭제해 보며 타이밍(테두리 0.85s → 글씨 0.8~1.7s, 지우개 0.7s) 확인 필요.
+- 남은 일 / 상대에게 요청: 글씨는 폰트라 획을 따라 쓸 수 없어 "왼쪽에서 오른쪽으로 드러나며 펜이 따라가는" 방식. 구겨짐은 찌그러짐·회전으로 흉내(진짜 접힘 아님). 목록 카드가 많은 저사양 폰에서는 연출 카드가 한 장이라 영향은 작을 것. 상세 화면에서 지우는 경우는 연출 없음. 커밋 안 함.
+- 적용한 규칙 번호: A-1, A-2, A-3(연출은 약 1.7초로 길어짐: 필요하면 줄일 것), D-17
+
+### 2026-10-05 일정 장소 필수(화면) + 소개 만화 3컷을 장소·날씨 흐름으로 수정 (작성: Claude Code)
+- 수정 목적(사용자 결정): 장소를 안 적으면 다른 지역 날씨를 보게 되는 문제를 줄이려고 일정 등록·수정에서 장소를 필수로. 소개 페이지 "이렇게 사용해보세요" 3컷(면접 일정 → 단정하게)을 장소와 날씨 기준 흐름으로 바꿈.
+- 변경 파일:
+  - `frontend/src/pages/NewEventPage.tsx` — 저장 때 장소가 비면 "장소도 꼭 적어줘…" 안내, 라벨 "장소 (필수)"
+  - `frontend/src/pages/EventDetailPage.tsx`, `mocks/events.ts` — 장소 위치를 못 찾았으면(`locationResolved === false`) 헤더에 "…의 위치를 찾지 못해서 내 기본 지역 날씨로 보여드려요" 안내
+  - `frontend/src/components/comic/HowToComic.tsx` — 3컷: 달력에 장소 핀, "제주 여행 · 제주" → "뭐 입지…?" → 해 그림 + 하늘색 긴팔·베이지 바지 코디 "제주 날씨 맞춤!", 설명 "일정과 장소를 넣고 "뭐 입지?" 하면, 그곳 날씨에 맞게 골라줘요."
+- 프론트 연결 사항: 없음(일정 응답의 `locationResolved` 는 기존 필드).
+- 검증 결과: frontend tsc/build 통과. 만화 그림·화면 직접 확인은 못 함.
+- 남은 일 / 상대에게 요청: **서버(`POST /api/events`)는 장소를 아직 필수로 하지 않음** — 캘린더에서 가져온 일정은 장소가 없을 수 있고, 통합 테스트 다수가 장소 없이 일정을 만들기 때문. 서버에서도 막으려면 테스트 수정 필요. 장소를 적었는데 위치를 못 찾는 경우의 대체(기본 지역)는 안내만 하고 막지는 않음. 커밋 안 함.
+- 적용한 규칙 번호: D-9, D-17
+
+### 2026-10-05 일정 "코디 필요" 체크박스: 옷차림이 필요 없는 일정은 그날 날씨만 보여줌 (작성: Claude Code)
+- 수정 목적(사용자 결정): 일정 등록·수정에 "코디 필요" 낙서 체크박스. 여행·캠핑·등산·야외활동은 처음부터 체크(종류를 바꾸면 다시 체크). **기타는 체크박스 없이 항상 날씨만** 보여줌. 체크를 풀거나 기타면 일정 상세에서 옷차림 카드·코디 도우미·날짜별 코디를 모두 숨기고 그날 날씨만 표시.
+- 변경 파일:
+  - `backend/prisma/schema.prisma`, `prisma/migrations/20261005090000_event_needs_outfit/` — `Event.needsOutfit Boolean @default(true)` (기존 일정은 모두 true, 기타 종류는 코드에서 항상 날씨만)
+  - `backend/src/services/recommendationService.ts` — `outfitWanted(e)`(= 기타 아님 && needsOutfit)
+  - `backend/src/api/routes/events.ts` — 생성/수정 본문 `needsOutfit`(생략=true). `GET /:id/outfit` 은 옷차림이 필요 없으면 추천을 만들거나 저장하지 않고 `status: 'weather_only'` + `weather` 만 응답
+  - `backend/src/services/serializers.ts` — 일정 응답에 `needsOutfit`(기타는 항상 false)
+  - `backend/src/jobs/eventForecastJob.ts` — 기타·옷차림 불필요 일정은 예보 점검(추천 저장·푸시)에서 제외
+  - `backend/tests/unit/outfitWanted.test.ts`(신규 3개)
+  - `frontend/src/pages/NewEventPage.tsx`(체크박스 `DoodleCheck` "코디 필요", 종류 바꾸면 다시 체크), `EventDetailPage.tsx`(날씨만 보기), `EventsPage.tsx`(목록 문구 "날씨만 알려드려요"), `mocks/events.ts`(`needsOutfit`, `outfitKinds`), `types.ts`(`EventOutfit.status` 에 `weather_only`)
+- 프론트 연결 사항: `POST/PATCH /api/events` 본문 `needsOutfit`(boolean, 선택), 일정 응답 `needsOutfit`, `GET /api/events/:id/outfit` 응답 `status: 'weather_only'` 추가(이때 `recommendation: null`, `days: []`).
+- 검증 결과: backend typecheck/lint, 단위 테스트 497개 통과(마이그레이션은 로컬 DB 에만 적용). frontend tsc/build 통과. 통합 테스트·화면 직접 확인은 못 함.
+- 남은 일 / 상대에게 요청: **배포(Render) 때 마이그레이션이 적용되는지 확인**(`migrate deploy`; 컬럼 기본값이 true 라 안전). 기타 일정에서도 코디 도우미 API(`/api/ai/event-stylist`)는 서버에서 막지 않음(화면에서만 숨김). 이미 푸시가 간 기타 일정의 알림 기준은 그대로. 커밋 안 함.
+- 적용한 규칙 번호: D-9, D-17
+
+### 2026-10-05 일정 ⋯ 메뉴(편집·삭제) 위치 어긋남 수정 (작성: Claude Code)
+- 수정 목적: 일정 카드의 ⋯ 메뉴가 `position: fixed` 로 버튼 좌표에 띄우는데, 화면 등장 애니메이션(`.page-in`, `.rise`, 일정 카드 차례로)이 `animation-fill-mode: both` 라 끝난 뒤에도 transform 효과가 남아 조상이 fixed 의 기준(containing block)이 돼 메뉴가 엉뚱한 곳에 떴다.
+- 변경 파일: `frontend/src/styles/motion.css` — 등장 애니메이션 5곳을 `both` → `backwards`(시작 전 상태만 적용, 끝나면 효과가 남지 않음)
+- 프론트 연결 사항: 없음.
+- 검증 결과: tsc 통과. 화면에서 메뉴 위치를 직접 확인하지는 못함(로그인 필요) — 새로고침 후 확인 필요.
+- 남은 일 / 상대에게 요청: 앞으로 transform 을 쓰는 등장 애니메이션은 `both`/`forwards` 를 쓰지 말 것(fixed 자식 위치가 어긋남). 커밋 안 함.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-05 일정 옷 추천 3단계: 정장 예시는 [예시로 보기]만, 바꾼 코디는 보온 재검증 + 부팅 화면 디자인 통일 (작성: Claude Code, 설계 검토: Codex)
 - 수정 목적: 정장·원하는 옷 예시로 바꾼 코디가 날씨 보온을 채우는지 다시 세지 않아(5°C 후드티·바지·패딩 보온 11 → 정장 예시 6.5) 설명이 맞지 않던 문제. 예시는 기본 추천에 자동으로 섞지 않고, 내 옷이 날씨에 부족할 때만 눌러서 본다.
 - 변경 파일:

@@ -66,6 +66,30 @@ function Pen() {
   )
 }
 
+/** 지우개: 끝이 (0,0), 펜과 같은 각도 */
+function Eraser() {
+  return (
+    <g transform="rotate(30)" strokeLinejoin="round" strokeLinecap="round">
+      <rect x="-4.6" y="-11" width="9.2" height="11" rx="2.2" fill="#f2a7b0" stroke="#222" strokeWidth="1.5" />
+      <rect x="-4.6" y="-30" width="9.2" height="19" rx="2" fill="#fcfcfa" stroke="#222" strokeWidth="1.5" />
+    </g>
+  )
+}
+
+// 터치로 펜을 건드렸을 때: 선이 삐져나가고(STRAY) 잠깐 멈췄다가(PAUSE) 지우개로 지운 뒤(ERASE) 그 획을 처음부터 다시 그린다
+const STRAY = 0.22
+const PAUSE = 0.5
+const ERASE = 0.7
+const MAX_OOPS = 3
+
+interface Oops {
+  t0: number // 실제 시각(초)
+  frozen: number // 멈춘 그림 시각
+  step: number
+  u: number
+  len: number // 삐져나온 선의 길이
+}
+
 interface PlanStep {
   def: StepDef
   el: SVGGeometryElement
@@ -77,13 +101,16 @@ interface PlanStep {
 }
 
 /** onProgress: 그리는 진행률(0~1). 펜이 들어와 마지막 획을 마칠 때까지 오르고, 건너뛰거나 다 그리면 1 (글을 그리는 속도에 맞춰 타이핑할 때 쓴다) */
-export default function GreetingFigure({ size = 220, onProgress }: { size?: number; onProgress?: (p: number) => void }) {
+export default function GreetingFigure({ size = 220, onProgress, oops = false }: { size?: number; onProgress?: (p: number) => void; oops?: boolean }) {
   const uid = useId().replace(/:/g, '')
   const [reduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [done, setDone] = useState(reduced)
   const els = useRef<Record<string, SVGGeometryElement | null>>({})
   const penRef = useRef<SVGGElement>(null)
+  const strayRef = useRef<SVGPathElement>(null)
+  const eraserRef = useRef<SVGGElement>(null)
   const skip = useRef<() => void>(() => undefined)
+  const bump = useRef<() => void>(() => undefined)
   const progressRef = useRef(onProgress)
   useEffect(() => {
     progressRef.current = onProgress
@@ -198,11 +225,96 @@ export default function GreetingFigure({ size = 220, onProgress }: { size?: numb
     let raf = 0
     let stopped = false
     const t0 = performance.now()
+
+    // 터치로 건드린 순간: 지금 긋는 획 끝에서 선이 삐져나가게 하고, 그림 시간은 멈춘다
+    const stray = strayRef.current
+    const eraser = eraserRef.current
+    let shift = 0 // 실제 시간 - 그림 시간 (다시 그릴 때 그림 시간을 획 시작으로 되돌린다)
+    let pending = false
+    let count = 0
+    let oopsState: Oops | null = null
+    const setEraser = (x: number, y: number, opacity: number) => {
+      eraser?.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`)
+      eraser?.setAttribute('opacity', String(opacity))
+    }
+    const startOops = (real: number, time: number) => {
+      if (!stray) return false
+      let idx = 0
+      for (let i = 0; i < plan.length; i++) if (plan[i]!.begin <= time) idx = i
+      const s = plan[idx]!
+      if (s.def.kind !== 'stroke') return false
+      const u = clamp01((time - s.begin) / s.dur)
+      if (u < 0.12 || u > 0.9) return false
+      const at = s.len * easeSine(u)
+      const p = s.el.getPointAtLength(at)
+      const back = s.el.getPointAtLength(Math.max(0, at - 4))
+      const ang = Math.atan2(p.y - back.y, p.x - back.x) + (count % 2 === 0 ? 1 : -1) * (0.9 + Math.random() * 0.5)
+      const reach = 24 + Math.random() * 8
+      const ex = p.x + Math.cos(ang) * reach
+      const ey = p.y + Math.sin(ang) * reach
+      const cx = p.x + Math.cos(ang - 0.5) * reach * 0.55
+      const cy = p.y + Math.sin(ang - 0.5) * reach * 0.55
+      stray.setAttribute('d', `M${p.x.toFixed(2)} ${p.y.toFixed(2)} Q${cx.toFixed(2)} ${cy.toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)}`)
+      const len = stray.getTotalLength()
+      stray.style.strokeDasharray = `${len} ${len * 3}`
+      stray.style.strokeDashoffset = `${len}`
+      stray.setAttribute('opacity', '1')
+      oopsState = { t0: real, frozen: time, step: idx, u, len }
+      count++
+      return true
+    }
+    const runOops = (real: number, o: Oops) => {
+      const s = plan[o.step]!
+      const mt = real - o.t0
+      apply(o.frozen)
+      if (mt < STRAY + PAUSE) {
+        const k = easeOut(clamp01(mt / STRAY))
+        stray!.style.strokeDashoffset = `${o.len * (1 - k)}`
+        const p = stray!.getPointAtLength(o.len * k)
+        const shake = mt > STRAY ? Math.sin(mt * 55) * 0.7 : 0
+        setPen(p.x + shake, p.y, 1)
+        return
+      }
+      const e = clamp01((mt - STRAY - PAUSE) / ERASE)
+      const e1 = clamp01(e / 0.4) // 삐져나온 선을 먼저 지우고
+      const e2 = clamp01((e - 0.4) / 0.6) // 그리던 획을 처음까지 지운다
+      pen?.setAttribute('opacity', '0')
+      let pos: { x: number; y: number }
+      if (e2 <= 0) {
+        stray!.style.strokeDashoffset = `${o.len * easeSine(e1)}`
+        pos = stray!.getPointAtLength(o.len * (1 - easeSine(e1)))
+      } else {
+        stray!.setAttribute('opacity', '0')
+        const keep = o.u * (1 - easeSine(e2))
+        s.el.style.strokeDashoffset = `${s.len * (1 - easeSine(keep))}`
+        pos = s.el.getPointAtLength(s.len * easeSine(keep))
+      }
+      setEraser(pos.x + Math.sin(mt * 50) * 0.8, pos.y, 1)
+    }
     const tick = (now: number) => {
       if (stopped) return
-      const time = (now - t0) / 1000
+      const real = (now - t0) / 1000
+      if (oopsState) {
+        if (real - oopsState.t0 >= STRAY + PAUSE + ERASE) {
+          shift = real - plan[oopsState.step]!.begin // 그 획을 처음부터 다시 그린다
+          oopsState = null
+          stray?.setAttribute('opacity', '0')
+          setEraser(0, 0, 0)
+        } else {
+          runOops(real, oopsState)
+          raf = requestAnimationFrame(tick)
+          return
+        }
+      }
+      const time = real - shift
       if (time >= total) {
         setDone(true)
+        return
+      }
+      if (pending && startOops(real, time)) {
+        pending = false
+        runOops(real, oopsState!)
+        raf = requestAnimationFrame(tick)
         return
       }
       apply(time)
@@ -211,6 +323,9 @@ export default function GreetingFigure({ size = 220, onProgress }: { size?: numb
     }
     raf = requestAnimationFrame(tick)
     skip.current = () => setDone(true)
+    bump.current = () => {
+      if (!oopsState && count < MAX_OOPS) pending = true
+    }
     return () => {
       stopped = true
       cancelAnimationFrame(raf)
@@ -219,6 +334,8 @@ export default function GreetingFigure({ size = 220, onProgress }: { size?: numb
 
   // 그리는 중에 누르면 바로 완성
   const finish = () => skip.current()
+  // oops 모드: 누르면 펜을 건드려 선이 삐져나가고, 지우고 다시 그린다
+  const touch = oops ? () => bump.current() : finish
 
   if (done) {
     return (
@@ -240,11 +357,15 @@ export default function GreetingFigure({ size = 220, onProgress }: { size?: numb
   }
 
   return (
-    <svg className="doodle greeting-figure" width={size} height={size * 1.15} {...figureSvgProps} onClick={finish}>
+    <svg className="doodle greeting-figure" width={size} height={size * 1.15} {...figureSvgProps} onPointerDown={touch}>
       <FigureArt pose={POSE_A} id={`${uid}a`} reg={reg} />
       <g transform="translate(10 0)">
+        <path ref={strayRef} d="M0 0" opacity="0" />
         <g ref={penRef} opacity="0">
           <Pen />
+        </g>
+        <g ref={eraserRef} opacity="0">
+          <Eraser />
         </g>
       </g>
     </svg>

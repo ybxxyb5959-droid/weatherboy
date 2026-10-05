@@ -800,3 +800,212 @@
 .wx-preview .wx-amb {
   inset: 0;
 }
+
+/* ---------- 일정 쪽지 카드: 테이프 붙인 메모지 + 펜으로 쓰기 / 지우개 / 구겨 버리기 ----------
+   연출 도구(.fx-*)는 평소엔 숨어 있고, 아래 "움직임 줄이기 아님" 블록에서만 보이고 움직인다. */
+.events-list .box.card.note {
+  background: var(--paper);
+}
+.events-list .box.card.note::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 18%;
+  width: 52px;
+  height: 15px;
+  background: rgba(34, 34, 34, 0.06);
+  border: 1.2px solid rgba(34, 34, 34, 0.28);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+.events-list .card-wrap:nth-child(2n) .box.card.note::before {
+  left: auto;
+  right: 22%;
+  transform: rotate(3deg);
+}
+.fx-wrap {
+  position: relative;
+}
+.fx-old,
+.fx-tool,
+.fx-border {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .events-list .card-wrap.fx-new {
+    animation: none;
+  }
+  .fx-old {
+    display: block;
+    position: absolute;
+    inset: 0;
+    white-space: nowrap;
+    z-index: 1;
+    animation: fx-erase 0.7s steps(14, end) forwards;
+  }
+  .fx-tool {
+    display: block;
+    position: absolute;
+    top: -4px;
+    left: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .fx-border {
+    display: block;
+    position: absolute;
+    inset: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    pointer-events: none;
+    stroke-dasharray: 1;
+    z-index: 2;
+  }
+  .fx-border path {
+    stroke-dasharray: 1;
+    animation: fx-border-draw 0.85s ease-out both;
+  }
+
+  /* 새 일정: 테두리를 펜으로 그린 뒤, 제목·날짜를 슥삭슥삭 쓴다 */
+  .fx-created {
+    animation: fx-hide-border 0.85s backwards;
+  }
+  .fx-created::after,
+  .fx-created::before {
+    animation: fx-hide-border 0.85s backwards;
+  }
+  .fx-created .fx-write {
+    animation: fx-write 0.9s steps(16, end) 0.8s backwards;
+  }
+  .fx-created .fx-pen {
+    animation: fx-pen-move 0.9s linear 0.8s both;
+  }
+  .fx-created .fx-late {
+    animation: fx-fade-in 0.4s ease-out 1.6s backwards;
+  }
+
+  /* 고친 일정: 지우개로 옛 글씨를 쓸어 지우고, 새 글씨를 펜으로 다시 쓴다 */
+  .fx-edited .fx-write {
+    animation: fx-write 0.9s steps(16, end) 0.8s backwards;
+  }
+  .fx-edited .fx-eraser {
+    animation: fx-pen-move 0.7s linear both;
+  }
+  .fx-edited .fx-pen {
+    animation: fx-pen-move 0.9s linear 0.8s both;
+  }
+  .fx-edited .fx-late {
+    animation: fx-fade-in 0.4s ease-out 1.6s backwards;
+  }
+
+  .fx-late {
+    /* 연출이 없는 카드는 그대로 */
+  }
+
+  @keyframes fx-hide-border {
+    from,
+    to {
+      border-color: transparent;
+    }
+  }
+  @keyframes fx-border-draw {
+    from {
+      stroke-dashoffset: 1;
+      opacity: 1;
+    }
+    85% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+      opacity: 0;
+    }
+  }
+  @keyframes fx-write {
+    from {
+      clip-path: inset(-6px 100% -6px -6px);
+    }
+    to {
+      clip-path: inset(-6px -6px -6px -6px);
+    }
+  }
+  @keyframes fx-erase {
+    from {
+      clip-path: inset(-6px 0 -6px 0);
+    }
+    to {
+      clip-path: inset(-6px 0 -6px 100%);
+    }
+  }
+  /* 도구가 글씨 줄을 왼쪽에서 오른쪽으로 지나가며, 살짝 까딱거린다. 끝나면 사라진다 */
+  @keyframes fx-pen-move {
+    0% {
+      left: 0;
+      opacity: 1;
+      transform: translateY(0) rotate(-8deg);
+    }
+    25% {
+      transform: translateY(5px) rotate(4deg);
+    }
+    50% {
+      transform: translateY(-2px) rotate(-6deg);
+    }
+    75% {
+      transform: translateY(5px) rotate(4deg);
+    }
+    96% {
+      left: calc(100% - 20px);
+      opacity: 1;
+    }
+    100% {
+      left: calc(100% - 20px);
+      opacity: 0;
+      transform: translateY(0) rotate(0deg);
+    }
+  }
+  @keyframes fx-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* 삭제: 종이를 구겨서(작고 찌그러지며) 옆으로 휙 던진다 */
+  .card-wrap.fx-crumple {
+    animation: fx-crumple 0.9s cubic-bezier(0.5, 0, 0.8, 0.5) forwards;
+    pointer-events: none;
+  }
+  @keyframes fx-crumple {
+    0% {
+      transform: none;
+      opacity: 1;
+    }
+    22% {
+      transform: scale(0.95, 0.9) rotate(-2deg) skewX(2deg);
+    }
+    45% {
+      transform: scale(0.62, 0.5) rotate(7deg) skewX(-9deg);
+      opacity: 1;
+    }
+    62% {
+      transform: scale(0.42, 0.4) rotate(-12deg) skewX(6deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(120%, -30px) scale(0.3) rotate(200deg);
+      opacity: 0;
+    }
+  }
+}
+
+/* 연출 시작 전(카드가 보이는 자리에 오기 전)에는 미리 보이지 않게 숨겨 둔다 */
+@media (prefers-reduced-motion: no-preference) {
+  .fx-wait {
+    opacity: 0;
+  }
+}

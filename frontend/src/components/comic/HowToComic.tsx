@@ -220,7 +220,7 @@ const PANELS: PanelDef[] = [
   },
   {
     scene: <Scene3 />,
-    caption: '일정과 장소를 넣고 "뭐 입지?" 하면, 그곳 날씨에 맞게 골라줘요.',
+    caption: '일정을 등록하고 정보를 확인 할 수 있어요.',
     bubbles: [
       { text: '제주 여행 · 제주', x: 2, y: 74, tone: 'w2' },
       { text: '뭐 입지…?', x: 44, y: 62, tone: 'w1' },

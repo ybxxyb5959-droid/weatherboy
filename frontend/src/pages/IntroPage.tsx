@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import IntroFigure from '../components/IntroFigure'
+import GreetingFigure from '../components/GreetingFigure'
 import { errorMessage } from '../api'
 import { useAuth } from '../auth'
 import HandText from '../components/HandText'
@@ -57,7 +57,7 @@ export default function IntroPage() {
         <h1 className="hello">
           <HandText>뭐입을옷?</HandText>
         </h1>
-        <IntroFigure size={200} />
+        <GreetingFigure size={200} oops />
       </div>
 
       <div className="login-list ready">
@@ -67,7 +67,9 @@ export default function IntroPage() {
         </button>
         {error && <p className="tiny" role="alert">{error}</p>}
         <p className="tiny consent-note">
-          시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의한 것으로 봐요. 만 14세 이상만 쓸 수 있어요.
+          <Link to="/terms">이용약관</Link>
+          <span aria-hidden="true"> • </span>
+          <Link to="/privacy">개인정보 처리방침</Link>
         </p>
       </div>
 

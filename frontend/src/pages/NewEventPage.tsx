@@ -5,7 +5,8 @@ import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import DatePicker from '../components/DatePicker'
 import TimePicker from '../components/TimePicker'
 import SayBox from '../components/SayBox'
-import { eventKinds, outfitKinds } from '../mocks/events'
+import { eventKinds, formatRange, outfitKinds } from '../mocks/events'
+import { markEventFx } from '../lib/eventFx'
 import DoodleCheck from '../components/DoodleCheck'
 import type { EventKind, PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
@@ -154,10 +155,12 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       if (event) {
         // 수정할 때는 끝나는 날을 항상 보낸다 (며칠짜리를 당일로 줄이는 경우도 반영되도록)
         const saved = await api<PlanEvent>('PATCH', `/api/events/${event.id}`, { ...body, endDate: multi && endDate > date ? endDate : date })
+        markEventFx(saved.id, { kind: 'edited', oldTitle: event.title, oldRange: formatRange(event) }) // 일정 탭에서 지우개로 지우고 다시 쓰는 연출
         nav(`/events/${saved.id}`, { replace: true, state: { saved: 'edited' } })
         return
       }
       const created = await api<PlanEvent>('POST', '/api/events', body)
+      markEventFx(created.id, { kind: 'created' }) // 일정 탭에서 쪽지에 펜으로 쓰는 연출
       // replace: 뒤로 가기를 눌렀을 때 방금 작성한 등록 화면이 아니라 일정 목록으로 가게 한다
       nav(`/events/${created.id}`, { replace: true, state: { saved: 'created' } })
     } catch (e) {
