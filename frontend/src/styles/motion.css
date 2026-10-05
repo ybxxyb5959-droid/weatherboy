@@ -2351,6 +2351,12 @@
 .act-sun .sb-set-in {
   transform: translateY(20px);
 }
+.act-sun .sb-light-out {
+  opacity: 0.5;
+}
+.act-sun .sb-fx-out {
+  opacity: 0;
+}
 @media (prefers-reduced-motion: no-preference) {
   .act-sun .sb-ray {
     animation: sb-ray 3.2s ease-in-out var(--d, 0s) infinite;
@@ -2360,6 +2366,18 @@
   }
   .act-sun .sb-set-in {
     animation: sb-set 5s ease-in both;
+  }
+  .act-sun .sb-fx-in {
+    animation: sb-light-in 3.2s ease-in-out both;
+  }
+  .act-sun .sb-fx-out {
+    animation: sb-light-out 3.2s ease-in-out both;
+  }
+  .act-sun .sb-light-in {
+    animation: sb-light-in 4s ease-out var(--d, 0s) both;
+  }
+  .act-sun .sb-light-out {
+    animation: sb-light-out 4s ease-in var(--d, 0s) both;
   }
   .act-sun .sb-moon-in {
     animation: sb-moon 3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
@@ -2380,4 +2398,12 @@
 @keyframes sb-moon {
   from { opacity: 0; transform: translateY(26px) scale(0.6) rotate(-25deg); }
   to { opacity: 1; transform: none; }
+}
+@keyframes sb-light-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sb-light-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }

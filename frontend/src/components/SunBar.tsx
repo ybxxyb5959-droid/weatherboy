@@ -48,6 +48,7 @@ const BUILDINGS = [
 ] as const
 // 오후 햇빛이 땅에 닿는 자리와 굵기
 const BEAMS = [210, 150, 128, 104, 82, 58, 34] as const
+const BEAMS_RISE = [60, 92, 122, 152, 182, 214, 238] as const // 해가 왼쪽에서 뜰 때 빛이 닿는 자리
 const BEAM_HALF = 7
 const WINDOWS = 'M34 32 l.1 0 M34 42 l.1 0 M62 24 l.1 0 M62 36 l.1 0 M62 48 l.1 0 M76 40 l.1 0 M104 34 l.1 0 M104 46 l.1 0 M135 42 l.1 0 M163 46 l.1 0 M220 36 l.1 0 M220 48 l.1 0 M235 50 l.1 0 M20 48 l.1 0'
 
@@ -79,6 +80,8 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
   let rising = false
   let dusk = 0 // 0..1: 일몰 30분 전 -> 일몰. 0 이면 노을 전이다
   let setting = false
+  let morning = false // 일출 후 5~8분: 일출 장면이 사라지고 낮 그림이 나타난다(한 번 교차)
+  let duskIn = false // 노을 시작 첫 3분: 낮 그림이 사라지고 노을 장면이 나타난다
   let status = ''
   // 하루 종일 일정(00:00~23:59)은 시간대가 없으니 그냥 낮 그림
   const timed = eventTime && !(toMin(eventTime.start) <= 0 && toMin(eventTime.end) >= 23 * 60)
@@ -105,8 +108,13 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
       status = kst ? '오늘은 해가 졌어요' : `일몰 후 일정이에요 · 일몰 ${set}`
     } else {
       t = (m - r) / len
+      if (kst && m < r + 8) {
+        morning = true
+        rising = true
+      }
       if (kst && m >= s - 30) {
         dusk = Math.max(0.05, (m - (s - 30)) / 30)
+        duskIn = m < s - 27
         status = `곧${SP}해가 져요 · 일몰 ${set}`
       } else {
         status = kst
@@ -129,6 +137,11 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
       : dusk > 0
       ? [SET_POS[0], ay * (1 - dusk) + SET_POS[1] * dusk]
       : [ax, ay]
+  const riseAnim = rising && !morning
+  const dayLayer = (!night && !rising && !setting && dusk === 0) || morning || duskIn
+  const sceneFx = morning ? 'sb-fx-out' : duskIn ? 'sb-fx-in' : undefined
+  const dayFx = morning ? 'sb-fx-in' : duskIn ? 'sb-fx-out' : undefined
+  const [sx, sy] = night ? [x, y] : [ax, ay]
   const sunX = rising || dawn > 0 ? RISE_POS[0] : SET_POS[0]
   // 빛이 드는 정도: 새벽·노을 전에는 점점 밝게, 일출·일몰 때는 가장 강하게
   const lit = rising || setting ? 1 : dawn > 0 ? Math.min(1, dawn * 1.2) : dusk
@@ -142,6 +155,7 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
           </clipPath>
         </defs>
 
+        <g className={sceneFx}>
         {/* 해가 진 뒤(그리고 새벽): 보랏빛 크레용으로 쓱쓱 칠한 밤하늘과 별 */}
         {night && (
           <g className="act-night">
@@ -191,15 +205,15 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
         {/* 노을: 해가 질수록 하늘이 주황 -> 붉은 분홍 -> 보랏빛으로 번진다 */}
         {(dusk > 0 || setting) && (
           <g strokeWidth="13">
-            <g stroke="#c9a6d9" opacity={setting ? 0.85 : 0.6 * dusk}>
+            <g stroke="#c9a6d9" opacity={setting ? 0.85 : 0.25 + 0.6 * dusk}>
               <path d="M12 -6 C60 -12 120 -2 248 -8" />
               <path d="M6 7 C70 12 150 0 252 6" />
             </g>
-            <g stroke="#f09aa2" opacity={setting ? 0.9 : 0.7 * dusk}>
+            <g stroke="#f09aa2" opacity={setting ? 0.9 : 0.4 + 0.5 * dusk}>
               <path d="M14 20 C80 14 160 25 246 17" />
               <path d="M8 33 C60 39 170 28 254 35" />
             </g>
-            <g stroke="#f6a45a" opacity={setting ? 0.92 : 0.75 * dusk}>
+            <g stroke="#f6a45a" opacity={setting ? 0.92 : 0.45 + 0.47 * dusk}>
               <path d="M16 46 C90 41 150 52 244 45" />
               <path d="M10 58 C70 63 180 55 250 60" />
             </g>
@@ -223,23 +237,30 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
         {sunBehind && (
           <g clipPath="url(#sb-above-ground)">
             <g transform={rising ? `translate(${RISE_POS[0]} ${RISE_POS[1]})` : `translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
-              <g className={rising ? 'sb-rise-in' : setting ? 'sb-set-in' : undefined}>
+              <g className={riseAnim ? 'sb-rise-in' : setting ? 'sb-set-in' : undefined}>
                 <SunFace />
               </g>
             </g>
           </g>
         )}
 
+        </g>
+
         {/* 땅: 손으로 그은 삐뚤빼뚤한 선 */}
         <path d="M5 58 C24 55 44 61 78 57 C108 54 124 60 158 58 C190 56 222 61 255 56" stroke="#222" strokeWidth="2.4" />
         <path d="M70 64 q6 3 12 0 M176 65 q7 3 13 0" stroke="#222" strokeWidth="1.5" opacity="0.5" />
         {/* 해가 지나가는 길: 점선을 콕콕 찍은 듯 */}
-        {!night && !rising && !setting && dusk === 0 && <path d="M29 38 C60 -16 200 -16 231 39" stroke="#222" strokeWidth="2.2" strokeDasharray="0.5 8" opacity="0.75" />}
-        {/* 해가 지나온 길은 주황 실선으로 */}
-        {!night && !rising && !setting && dusk === 0 && passed && <path d={passed} stroke="#e8a24a" strokeWidth="3.2" />}
+        {dayLayer && (
+          <g className={dayFx}>
+            <path d="M29 38 C60 -16 200 -16 231 39" stroke="#222" strokeWidth="2.2" strokeDasharray="0.5 8" opacity="0.75" />
+            {/* 해가 지나온 길은 주황 실선으로 */}
+            {passed && <path d={passed} stroke="#e8a24a" strokeWidth="3.2" />}
+          </g>
+        )}
 
         {/* 빌딩: 밤에는 까만 그림자와 켜진 창, 일출·일몰에는 해 쪽 모서리에 빛이 든다. 노을 전에는 땅에서 하나씩 올라온다 */}
         {scene && (
+          <g className={sceneFx}>
           <g clipPath="url(#sb-above-ground)">
             {BUILDINGS.map((b, i) => {
               const cx = (b[0] + b[6]) / 2
@@ -249,44 +270,58 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
               return (
                 <g key={i}>
                   <path d={body} fill="#222" stroke="#222" strokeWidth="1.6" />
-                  {lit > 0 && near && (rising || setting) && <path d={body} fill="#f6b26b" fillOpacity="0.5" stroke="none" />}
-                  {lit > 0 && (
-                    <path
-                      d={faceRight ? `M${b[2]} ${b[3]} L${b[4]} ${b[5]} L${b[6]} ${b[7]}` : `M${b[0]} ${b[1]} L${b[2]} ${b[3]} L${b[4]} ${b[5]}`}
-                      stroke="#ffd27a"
-                      strokeWidth="2"
-                      opacity={Math.min(1, lit * 1.1)}
-                    />
-                  )}
+                  {/* 빛: 해가 뜰 때는 해에 가까운 빌딩부터 차례로 켜지고, 질 때는 먼 빌딩부터 해와 함께 꺼진다 */}
+                  <g
+                    className={riseAnim ? 'sb-light-in' : setting ? 'sb-light-out' : undefined}
+                    style={{ ['--d' as string]: `${((rising ? Math.abs(cx - sunX) : 260 - Math.abs(cx - sunX)) / 260 * 2.6).toFixed(2)}s` }}
+                  >
+                    {lit > 0 && near && (rising || setting) && <path d={body} fill="#f6b26b" fillOpacity="0.5" stroke="none" />}
+                    {lit > 0 && (
+                      <path
+                        d={faceRight ? `M${b[2]} ${b[3]} L${b[4]} ${b[5]} L${b[6]} ${b[7]}` : `M${b[0]} ${b[1]} L${b[2]} ${b[3]} L${b[4]} ${b[5]}`}
+                        stroke="#ffd27a"
+                        strokeWidth="2"
+                        opacity={Math.min(1, lit * 1.1)}
+                      />
+                    )}
+                  </g>
                 </g>
               )
             })}
             <path d="M62 12 V4 M105 25 V19" stroke="#222" strokeWidth="1.6" />
             {/* 오후의 햇빛: 해에서 빌딩 사이로 비스듬히 뻗어 빌딩과 땅에 닿는다. 해가 질수록 가늘어진다 */}
-            {(dusk > 0 || setting) && (
-              <g fill="#ffd980" stroke="none">
-                {BEAMS.map((gx, i) => {
-                  const hw = BEAM_HALF * (setting ? 0.22 : 1 - 0.75 * dusk)
-                  return <path key={i} d={`M${x.toFixed(1)} ${y.toFixed(1)} L${gx - hw} 58 L${gx + hw} 58Z`} opacity={setting ? 0.3 : 0.38 - 0.1 * dusk} />
-                })}
+            {/* 일출: 해가 오르는 만큼 빛줄기도 함께 올라오며 오른쪽 빌딩들을 비춘다. 일몰: 해와 함께 내려가며 줄어든다 */}
+            {(dusk > 0 || setting || rising) && (
+              <g transform={`translate(${(rising ? RISE_POS[0] : x).toFixed(1)} ${(rising ? RISE_POS[1] : y).toFixed(1)})`}>
+                <g className={riseAnim ? 'sb-rise-in' : setting ? 'sb-set-in' : undefined}>
+                  <g className={riseAnim ? 'sb-light-in' : setting ? 'sb-light-out' : undefined} fill="#ffd980" stroke="none">
+                    {(rising ? BEAMS_RISE : BEAMS).map((gx, i) => {
+                      const ox = rising ? RISE_POS[0] : x
+                      const oy = rising ? RISE_POS[1] : y
+                      const hw = BEAM_HALF * (rising ? 0.9 : setting ? 0.22 : 1 - 0.75 * dusk)
+                      return <path key={i} d={`M0 0 L${(gx - hw - ox).toFixed(1)} ${(58 - oy).toFixed(1)} L${(gx + hw - ox).toFixed(1)} ${(58 - oy).toFixed(1)}Z`} opacity={rising ? 0.34 : setting ? 0.3 : 0.38 - 0.1 * dusk} />
+                    })}
+                  </g>
+                </g>
               </g>
             )}
             {/* 켜진 창: 해가 뜨면 꺼지고, 해가 지면 켜진다 */}
             {(night || dusk > 0) && <path d={WINDOWS} stroke="#f2cf4a" strokeWidth="3" opacity={night ? 0.95 * (1 - dawn) : 0.95 * dusk * dusk} />}
           </g>
+          </g>
         )}
 
         {/* 일출·일몰 자리: 호의 양 끝에 작은 점과 눈금(해는 가운데에서 움직이는 하나만) */}
-        {!night && !rising && !setting && dusk === 0 && (
-          <g stroke="#222" strokeWidth="2.2">
+        {dayLayer && (
+          <g className={dayFx} stroke="#222" strokeWidth="2.2">
             <circle cx="29" cy="40" r="3" fill="#fcfcfa" />
             <circle cx="231" cy="41" r="3" fill="#fcfcfa" />
             <path d="M29 46 V55 M231 47 V55" strokeWidth="1.8" opacity="0.6" />
           </g>
         )}
         {/* 낮의 해 / 밤의 달 */}
-        {!sunBehind && (
-          <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`} opacity={night ? 1 - dawn : 1}>
+        {(!sunBehind || morning || duskIn) && (
+          <g className={dayFx} transform={`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`} opacity={night ? 1 - dawn : 1}>
             <g className="act-sunbody">
               {night ? (
                 <g className={now && dawn === 0 ? 'sb-moon-in' : undefined}>
