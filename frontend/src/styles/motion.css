@@ -486,19 +486,6 @@
       transform: rotate(1.7deg);
     }
   }
-  /* 빈 옷장·캐릭터 장면의 졸라맨은 숨 쉬듯 */
-  .closet-scene svg,
-  .empty > svg.doodle {
-    animation: gentle-bob 3.6s ease-in-out infinite;
-  }
-  @keyframes gentle-bob {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-4px);
-    }
-  }
 
   /* ───── 내 캐릭터: 둥실둥실 + 잠금 자물쇠 달랑달랑 ───── */
   .char-stage > svg.doodle {

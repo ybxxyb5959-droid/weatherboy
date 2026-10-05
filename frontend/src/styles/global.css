@@ -1440,6 +1440,25 @@ a.card {
   margin-top: 12px;
   padding: 12px;
 }
+@media (prefers-reduced-motion: no-preference) {
+  /* 검색 패널: 종이가 툭 펼쳐지듯 나타났다가, 접히듯 사라진다 */
+  .loc-panel {
+    transform-origin: 18% 0;
+    animation: loc-pop 0.32s cubic-bezier(0.3, 1.35, 0.5, 1) both;
+  }
+  .loc-panel.closing {
+    animation: loc-fold 0.2s ease-in both;
+    pointer-events: none;
+  }
+  @keyframes loc-pop {
+    from { opacity: 0; transform: translateY(-10px) scale(0.94, 0.8) rotate(-0.8deg); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes loc-fold {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(-8px) scale(0.96, 0.85) rotate(0.6deg); }
+  }
+}
 .loc-input {
   margin: 0;
 }
@@ -4761,6 +4780,16 @@ dd,
 
 .look > .stage-figure {
   flex: none;
+}
+/* 홈에서는 졸라맨이 장면 왼쪽부터 옷장 앞까지 달려가므로, 글자를 옷장 폭(76px) 안에서 옷장 위에 두어 졸라맨과 겹치지 않게 한다 */
+.look .stage-caption {
+  left: auto;
+  right: 0;
+  top: -26px;
+  width: 76px;
+  text-align: center;
+  line-height: 1.15;
+  word-break: keep-all;
 }
 
 /* 시간대별 날씨는 옆으로 밀어 볼 수 있지만 스크롤 바는 숨긴다 */

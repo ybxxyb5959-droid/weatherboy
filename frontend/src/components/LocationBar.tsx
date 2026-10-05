@@ -38,6 +38,7 @@ function Star({ filled, size = 22 }: { filled: boolean; size?: number }) {
 
 export default function LocationBar({ homeName, target, favorites, onHome, onFavorite, onPlace, onToggleSaved, onRemoveFavorite, saving }: Props) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [q, setQ] = useState('')
   const [items, setItems] = useState<Suggestion[]>([])
   const [active, setActive] = useState(-1)
@@ -74,6 +75,16 @@ export default function LocationBar({ homeName, target, favorites, onHome, onFav
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
+  }, [open])
+
+  // 닫을 때도 사라지는 모션이 끝난 뒤에 떼어낸다
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+    const t = window.setTimeout(() => setMounted(false), 220)
+    return () => window.clearTimeout(t)
   }, [open])
 
   const choose = (name: string) => {
@@ -127,8 +138,8 @@ export default function LocationBar({ homeName, target, favorites, onHome, onFav
         )}
       </div>
 
-      {open && (
-        <div className="box w2 loc-panel">
+      {(open || mounted) && (
+        <div className={`box w2 loc-panel${open ? '' : ' closing'}`} inert={!open}>
           <input
             ref={inputRef}
             className="loc-input"
