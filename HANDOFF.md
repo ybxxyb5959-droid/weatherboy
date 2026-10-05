@@ -109,6 +109,12 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 일정 상세: 예보 확인 중에는 서버 깨우는 졸라맨 장면 (작성: Claude Code)
+- 사용자 요청: 일정을 만든 직후 예보를 받아오는 동안 "대기중"처럼 정적인 화면이 완성된 것처럼 보이는 문제 → 확인 중임을 서버 깨우는 졸라맨(`WakeScene`)으로 표시.
+- 변경 파일: `frontend/src/pages/EventDetailPage.tsx` (`checking = outfit.loading && !outfit.data && !failed`). 기기 캘린더 연동은 조사·보고만 했고 코드는 수정하지 않음(Capacitor/Android 구성 없음).
+- 검증 결과: tsc 통과, 응답을 20초 지연시켜 브라우저에서 장면 확인.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-05 홈 옷장 연출 글자 겹침 수정 + 지역 검색 패널 펼침/접힘 모션 + 빈 화면 졸라맨 둥둥 제거 (작성: Claude Code)
 - 사용자 요청: 다른 조합 연출 글자가 졸라맨과 겹침 수정, 검색 패널을 디자인에 맞는 애니메이션으로 나타나고 사라지게, 옷장 탭 캐릭터·빈 화면(옷장/일정)의 둥둥 애니메이션 삭제.
 - 변경: 홈 `.look .stage-caption` 을 옷장 위(폭 76px, 두 줄)로 이동 / `LocationBar.tsx` 닫힐 때 220ms 뒤 떼어내고 `loc-pop`·`loc-fold` 키프레임 / `motion.css` 의 `gentle-bob`(`.closet-scene svg`, `.empty > svg.doodle`) 삭제. 내 캐릭터 화면(`char-stage`)의 둥실은 그대로.

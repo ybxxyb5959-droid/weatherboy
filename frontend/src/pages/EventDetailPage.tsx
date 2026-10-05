@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Loading } from '../components/LoadingScene'
+import WakeScene from '../components/WakeScene'
 import BackButton from '../components/BackButton'
 import EventMenu from '../components/EventMenu'
 import ActivityScore from '../components/ActivityScore'
@@ -178,6 +179,8 @@ function EventDetail({ id }: { id: string }) {
   const waiting = !rec
   // 요청이 실패한 것과 예보가 아직 없는 것은 다르다: 실패하면 재시도를 안내한다
   const failed = waiting && !!outfit.error && !outfit.data
+  // 예보를 받아오는 중: 아직 "대기중"이 아니라 확인 중이므로, 완성된 화면처럼 보이지 않게 졸라맨이 서버를 깨우는 장면을 보여준다
+  const checking = outfit.loading && !outfit.data && !failed
   // 옷차림을 안 보여주는 일정: 기타는 그날 날씨만, 러닝·등산 같은 야외 활동은 야외활동 점수(옷은 기능성 운동복이라 추천하지 않는다)
   const isActivity = outfit.data?.status === 'activity'
   const noOutfit = outfit.data?.status === 'weather_only' || isActivity || e.needsOutfit === false
@@ -221,8 +224,10 @@ function EventDetail({ id }: { id: string }) {
       <div className="box w1">
         <div className="row between">
           <div>
-            <h2>{failed ? '불러오지 못했어요' : isActivity ? '야외활동이 적합한지 확인해보세요' : weatherShown ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
-            {failed ? (
+            <h2>{checking ? '예보 확인하는 중…' : failed ? '불러오지 못했어요' : isActivity ? '야외활동이 적합한지 확인해보세요' : weatherShown ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
+            {checking ? (
+              <p>서버가 잠들어 있었다면 깨우는 중이에요. 잠깐만 기다려 주세요.</p>
+            ) : failed ? (
               <>
                 <p>{outfit.error}</p>
                 <p>예보가 없는 게 아니라 서버에서 못 받아왔어요.</p>
@@ -247,7 +252,7 @@ function EventDetail({ id }: { id: string }) {
               </>
             )}
           </div>
-          <StickPerson mood={eventMood(e.kind, waiting, e.title, e.place)} size={96} />
+          {checking ? <WakeScene size={130} /> : <StickPerson mood={eventMood(e.kind, waiting, e.title, e.place)} size={96} />}
         </div>
       </div>
 
