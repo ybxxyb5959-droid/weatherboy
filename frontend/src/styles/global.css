@@ -4860,3 +4860,30 @@ dd,
     }
   }
 }
+
+/* 로그인 화면 약관 링크: 맨 아래 가운데(꽃은 오른쪽 구석이라 겹치지 않게 글자를 작게) */
+.intro-legal {
+  position: absolute;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 2;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 14px;
+  transform: translateX(-50%);
+}
+.intro-legal a {
+  display: inline-block;
+  padding: 8px 4px;
+  color: var(--ink);
+  text-decoration: underline;
+  opacity: 0.8;
+}
+@media (max-height: 700px) {
+  /* 화면이 낮으면 내용 아래로 이어 붙인다(겹치지 않게) */
+  .intro-legal {
+    position: static;
+    margin-top: 10px;
+    transform: none;
+  }
+}

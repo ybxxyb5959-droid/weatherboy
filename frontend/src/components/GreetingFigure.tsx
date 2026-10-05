@@ -66,12 +66,14 @@ function Pen() {
   )
 }
 
-/** 지우개: 끝이 (0,0), 펜과 같은 각도 */
+/** 지우개: 종이에 닿는 아랫면 가운데가 (0,0). 분홍 몸통에 흰 종이 띠(파란 줄)를 두른 모난 지우개 */
 function Eraser() {
   return (
-    <g transform="rotate(30)" strokeLinejoin="round" strokeLinecap="round">
-      <rect x="-4.6" y="-11" width="9.2" height="11" rx="2.2" fill="#f2a7b0" stroke="#222" strokeWidth="1.5" />
-      <rect x="-4.6" y="-30" width="9.2" height="19" rx="2" fill="#fcfcfa" stroke="#222" strokeWidth="1.5" />
+    <g transform="rotate(-12)" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M-14 0 L-14 -11 Q-14 -14 -11 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="#f2a7b0" stroke="#222" strokeWidth="1.8" />
+      <path d="M-2 0 L-2 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="#fcfcfa" stroke="#222" strokeWidth="1.8" />
+      <path d="M2 -14 V0 M7 -14 V0" stroke="#4a7fc1" strokeWidth="1.6" />
+      <path d="M-11 -9.5 Q-8.5 -11.5 -5.5 -10.5" stroke="#fff" strokeWidth="1.6" opacity="0.75" />
     </g>
   )
 }
@@ -109,6 +111,7 @@ export default function GreetingFigure({ size = 220, onProgress, oops = false }:
   const penRef = useRef<SVGGElement>(null)
   const strayRef = useRef<SVGPathElement>(null)
   const eraserRef = useRef<SVGGElement>(null)
+  const crumbsRef = useRef<SVGGElement>(null)
   const skip = useRef<() => void>(() => undefined)
   const bump = useRef<() => void>(() => undefined)
   const progressRef = useRef(onProgress)
@@ -233,9 +236,29 @@ export default function GreetingFigure({ size = 220, onProgress, oops = false }:
     let pending = false
     let count = 0
     let oopsState: Oops | null = null
-    const setEraser = (x: number, y: number, opacity: number) => {
-      eraser?.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`)
+    const crumbs = crumbsRef.current
+    const setEraser = (x: number, y: number, opacity: number, rot = 0) => {
+      eraser?.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)})`)
       eraser?.setAttribute('opacity', String(opacity))
+    }
+    // 지우개 가루: 지우는 곳에서 톡톡 떨어진다
+    const setCrumbs = (x: number, y: number, t: number, on: boolean) => {
+      if (!crumbs) return
+      crumbs.setAttribute('opacity', on ? '1' : '0')
+      if (!on) return
+      Array.from(crumbs.children).forEach((c, i) => {
+        const ph = (t * 2.6 + i / 6) % 1
+        c.setAttribute('cx', (x + (i - 2.5) * 3.4 + Math.sin(i * 5) * 2).toFixed(1))
+        c.setAttribute('cy', (y - 1 + ph * 15).toFixed(1))
+        c.setAttribute('opacity', (1 - ph).toFixed(2))
+      })
+    }
+    // 곡선의 그 지점에서 진행 방향(단위 벡터)
+    const tangentAt = (el: SVGGeometryElement, at: number): [number, number] => {
+      const a = el.getPointAtLength(Math.max(0, at - 3))
+      const b = el.getPointAtLength(at + 3)
+      const l = Math.hypot(b.x - a.x, b.y - a.y) || 1
+      return [(b.x - a.x) / l, (b.y - a.y) / l]
     }
     const startOops = (real: number, time: number) => {
       if (!stray) return false
@@ -280,16 +303,27 @@ export default function GreetingFigure({ size = 220, onProgress, oops = false }:
       const e2 = clamp01((e - 0.4) / 0.6) // 그리던 획을 처음까지 지운다
       pen?.setAttribute('opacity', '0')
       let pos: { x: number; y: number }
+      let tg: [number, number]
       if (e2 <= 0) {
         stray!.style.strokeDashoffset = `${o.len * easeSine(e1)}`
-        pos = stray!.getPointAtLength(o.len * (1 - easeSine(e1)))
+        const at = o.len * (1 - easeSine(e1))
+        pos = stray!.getPointAtLength(at)
+        tg = tangentAt(stray!, at)
       } else {
         stray!.setAttribute('opacity', '0')
         const keep = o.u * (1 - easeSine(e2))
         s.el.style.strokeDashoffset = `${s.len * (1 - easeSine(keep))}`
-        pos = s.el.getPointAtLength(s.len * easeSine(keep))
+        const at = s.len * easeSine(keep)
+        pos = s.el.getPointAtLength(at)
+        tg = tangentAt(s.el, at)
       }
-      setEraser(pos.x + Math.sin(mt * 50) * 0.8, pos.y, 1)
+      // 선을 따라 앞뒤로 슥슥 문지르며 지운다(지워지는 끝 근처를 오간다)
+      const rub = Math.sin(mt * 26) * 6
+      const lift = Math.abs(Math.sin(mt * 26)) * 1.2
+      const ex = pos.x + tg[0] * rub - tg[1] * lift
+      const ey = pos.y + tg[1] * rub + tg[0] * lift
+      setEraser(ex, ey, 1, Math.sin(mt * 26) * 7)
+      setCrumbs(ex, ey, mt, true)
     }
     const tick = (now: number) => {
       if (stopped) return
@@ -300,6 +334,7 @@ export default function GreetingFigure({ size = 220, onProgress, oops = false }:
           oopsState = null
           stray?.setAttribute('opacity', '0')
           setEraser(0, 0, 0)
+          setCrumbs(0, 0, 0, false)
         } else {
           runOops(real, oopsState)
           raf = requestAnimationFrame(tick)
@@ -366,6 +401,11 @@ export default function GreetingFigure({ size = 220, onProgress, oops = false }:
         </g>
         <g ref={eraserRef} opacity="0">
           <Eraser />
+        </g>
+        <g ref={crumbsRef} opacity="0" fill="#c4c4be" stroke="none">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <circle key={i} r="1.3" />
+          ))}
         </g>
       </g>
     </svg>

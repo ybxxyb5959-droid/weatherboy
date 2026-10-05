@@ -66,12 +66,14 @@ export default function IntroPage() {
           <HandText>{starting ? '시작하는 중…' : '로그인 없이 둘러보기'}</HandText>
         </button>
         {error && <p className="tiny" role="alert">{error}</p>}
-        <p className="tiny consent-note">
-          <Link to="/terms">이용약관</Link>
-          <span aria-hidden="true"> • </span>
-          <Link to="/privacy">개인정보 처리방침</Link>
-        </p>
       </div>
+
+      {/* 약관 링크: 맨 아래 가운데. 게스트 로그인과 멀리 떨어지고 벌·꽃과 겹치지 않는다 */}
+      <p className="tiny intro-legal">
+        <Link to="/terms">이용약관</Link>
+        <span aria-hidden="true"> • </span>
+        <Link to="/privacy">개인정보 처리방침</Link>
+      </p>
 
       <div className="bee-lane" aria-hidden="true">
         <div className="bee-fly">
