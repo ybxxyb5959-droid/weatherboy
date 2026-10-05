@@ -3,6 +3,7 @@ import type { Request } from 'express'
 import { RENEW_AFTER_MS, SESSION_MAX_AGE_MS, renewSession } from '../../src/api/middleware/sessionRenew.js'
 import { maskQuery, maskedReqSerializer } from '../../src/utils/maskUrl.js'
 import { networkInfo } from '../../src/services/admin/opsChecks.js'
+import { trustProxyHops } from '../../src/utils/trustProxy.js'
 
 describe('로그인 유지(세션 연장)', () => {
   const run = (session: object | undefined) => {
@@ -74,5 +75,14 @@ describe('프록시 IP 진단', () => {
   })
   it('프록시 헤더가 없으면(바로 접속) 판단하지 않고 안내만', () => {
     expect(networkInfo('127.0.0.1', undefined)).toMatchObject({ ok: true, hops: 0, forwardedFor: null })
+  })
+})
+
+describe('접속자 IP 를 읽는 프록시 단계', () => {
+  it('Render 는 2단계, 그 밖에는 1단계, 설정값이 있으면 그 값', () => {
+    expect(trustProxyHops(undefined, true)).toBe(2)
+    expect(trustProxyHops(undefined, false)).toBe(1)
+    expect(trustProxyHops(0, true)).toBe(0)
+    expect(trustProxyHops(3, false)).toBe(3)
   })
 })

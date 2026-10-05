@@ -21,6 +21,20 @@ const limiter = (max: number) =>
     },
   })
 
+// 서버 전체 게스트 가입 상한(IP 를 속여 한도를 피하는 가입 폭주 방어). 한 사람의 정상 사용량에는 영향이 없다.
+const guestGlobalLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: env.NODE_ENV === 'test' ? 10_000 : 300,
+  keyGenerator: () => 'all-guests',
+  validate: { keyGeneratorIpFallback: false },
+  standardHeaders: false,
+  legacyHeaders: false,
+  skip: (req) => !!req.session?.userId, // 이미 게스트/로그인 상태면 새 계정을 만들지 않으니 세지 않는다
+  handler: (_req, res) => {
+    res.status(429).json({ code: 'RATE_LIMITED', message: '지금 이용자가 몰려 있어요. 잠시 후 다시 시도해주세요.' })
+  },
+})
+
 const regenerate = (req: Request) =>
   new Promise<void>((resolve, reject) => req.session.regenerate((e) => (e ? reject(e) : resolve())))
 const save = (req: Request) => new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())))
@@ -31,6 +45,7 @@ export const authRouter = Router()
 authRouter.post(
   '/guest',
   limiter(20),
+  guestGlobalLimiter,
   wrap(async (req, res) => {
     const existing = req.session.userId
     if (existing) {

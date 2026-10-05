@@ -8,6 +8,9 @@ const schema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().min(1),
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
+  // 앞단 프록시가 몇 단계인가(접속자 IP 를 읽는 위치). 비우면 Render 는 2(Vercel -> Render), 그 밖에는 1.
+  // Render 주소를 직접 부르는 요청은 헤더를 속일 수 있어서, 게스트 가입에는 서버 전체 상한도 같이 둔다.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).optional(),
   SESSION_SECRET: z.string().min(16),
   KAKAO_REST_API_KEY: z.string().default(''),
   // Kakao Local 전용 키(선택). 비어 있으면 KAKAO_REST_API_KEY 를 사용한다.

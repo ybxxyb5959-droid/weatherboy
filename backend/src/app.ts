@@ -9,6 +9,7 @@ import pg from 'pg'
 import { pinoHttp } from 'pino-http'
 import { renewSession, SESSION_MAX_AGE_MS } from './api/middleware/sessionRenew.js'
 import { maskedReqSerializer } from './utils/maskUrl.js'
+import { trustProxyHops } from './utils/trustProxy.js'
 import { env, isProd } from './config/env.js'
 import { prisma } from './db.js'
 import { adminRouter } from './api/routes/admin.js'
@@ -30,7 +31,7 @@ import { logger } from './utils/logger.js'
 export function createApp() {
   const app = express()
   // Nginx 등 Reverse Proxy 뒤에서 secure cookie / client IP 가 올바르게 동작하도록
-  app.set('trust proxy', 1)
+  app.set('trust proxy', trustProxyHops(env.TRUST_PROXY_HOPS, !!process.env.RENDER))
   app.disable('x-powered-by')
 
   // 요청 로그에는 쿼리 값(위치 좌표, 카카오 로그인 code 등)을 남기지 않는다

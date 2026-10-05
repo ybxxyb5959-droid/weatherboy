@@ -109,6 +109,19 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 Vercel 경유 접속 IP 문제 수정(trust proxy 2단계) + 게스트 가입 서버 전체 상한 (작성: Claude Code)
+- 수정 목적: Vercel 이 /api 를 Render 로 넘겨서 서버가 보는 접속 IP 가 Vercel 서버 IP 였음(실측: 로그인 없이 되는 /api/auth/kakao 의 RateLimit 남은 횟수를 Vercel 경유 4회와 Render 직접 1회로 비교 -> 19,19,18,18 vs 19, 즉 사용자 IP 가 아니라 Vercel IP 로 묶임). IP 기준 요청 제한(게스트 20/분, 카카오 20/분 등)을 모든 사용자가 나눠 쓰게 되는 문제.
+- 변경 파일:
+  - backend/src/utils/trustProxy.ts — 새 파일. 믿는 프록시 단계 수: 설정값 > Render(RENDER 환경변수 있으면) 2 > 그 밖 1
+  - backend/src/app.ts — trust proxy 를 위 값으로
+  - backend/src/config/env.ts — TRUST_PROXY_HOPS(선택, 0~5)
+  - backend/src/api/routes/auth.ts — 게스트 가입에 서버 전체 시간당 300회 상한(이미 로그인/게스트 상태인 요청은 세지 않음). trust proxy 2단계에서 Render 직접 호출은 X-Forwarded-For 를 속일 수 있어 그 대비
+  - backend/tests/unit/hardening.test.ts — 단계 결정 테스트
+- 프론트 연결 사항: 없음
+- 검증 결과: backend typecheck 통과, lint 오류 없음, hardening 단위 테스트 12개 통과. 통합 테스트(DB 필요)는 못 함. 배포 후 같은 방법(Vercel 경유 vs Render 직접 RateLimit 남은 횟수 비교)으로 확인 필요: 이제 Vercel 경유가 19,18,17,16 으로 내려가고 Render 직접과 같은 카운터여야 함.
+- 남은 일 / 상대에게 요청: Render 배포 반영 후 재확인. 관리자 화면 서버 상태의 네트워크 항목도 ok 로 바뀌어야 함. Render 주소 직접 호출 시 IP 위조 가능성은 서버 전체 가입 상한으로만 보완(다른 경로의 IP 한도는 위조로 피할 수 있음).
+- 적용한 규칙 번호: B-5
+
 ### 2026-10-06 홈 일출·일몰 연출 다듬기: 빛이 해와 함께 오르내림, 장면 사이 교차 전환 (작성: Claude Code)
 - 수정 목적: 일출 때 빌딩 빛이 해에 가까운 쪽부터 차례로 켜지고 해가 질 땐 해와 함께 꺼지게, 일출 후·노을 시작 때 낮 그림과 장면이 자연스럽게 교차하게, 노을 시작에도 배경색이 있게.
 - 변경 파일:
