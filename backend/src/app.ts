@@ -46,6 +46,22 @@ export function createApp() {
   app.get('/health', (_req, res) => {
     res.json({ ok: true })
   })
+  // 접속 IP 진단(로그인 불필요): 요청한 사람 자신의 정보만, 마지막 자리를 가려서 돌려준다. 프록시 단계 설정이 맞는지와 배포된 커밋을 확인하는 데 쓴다.
+  app.get('/api/net-check', (req, res) => {
+    const mask = (v: string) => {
+      const s = v.replace(/^::ffff:/, '')
+      return s.includes(':') ? `${s.split(':').slice(0, 3).join(':')}:…` : `${s.split('.').slice(0, 3).join('.')}.x`
+    }
+    const raw = req.headers['x-forwarded-for']
+    const chain = (Array.isArray(raw) ? raw.join(',') : (raw ?? '')).split(',').map((x) => x.trim()).filter(Boolean)
+    res.json({
+      commit: (process.env.RENDER_GIT_COMMIT ?? '').slice(0, 7),
+      trustProxy: app.get('trust proxy'),
+      ip: req.ip ? mask(req.ip) : null,
+      hops: chain.length,
+      chain: chain.map(mask),
+    })
+  })
   // DB 연결 확인
   app.get('/ready', async (_req, res) => {
     try {
