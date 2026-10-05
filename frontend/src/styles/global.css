@@ -4248,3 +4248,24 @@ a.card {
 @media (prefers-reduced-motion: reduce) {
   .hl-item { animation: none; }
 }
+
+/* 이미 옷장에 있는 옷: 초록 체크 */
+.scan-owned-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.scan-owned {
+  color: #2f8a4a;
+  font-weight: 700;
+}
+
+/* 이미 옷장에 있는 옷 줄: 옷 그림만 흐리게, 초록 표시와 문구는 또렷하게 */
+.scan-item.owned > .scan-row > svg {
+  opacity: 0.45;
+}
+.scan-item.owned .scan-cats {
+  display: none;
+}

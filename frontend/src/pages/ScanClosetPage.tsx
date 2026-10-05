@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BackButton from '../components/BackButton'
 import { useNavigate } from 'react-router-dom'
 import ClothingDoodle from '../components/ClothingDoodle'
 import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import { categories, clothingTypes, colorNames, patternNames } from '../mocks/clothes'
 import { api, ApiError, errorMessage } from '../api'
+import { useAsync } from '../hooks'
+import type { Clothing } from '../mocks/clothes'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
 import HangLoader from '../components/HangLoader'
@@ -14,6 +16,21 @@ import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
 let nextKey = 1
+
+// 종류·색·무늬가 같으면 같은 옷으로 본다(같은 옷을 여러 벌 담지 않는다)
+const sameKey = (c: { type: string; color: string; pattern?: string }) => `${c.type}|${c.color}|${c.pattern ?? '무지'}`
+
+/** 이미 옷장에 있다는 초록 체크 표시 */
+function OwnedCheck() {
+  return (
+    <span className="scan-owned-mark" role="img" aria-label="이미 등록되어 있어요">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#4fae6a" stroke="#222" strokeWidth="1.6" />
+        <path d="M7 12.5 L10.5 16 L17 8.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  )
+}
 
 // 한 번에 상의/하의/겉옷을 바꾸는 줄: 바꾸면 그 구분의 대표 종류로 놓고, 자세한 종류는 "수정"에서 고른다
 const CAT_DEFAULT = ['긴팔', '바지', '자켓']
@@ -30,6 +47,17 @@ export default function ScanClosetPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [limited, setLimited] = useState(false) // 사진 인식 한도에 걸림: 직접 등록으로 안내한다
+  const [merged, setMerged] = useState(0) // 같은 옷이라 하나로 합친 수
+  // 내 옷장에 이미 있는 옷(예시 옷은 진짜 내 옷이 아니라서 뺀다)
+  const closet = useAsync(() => api<Clothing[]>('GET', '/api/clothes'))
+  const ownedKeys = new Set((closet.data ?? []).filter((c) => !c.isSample).map(sameKey))
+  // 사진 분석 도중(비동기)에 최신 목록·내 옷을 읽기 위한 사본
+  const itemsRef = useRef(items)
+  const ownedRef = useRef(ownedKeys)
+  useEffect(() => {
+    itemsRef.current = items
+    ownedRef.current = ownedKeys
+  })
   const usage = useAiUsage(true, busy) // 오늘 남은 양(스캔이 끝날 때마다 다시 읽는다)
   const blocked = photoBlocked(usage)
 
@@ -39,6 +67,9 @@ export default function ScanClosetPage() {
     setError('')
     setLimited(false)
     const failed: string[] = []
+    const seen = new Set(itemsRef.current.map(sameKey)) // 지금까지 목록에 있는 옷(같은 옷은 한 벌로 합친다)
+    let dropped = 0
+    setMerged(0)
     let stop = false // 한도에 걸리면 남은 조각/사진은 더 부르지 않는다
     try {
       const list = Array.from(files).slice(0, 4)
@@ -63,7 +94,19 @@ export default function ScanClosetPage() {
               // 종류가 헷갈린다고 한 옷은 체크를 풀어 둔다(틀린 옷이 그대로 등록되지 않게)
               return { ...it, key: nextKey++, checked: !dup && it.confidence !== '헷갈림', dup }
             })
-            setItems((prev) => [...prev, ...found])
+            // 같은 옷(종류·색·무늬)은 한 벌로 합친다. 이미 옷장에 있는 옷도 한 줄만 남겨 "이미 등록"으로 보여준다.
+            const add: Found[] = []
+            for (const f of found) {
+              const k = sameKey(f)
+              if (seen.has(k)) {
+                dropped++
+                continue
+              }
+              seen.add(k)
+              add.push(ownedRef.current.has(k) ? { ...f, checked: false } : f)
+            }
+            if (add.length > 0) setItems((prev) => [...prev, ...add])
+            if (dropped > 0) setMerged(dropped)
             prevTile = found
           }
           if (firstError) throw firstError
@@ -84,7 +127,16 @@ export default function ScanClosetPage() {
   }
 
   const patch = (key: number, p: Partial<Found>) => setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...p } : it)))
-  const chosen = items.filter((it) => it.checked)
+  const isOwned = (it: Found) => ownedKeys.has(sameKey(it))
+  // 등록할 옷: 체크된 것 중 이미 옷장에 있는 옷은 빼고, 고치다가 같아진 옷은 한 벌만
+  const chosen = (() => {
+    const seen = new Set<string>()
+    return items.filter((it) => {
+      if (!it.checked || isOwned(it) || seen.has(sameKey(it))) return false
+      seen.add(sameKey(it))
+      return true
+    })
+  })()
 
   const saveAll = async () => {
     if (saving || chosen.length === 0) return
@@ -142,17 +194,28 @@ export default function ScanClosetPage() {
           <p className="scan-count">
             {items.length}벌을 찾았어요. 등록할 옷만 남겨주세요.
           </p>
+          {(merged > 0 || items.some(isOwned)) && (
+            <p className="tiny">
+              {merged > 0 ? `똑같은 옷 ${merged}벌은 하나로 합쳤어요. ` : ''}
+              {items.some(isOwned) ? '초록 체크는 이미 옷장에 있는 옷이라 등록하지 않아요.' : ''}
+            </p>
+          )}
           <ul className="scan-list">
             {items.map((it) => (
-              <li key={it.key} className={`scan-item${it.checked ? '' : ' off'}`}>
+              <li key={it.key} className={`scan-item${isOwned(it) ? ' owned' : it.checked ? '' : ' off'}`}>
                 <div className="scan-row">
-                  <button type="button" className={`scan-check${it.checked ? ' on' : ''}`} aria-pressed={it.checked} aria-label={`${it.label} 등록`} onClick={() => patch(it.key, { checked: !it.checked })}>
-                    {it.checked ? '✓' : ''}
-                  </button>
+                  {isOwned(it) ? (
+                    <OwnedCheck />
+                  ) : (
+                    <button type="button" className={`scan-check${it.checked ? ' on' : ''}`} aria-pressed={it.checked} aria-label={`${it.label} 등록`} onClick={() => patch(it.key, { checked: !it.checked })}>
+                      {it.checked ? '✓' : ''}
+                    </button>
+                  )}
                   <ClothingDoodle type={it.type} color={it.color} pattern={it.pattern} size={48} />
                   <div className="scan-info">
                     <strong>{it.label}</strong>
-                    {it.dup && <span className="tiny"> · 겹쳐 찍힌 옷일 수 있어요</span>}
+                    {isOwned(it) && <span className="tiny scan-owned"> · 이미 등록되어 있어요</span>}
+                    {!isOwned(it) && it.dup && <span className="tiny"> · 겹쳐 찍힌 옷일 수 있어요</span>}
                     {it.confidence === '헷갈림' && <div className="tiny unsure">종류를 확인해 주세요</div>}
                     <div className="tiny">
                       {it.type} · {it.color}
