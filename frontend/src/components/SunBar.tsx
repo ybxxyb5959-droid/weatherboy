@@ -1,5 +1,6 @@
 // 일출·일몰: 지평선 위로 해가 지나가는 길(점선 호)과 해, 양쪽에 시각, 가운데에 낮의 길이.
 // now 를 주면 지금 해가 그 길의 어디쯤인지 보여준다(해가 졌거나 뜨기 전이면 달).
+// 일정 화면에서는 now 대신 eventTime(일정 시작·끝)을 주면 "일정 시간" 기준으로 보여준다: 시작이 일몰 뒤(또는 일출 전)면 달과 밤 빌딩.
 
 const toMin = (hm: string) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5))
 
@@ -16,23 +17,29 @@ const at = (t: number): [number, number] => {
   return [0, 1].map((k) => c.reduce((a, w, i) => a + w * P[i]![k]!, 0)) as [number, number]
 }
 
-export default function SunBar({ rise, set, now }: { rise: string; set: string; now?: Date }) {
+export default function SunBar({ rise, set, now, eventTime }: { rise: string; set: string; now?: Date; eventTime?: { start: string; end: string } }) {
   const len = toMin(set) - toMin(rise)
   let t = 0.5
   let night = false
   let status = ''
-  if (now) {
-    const kst = new Date(now.getTime() + 9 * 3600_000)
-    const m = kst.getUTCHours() * 60 + kst.getUTCMinutes()
+  // 하루 종일 일정(00:00~23:59)은 시간대가 없으니 그냥 낮 그림
+  const timed = eventTime && !(toMin(eventTime.start) <= 0 && toMin(eventTime.end) >= 23 * 60)
+  if (now || timed) {
+    const kst = now ? new Date(now.getTime() + 9 * 3600_000) : null
+    const m = kst ? kst.getUTCHours() * 60 + kst.getUTCMinutes() : toMin(eventTime!.start)
     if (m < toMin(rise)) {
       night = true
-      status = '아직 해가 뜨기 전이에요'
+      status = kst ? '아직 해가 뜨기 전이에요' : `해 뜨기 전 일정이에요 · 일출 ${rise}`
     } else if (m > toMin(set)) {
       night = true
-      status = '오늘은 해가 졌어요'
+      status = kst ? '오늘은 해가 졌어요' : `일몰 후 일정이에요 · 일몰 ${set}`
     } else {
       t = (m - toMin(rise)) / len
-      status = `해가 떠 있어요 · 일몰까지 ${Math.floor((toMin(set) - m) / 60)}시간 ${(toMin(set) - m) % 60}분`
+      status = kst
+        ? `해가 떠 있어요 · 일몰까지 ${Math.floor((toMin(set) - m) / 60)}시간 ${(toMin(set) - m) % 60}분`
+        : toMin(eventTime!.end) > toMin(set)
+          ? `일정 중에 해가 져요 · 일몰 ${set}`
+          : `해가 떠 있는 시간 일정이에요 · 일몰까지 ${Math.floor((toMin(set) - m) / 60)}시간 ${(toMin(set) - m) % 60}분`
     }
   }
   const [x, y] = night ? [182, 12] : at(t)

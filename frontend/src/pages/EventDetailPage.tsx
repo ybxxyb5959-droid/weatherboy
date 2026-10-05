@@ -279,7 +279,7 @@ function EventDetail({ id }: { id: string }) {
 
       <hr className="scribble" />
 
-      {isActivity && outfit.data?.activity && outfit.data.activity.length > 0 && <ActivityScore days={outfit.data.activity} approx={approx} />}
+      {isActivity && outfit.data?.activity && outfit.data.activity.length > 0 && <ActivityScore days={outfit.data.activity} approx={approx} eventTime={{ start: e.startTime, end: e.endTime }} />}
 
       {(!waiting || weatherShown) && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 

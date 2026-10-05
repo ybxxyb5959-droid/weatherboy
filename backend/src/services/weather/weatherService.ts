@@ -213,6 +213,27 @@ export async function getAirQuality(region: Region, now = new Date()): Promise<A
   return p
 }
 
+// 날짜별 대기질 예보: 하루 4번만 발표되므로 1시간 캐시. 실패해도 일정 화면이 막히지 않게 빈 값으로 둔다(마지막 값이 있으면 그대로 쓴다)
+const AIR_FORECAST_TTL_MS = 3600_000
+const airForecastCache = new Map<string, { at: number; data: Record<string, number> }>()
+export async function getAirForecast(region: Region, now = new Date()): Promise<Record<string, number>> {
+  const fetchForecast = providers.air.fetchForecast?.bind(providers.air)
+  if (!region.sido || !fetchForecast || !providers.air.configured) return {}
+  const key = `${region.sido}|${region.district ?? ''}`
+  const hit = airForecastCache.get(key)
+  if (hit && now.getTime() - hit.at < AIR_FORECAST_TTL_MS) return hit.data
+  const t0 = Date.now()
+  try {
+    const data = await fetchForecast(region.sido, region.district)
+    airForecastCache.set(key, { at: now.getTime(), data })
+    await logCollect('airForecast', key, 'SUCCESS', null, t0)
+    return data
+  } catch (e) {
+    await logCollect('airForecast', key, 'PARTIAL', e instanceof Error ? e.message : String(e), t0)
+    return hit?.data ?? {}
+  }
+}
+
 async function fetchAir(region: Region, key: string, now: Date): Promise<AirQualityReading | null> {
   const t0 = Date.now()
   try {

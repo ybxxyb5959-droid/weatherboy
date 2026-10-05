@@ -39,7 +39,7 @@ function Gauge({ score }: { score: number }) {
   )
 }
 
-function Day({ d, index }: { d: EventDayActivity; index: number }) {
+function Day({ d, index, eventTime }: { d: EventDayActivity; index: number; eventTime?: { start: string; end: string } }) {
   return (
     <div className={`box w${(index % 3) + 1} act-day`} style={{ ['--i' as string]: index }}>
       <div className="ev-day-head">
@@ -71,20 +71,20 @@ function Day({ d, index }: { d: EventDayActivity; index: number }) {
         </div>
       </div>
 
-      {d.sun && <SunBar rise={d.sun.rise} set={d.sun.set} />}
+      {d.sun && <SunBar rise={d.sun.rise} set={d.sun.set} eventTime={eventTime} />}
 
       <p className="tiny act-tip">{d.tip}</p>
     </div>
   )
 }
 
-export default function ActivityScore({ days }: { days: EventDayActivity[]; approx?: boolean }) {
+export default function ActivityScore({ days, eventTime }: { days: EventDayActivity[]; approx?: boolean; eventTime?: { start: string; end: string } }) {
   return (
     <section className="section">
       <h2>야외활동 점수</h2>
       <div className="act-days">
         {days.map((d, i) => (
-          <Day key={d.date} d={d} index={i} />
+          <Day key={d.date} d={d} index={i} eventTime={eventTime} />
         ))}
       </div>
     </section>

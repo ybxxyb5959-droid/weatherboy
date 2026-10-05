@@ -65,4 +65,6 @@ export interface AirQualityReading {
 export interface AirQualityProvider {
   readonly configured: boolean
   fetch(regionSido: string, regionDistrict: string | null): Promise<AirQualityReading>
+  /** 날짜별 대기질 예보 등급(1좋음~4매우나쁨). 시간대별 수치 예보는 공공 API 에 없다. 선택 구현 */
+  fetchForecast?(regionSido: string, regionDistrict: string | null): Promise<Record<string, number>>
 }

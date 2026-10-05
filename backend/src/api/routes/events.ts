@@ -14,6 +14,7 @@ import { serializeEvent } from '../../services/serializers.js'
 import { badRequest, notFound } from '../../utils/errors.js'
 import { fromKst, kstDate, kstTime, toKstParts } from '../../utils/time.js'
 import type { OutingPoint } from '../../rules/outfitEngine.js'
+import { getAirForecast } from '../../services/weather/weatherService.js'
 import { parse, requireAuth, wrap, type AuthedRequest } from '../middleware/common.js'
 import type { Event, Prisma } from '@prisma/client'
 
@@ -213,7 +214,7 @@ eventsRouter.get(
       const grid = gridToLatLng(c.region.nx, c.region.ny)
       const base = { forecastStage: c.window.stage, recommendation: null, message: null, weather: weatherByDay(c.window.points), days: [], style: null, styleLabel: null }
       if (eventModeOf(e.kind, e.title) === 'activity') {
-        return void res.json({ ...base, status: 'activity', activity: activityByDay(c.window.points, c.airGrade, kstDate(new Date()), (d) => sunTimes(d, grid.lat, grid.lng)) })
+        return void res.json({ ...base, status: 'activity', activity: activityByDay(c.window.points, c.airGrade, kstDate(new Date()), (d) => sunTimes(d, grid.lat, grid.lng), await getAirForecast(c.region)) })
       }
       return void res.json({ ...base, status: 'weather_only' })
     }
