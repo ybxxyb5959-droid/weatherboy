@@ -109,6 +109,12 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 일정 탭: "+ 이 날 일정 추가" 버튼과 목록 스크롤 바 숨김 (작성: Claude Code)
+- 사용자 요청: 달력에서 날짜를 눌렀을 때 나오는 "+ 이 날 일정 추가" 버튼 제거, 일정 목록의 스크롤 바 숨김(밀어서 스크롤은 그대로).
+- 변경 파일: `frontend/src/components/MonthCalendar.tsx`, `global.css`
+- 검증 결과: tsc 통과, 브라우저에서 버튼 없음·스크롤 바 숨김 확인.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-05 홈: "n시 관측 · 방금 확인" 숨김, 추정 기온 제거 (작성: Claude Code)
 - 사용자 결정: 직전의 "n시 관측 · ● 방금 확인" 표시는 숨기고 **추정 기온(소수점·`추정` 표시)은 지운다**. 기온·체감은 다시 관측값(`w.temp`/`w.feels`) 그대로.
 - 변경 파일: `frontend/src/pages/HomePage.tsx`(표시 제거), `frontend/src/lib/estimateTemp.ts`(삭제), `global.css`(live-dot·est-tag·num-tick 스타일 삭제)

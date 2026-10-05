@@ -28,7 +28,7 @@ function datesOf(e: PlanEvent): string[] {
   return out
 }
 
-/** 우리 디자인(삐뚤빼뚤 낙서)의 한 달 달력. 일정이 있는 날은 점으로, 오늘은 동그라미로 표시한다. 날짜를 누르면 그 날 일정과 "이 날 일정 추가"가 아래에 나타난다. */
+/** 우리 디자인(삐뚤빼뚤 낙서)의 한 달 달력. 일정이 있는 날은 점으로, 오늘은 동그라미로 표시한다. 날짜를 누르면 그 날 일정이 아래에 나타난다. */
 export default function MonthCalendar({ events, view, onViewChange }: { events: PlanEvent[]; view: MonthView; onViewChange: (v: MonthView) => void }) {
   const [today] = useState(() => new Date())
   const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate())
@@ -96,9 +96,6 @@ export default function MonthCalendar({ events, view, onViewChange }: { events: 
             <strong>
               <HandText>{`${Number(selected.slice(5, 7))}월 ${Number(selected.slice(8))}일`}</HandText>
             </strong>
-            <Link to={`/events/new?date=${selected}`} className="dbtn w2 small">
-              <HandText>+ 이 날 일정 추가</HandText>
-            </Link>
           </div>
           {picked.length === 0 ? (
             <p className="tiny">이 날은 일정이 없어요</p>

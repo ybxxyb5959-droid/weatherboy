@@ -4835,3 +4835,11 @@ dd,
     transform: none;
   }
 }
+
+/* 일정 목록(스크롤 영역)의 스크롤 바는 숨긴다. 그래도 밀어서 스크롤된다 */
+.events-list {
+  scrollbar-width: none;
+}
+.events-list::-webkit-scrollbar {
+  display: none;
+}
