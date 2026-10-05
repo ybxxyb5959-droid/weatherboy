@@ -574,6 +574,181 @@
     animation-delay: 210ms;
   }
 
+  /* ───── 일정 장면(졸라맨): 그림은 그대로, 안의 부분만 움직인다 ───── */
+  .sp-idle {
+    animation: sp-idle 2.8s ease-in-out infinite;
+  }
+  .sp-sway {
+    animation: sp-sway 3.4s ease-in-out infinite;
+  }
+  .sp-wave {
+    animation: sp-wave 1.7s ease-in-out infinite;
+  }
+  .sp-cheer {
+    animation: sp-cheer 1.2s ease-in-out infinite;
+  }
+  .sp-swing {
+    animation: sp-swing 1.1s ease-in-out infinite alternate;
+  }
+  .sp-flicker {
+    animation: sp-flicker 0.55s ease-in-out infinite alternate;
+  }
+  .sp-twinkle {
+    animation: wx-twinkle 1.8s ease-in-out infinite;
+  }
+  .sp-heart {
+    animation: sp-heart 1.6s ease-in-out infinite;
+  }
+  .sp-steam {
+    animation: sp-steam 2.2s ease-out infinite;
+  }
+  .sp-dip {
+    animation: sp-dip 1.8s ease-in-out infinite;
+  }
+  .sp-clink {
+    animation: sp-clink 2.4s ease-in-out infinite;
+  }
+  .sp-bob {
+    animation: sp-bob 2.4s ease-in-out infinite;
+  }
+  .sp-note {
+    animation: sp-note 2.4s ease-in-out infinite;
+  }
+  .sp-late {
+    animation-delay: -1.2s;
+  }
+  .sp-bounce {
+    animation: sp-bounce 0.9s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
+  }
+  .sp-flag {
+    animation: sp-flag 1.4s ease-in-out infinite alternate;
+  }
+  .sp-spin {
+    animation: wx-spin 30s linear infinite;
+  }
+  @keyframes sp-idle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-1.5px);
+    }
+  }
+  @keyframes sp-sway {
+    0%, 100% {
+      transform: rotate(-3deg);
+    }
+    50% {
+      transform: rotate(3deg);
+    }
+  }
+  @keyframes sp-wave {
+    0%, 100% {
+      transform: rotate(0);
+    }
+    50% {
+      transform: rotate(-14deg);
+    }
+  }
+  @keyframes sp-cheer {
+    0%, 100% {
+      transform: rotate(-6deg);
+    }
+    50% {
+      transform: rotate(6deg);
+    }
+  }
+  @keyframes sp-swing {
+    from {
+      transform: rotate(-9deg);
+    }
+    to {
+      transform: rotate(9deg);
+    }
+  }
+  @keyframes sp-flicker {
+    from {
+      transform: scale(1, 0.92);
+      opacity: 0.85;
+    }
+    to {
+      transform: scale(0.94, 1.1);
+      opacity: 1;
+    }
+  }
+  @keyframes sp-heart {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-4px) scale(1.12);
+    }
+  }
+  @keyframes sp-steam {
+    0% {
+      transform: translateY(2px);
+      opacity: 0.2;
+    }
+    40% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: translateY(-6px);
+      opacity: 0;
+    }
+  }
+  @keyframes sp-dip {
+    0%, 100% {
+      transform: rotate(0);
+    }
+    50% {
+      transform: rotate(5deg);
+    }
+  }
+  @keyframes sp-clink {
+    0%, 55%, 100% {
+      transform: rotate(0);
+    }
+    70% {
+      transform: rotate(-9deg);
+    }
+    85% {
+      transform: rotate(3deg);
+    }
+  }
+  @keyframes sp-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-2px);
+    }
+  }
+  @keyframes sp-note {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  @keyframes sp-bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-9px);
+    }
+  }
+  @keyframes sp-flag {
+    from {
+      transform: skewY(-7deg);
+    }
+    to {
+      transform: skewY(7deg);
+    }
+  }
+
   /* 달리는 졸라맨의 바람 줄이 뒤로 흩날린다 */
   .run-lines {
     animation: run-lines 0.8s linear infinite;

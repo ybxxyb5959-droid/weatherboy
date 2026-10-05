@@ -17,6 +17,15 @@ const OTHER_EXAMPLES: [string, Mood][] = [
   ['그 밖의 일정', 'trip'],
 ]
 
+// 일정 종류별 그림
+const KIND_EXAMPLES: [string, Mood][] = [
+  ['여행', 'travel'],
+  ['캠핑', 'camp'],
+  ['등산', 'hike'],
+  ['야외활동', 'outdoor'],
+  ['예보 기다리는 중', 'wait'],
+]
+
 // 날씨 낙서 미리보기 (개발용): /weather
 export default function WeatherPreviewPage() {
   return (
@@ -33,6 +42,15 @@ export default function WeatherPreviewPage() {
             <WeatherAmbience kind={w.kind} />
             <WeatherDoodle kind={w.kind} size={96} animate />
             <div className="label">{w.label}</div>
+          </div>
+        ))}
+      </div>
+      <h2 style={{ marginTop: 24 }}>일정 종류 그림</h2>
+      <div className="grid2">
+        {KIND_EXAMPLES.map(([title, mood], i) => (
+          <div key={mood} className={`box w${i % 4} cloth`}>
+            <StickPerson mood={mood} size={110} />
+            <div className="label">{title}</div>
           </div>
         ))}
       </div>

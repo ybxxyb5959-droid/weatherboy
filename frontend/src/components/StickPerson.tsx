@@ -6,6 +6,9 @@ export type Mood =
   // 기타 일정의 제목에 맞춘 장면
   | 'birthday' | 'date' | 'meal' | 'drink' | 'gift' | 'show' | 'sport' | 'run' | 'work'
 
+// 가만히 숨 쉬듯 움직이는 장면들(일정 그림). 부분 움직임은 각 장면 안의 sp-* 클래스가 맡는다.
+const SCENES: Mood[] = ['travel', 'camp', 'hike', 'outdoor', 'birthday', 'date', 'meal', 'drink', 'gift', 'show', 'sport', 'run', 'work', 'trip', 'wait']
+
 export interface WornItem {
   type: string
   color: string
@@ -81,7 +84,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
   const shift = showUmbrella ? 'translate(-12 22)' : mood === 'camp' ? 'translate(-14 8)' : mood === 'outdoor' ? 'translate(-4 28)' : 'translate(10 0)'
   return (
     <svg
-      className="doodle"
+      className={SCENES.includes(mood) ? 'doodle sp-idle' : 'doodle'}
       width={size}
       height={size * 1.15}
       viewBox="0 0 140 160"
@@ -106,7 +109,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           {/* 산: 큰 봉우리에 눈 덮인 꼭대기와 깃발, 작은 봉우리 */}
           <path d="M40 138 L88 66 L112 100 L124 84 L146 138Z" fill="#cfe6e2" />
           <path d="M78 82 L88 66 L98 82 L92 79 L88 85 L83 79Z" fill="#fcfcfa" strokeWidth="1.8" />
-          <path d="M88 66 V52 M88 52 L102 57 L88 62" strokeWidth="2" />
+          <path d="M88 66 V52" strokeWidth="2" />
+          <path className="sp-flag" style={{ transformOrigin: '88px 57px' }} d="M88 52 L102 57 L88 62" strokeWidth="2" />
           <path d="M104 100 L112 90 L120 100" strokeWidth="1.6" />
         </g>
       )}
@@ -114,9 +118,9 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         <g>
           {/* 나무와 해 */}
           <path d="M20 66 V130" strokeWidth="3" />
-          <path d="M20 48 C4 46 2 70 18 68 C30 76 42 62 34 52 C36 40 26 38 20 48Z" fill="#9fd1a0" />
+          <path className="sp-sway" style={{ transformOrigin: '20px 68px' }} d="M20 48 C4 46 2 70 18 68 C30 76 42 62 34 52 C36 40 26 38 20 48Z" fill="#9fd1a0" />
           <circle cx="116" cy="22" r="8" fill="#f2cf4a" />
-          <path d="M116 6 V10 M116 34 V38 M100 22 H104 M128 22 H132 M104 10 L107 13 M128 10 L125 13" strokeWidth="1.8" />
+          <path className="sp-spin" style={{ transformOrigin: '116px 22px' }} d="M116 6 V10 M116 34 V38 M100 22 H104 M128 22 H132 M104 10 L107 13 M128 10 L125 13" strokeWidth="1.8" />
         </g>
       )}
       <g transform={mood === 'run' ? `${shift} rotate(7 60 138)` : shift}>
@@ -199,13 +203,15 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M58 27 Q60 25.5 62 27 M47 27 L44 25 M73 27 L76 25" strokeWidth="1.6" />
             {/* 한 팔은 캐리어 손잡이, 한 팔은 흔들며 */}
             <path d="M60 58 L90 88" />
-            <path d="M60 58 L42 82" />
+            <path className="sp-wave" style={{ transformOrigin: '60px 58px' }} d="M60 58 L42 82" />
             {/* 캐리어 */}
-            <path d="M90 88 L90 100" strokeWidth="2.2" />
-            <path d="M78 100 L102 100 L102 134 L78 134Z" fill="#e8a24a" />
-            <path d="M84 100 L84 134 M96 100 L96 134" strokeWidth="1.6" />
-            <path d="M85 100 V96 H95 V100" strokeWidth="1.8" />
-            <path d="M82 137 l.1 0 M98 137 l.1 0" strokeWidth="3.4" />
+            <g className="sp-sway" style={{ transformOrigin: '90px 88px' }}>
+              <path d="M90 88 L90 100" strokeWidth="2.2" />
+              <path d="M78 100 L102 100 L102 134 L78 134Z" fill="#e8a24a" />
+              <path d="M84 100 L84 134 M96 100 L96 134" strokeWidth="1.6" />
+              <path d="M85 100 V96 H95 V100" strokeWidth="1.8" />
+              <path d="M82 137 l.1 0 M98 137 l.1 0" strokeWidth="3.4" />
+            </g>
           </g>
         )}
 
@@ -285,8 +291,10 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <g>
             <path d="M60 58 L38 80" />
             <path d="M60 58 L84 80" />
-            <path d="M80 82 L104 82 L106 104 L78 104Z" />
-            <path d="M86 82 Q92 70 98 82" />
+            <g className="sp-sway" style={{ transformOrigin: '84px 80px' }}>
+              <path d="M80 82 L104 82 L106 104 L78 104Z" />
+              <path d="M86 82 Q92 70 98 82" />
+            </g>
           </g>
         )}
 
@@ -307,15 +315,15 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M51 9 L71 11 M55 0 L67 2" strokeWidth="1.6" />
             <circle cx="61" cy="-12" r="3.4" fill="#f2cf4a" strokeWidth="1.8" />
             {/* 한 팔은 만세, 한 팔은 케이크 쪽으로 */}
-            <path d="M60 58 L38 38 M38 38 l-4 -6 M38 38 l-7 -1" />
+            <path className="sp-cheer" style={{ transformOrigin: '60px 58px' }} d="M60 58 L38 38 M38 38 l-4 -6 M38 38 l-7 -1" />
             <path d="M60 58 L84 90" />
             {/* 케이크: 접시, 크림, 초 세 개 */}
             <path d="M82 104 L118 104 L118 128 L82 128Z" fill="#fcfcfa" />
             <path d="M82 104 Q88 112 94 104 Q100 112 106 104 Q112 112 118 104" fill="#f4c6c6" strokeWidth="2" />
             <path d="M77 129 L123 129" strokeWidth="3" />
             <path d="M91 103 V93 M100 103 V93 M109 103 V93" stroke="#4a8bd4" strokeWidth="2.6" />
-            <path d="M91 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M100 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M109 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z" fill="#e8a24a" strokeWidth="1.2" />
-            <path d="M86 80 l-3 -3 M114 80 l3 -3 M100 76 v-4" stroke="#e8a24a" strokeWidth="1.6" />
+            <path className="sp-flicker" style={{ transformOrigin: '100px 90px' }} d="M91 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M100 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z M109 90 c-2.4 -3 0 -6.5 0 -6.5 c0 0 2.4 3.5 0 6.5Z" fill="#e8a24a" strokeWidth="1.2" />
+            <path className="sp-twinkle" d="M86 80 l-3 -3 M114 80 l3 -3 M100 76 v-4" stroke="#e8a24a" strokeWidth="1.6" />
           </g>
         )}
 
@@ -328,11 +336,13 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             </g>
             <path d="M60 58 L40 84" />
             <path d="M60 58 L82 72" />
-            <path d="M82 72 L92 50" strokeWidth="2.2" stroke="#4f8a4f" />
-            <path d="M87 62 Q80 58 82 52 Q89 55 87 62Z" fill="#9fd1a0" strokeWidth="1.6" />
-            <path d="M92 50 m-7 0 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0" fill="#f08a8a" strokeWidth="2" />
-            <circle cx="92" cy="50" r="2.4" fill="#f2cf4a" strokeWidth="1.4" />
-            <path d="M104 24 C100 17 91 20 95 28 L104 37 L113 28 C117 20 108 17 104 24Z" fill="#f08a8a" strokeWidth="2" />
+            <g className="sp-sway" style={{ transformOrigin: '82px 72px' }}>
+              <path d="M82 72 L92 50" strokeWidth="2.2" stroke="#4f8a4f" />
+              <path d="M87 62 Q80 58 82 52 Q89 55 87 62Z" fill="#9fd1a0" strokeWidth="1.6" />
+              <path d="M92 50 m-7 0 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0" fill="#f08a8a" strokeWidth="2" />
+              <circle cx="92" cy="50" r="2.4" fill="#f2cf4a" strokeWidth="1.4" />
+            </g>
+            <path className="sp-heart" style={{ transformOrigin: '104px 30px' }} d="M104 24 C100 17 91 20 95 28 L104 37 L113 28 C117 20 108 17 104 24Z" fill="#f08a8a" strokeWidth="2" />
           </g>
         )}
 
@@ -341,10 +351,10 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             {/* 식탁 위 밥그릇과 김, 젓가락을 든 손 */}
             <path d="M60 58 L44 86" />
             <path d="M60 58 L84 80" />
-            <path d="M83 79 L100 93 M86 77 L103 90" strokeWidth="1.8" />
+            <path className="sp-dip" style={{ transformOrigin: '84px 78px' }} d="M83 79 L100 93 M86 77 L103 90" strokeWidth="1.8" />
             <path d="M84 96 Q100 116 116 96Z" fill="#fcfcfa" />
             <path d="M86 96 Q100 86 114 96" fill="#fcfcfa" strokeWidth="2" />
-            <path d="M95 82 q-3 -4 0 -8 q3 -4 0 -8 M106 82 q-3 -4 0 -8 q3 -4 0 -8" strokeWidth="1.6" opacity="0.6" />
+            <path className="sp-steam" d="M95 82 q-3 -4 0 -8 q3 -4 0 -8 M106 82 q-3 -4 0 -8 q3 -4 0 -8" strokeWidth="1.6" opacity="0.6" />
             <path d="M74 108 L128 108" strokeWidth="3.2" />
             <path d="M80 108 L80 138 M122 108 L122 138" strokeWidth="2.6" />
           </g>
@@ -354,24 +364,28 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <g>
             {/* 건배: 높이 든 맥주잔 */}
             <path d="M60 58 L40 84" />
-            <path d="M60 58 L82 46" />
-            <path d="M80 30 L96 30 L95 50 L81 50Z" fill="#f2cf4a" />
-            <path d="M78 31 Q78 23 84 25 Q87 20 92 24 Q98 22 98 30 Q90 33 78 31Z" fill="#fcfcfa" strokeWidth="2" />
-            <path d="M95 34 Q103 34 102 41 Q102 47 95 46" strokeWidth="2.2" />
-            <path d="M85 36 V45 M90 36 V45" strokeWidth="1.4" />
-            <path d="M104 18 l5 -4 M107 26 l6 0 M98 14 l1 -6" strokeWidth="1.8" />
+            <g className="sp-clink" style={{ transformOrigin: '60px 58px' }}>
+              <path d="M60 58 L82 46" />
+              <path d="M80 30 L96 30 L95 50 L81 50Z" fill="#f2cf4a" />
+              <path d="M78 31 Q78 23 84 25 Q87 20 92 24 Q98 22 98 30 Q90 33 78 31Z" fill="#fcfcfa" strokeWidth="2" />
+              <path d="M95 34 Q103 34 102 41 Q102 47 95 46" strokeWidth="2.2" />
+              <path d="M85 36 V45 M90 36 V45" strokeWidth="1.4" />
+            </g>
+            <path className="sp-twinkle" d="M104 18 l5 -4 M107 26 l6 0 M98 14 l1 -6" strokeWidth="1.8" />
           </g>
         )}
 
         {mood === 'gift' && (
           <g>
             {/* 두 손으로 든 리본 달린 선물 상자 */}
-            <path d="M60 58 L72 88" />
-            <path d="M60 58 L96 86" />
-            <path d="M68 84 L100 84 L100 110 L68 110Z" fill="#f4c6c6" />
-            <path d="M84 84 V110 M68 95 H100" stroke="#e05a5a" strokeWidth="2.4" />
-            <path d="M84 84 C76 72 70 80 84 84 C98 80 92 72 84 84Z" fill="#f08a8a" strokeWidth="1.8" />
-            <path d="M104 72 l4 -3 M106 80 l5 0" strokeWidth="1.6" />
+            <g className="sp-bob">
+              <path d="M60 58 L72 88" />
+              <path d="M60 58 L96 86" />
+              <path d="M68 84 L100 84 L100 110 L68 110Z" fill="#f4c6c6" />
+              <path d="M84 84 V110 M68 95 H100" stroke="#e05a5a" strokeWidth="2.4" />
+              <path d="M84 84 C76 72 70 80 84 84 C98 80 92 72 84 84Z" fill="#f08a8a" strokeWidth="1.8" />
+            </g>
+            <path className="sp-twinkle" d="M104 72 l4 -3 M106 80 l5 0" strokeWidth="1.6" />
           </g>
         )}
 
@@ -379,15 +393,21 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <g>
             {/* 응원봉을 흔들고, 음표가 날아다닌다 */}
             <path d="M60 58 L38 82" />
-            <path d="M60 58 L84 38" />
-            <path d="M84 38 L90 22" strokeWidth="3" />
-            <circle cx="91.5" cy="17" r="5.5" fill="#f2cf4a" strokeWidth="2" />
-            <path d="M98 10 l4 -3 M100 18 l6 0 M86 8 l-1 -5" stroke="#e8a24a" strokeWidth="1.6" />
-            <path d="M106 58 V42 L118 39 V54" strokeWidth="2" />
-            <ellipse cx="103.5" cy="58" rx="3.6" ry="2.8" fill={ink} stroke="none" />
-            <ellipse cx="115.5" cy="54.5" rx="3.6" ry="2.8" fill={ink} stroke="none" />
-            <path d="M24 46 V34 L32 38" strokeWidth="2" />
-            <ellipse cx="21.8" cy="46.5" rx="3" ry="2.3" fill={ink} stroke="none" />
+            <g className="sp-swing" style={{ transformOrigin: '60px 58px' }}>
+              <path d="M60 58 L84 38" />
+              <path d="M84 38 L90 22" strokeWidth="3" />
+              <circle cx="91.5" cy="17" r="5.5" fill="#f2cf4a" strokeWidth="2" />
+              <path className="sp-twinkle" d="M98 10 l4 -3 M100 18 l6 0 M86 8 l-1 -5" stroke="#e8a24a" strokeWidth="1.6" />
+            </g>
+            <g className="sp-note">
+              <path d="M106 58 V42 L118 39 V54" strokeWidth="2" />
+              <ellipse cx="103.5" cy="58" rx="3.6" ry="2.8" fill={ink} stroke="none" />
+              <ellipse cx="115.5" cy="54.5" rx="3.6" ry="2.8" fill={ink} stroke="none" />
+            </g>
+            <g className="sp-note sp-late">
+              <path d="M24 46 V34 L32 38" strokeWidth="2" />
+              <ellipse cx="21.8" cy="46.5" rx="3" ry="2.3" fill={ink} stroke="none" />
+            </g>
           </g>
         )}
 
@@ -398,9 +418,11 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M44 22 L36 28 M44 22 L37 19" stroke="#e05a5a" strokeWidth="2.2" />
             <path d="M60 58 L40 70 L34 56" />
             <path d="M60 58 L80 74 L92 66" />
-            <circle cx="100" cy="128" r="9" fill="#fcfcfa" />
-            <path d="M96 124 L100 121 L104 124 L103 129 L97 129Z" fill={ink} strokeWidth="1" />
-            <path d="M84 122 h-8 M86 130 h-10 M86 138 h-7" strokeWidth="1.8" />
+            <g className="sp-bounce">
+              <circle cx="100" cy="128" r="9" fill="#fcfcfa" />
+              <path d="M96 124 L100 121 L104 124 L103 129 L97 129Z" fill={ink} strokeWidth="1" />
+              <path d="M84 122 h-8 M86 130 h-10 M86 138 h-7" strokeWidth="1.8" />
+            </g>
           </g>
         )}
 
@@ -422,16 +444,18 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M58 49 L62 49 L63.5 64 L60 69 L56.5 64Z" fill="#4a8bd4" strokeWidth="1.8" />
             <path d="M60 58 L40 84" />
             <path d="M60 58 L84 90" />
-            <path d="M74 94 L102 94 L102 116 L74 116Z" fill="#c9965a" />
-            <path d="M82 94 V89 H94 V94 M74 103 H102" strokeWidth="2" />
+            <g className="sp-sway" style={{ transformOrigin: '88px 90px' }}>
+              <path d="M74 94 L102 94 L102 116 L74 116Z" fill="#c9965a" />
+              <path d="M82 94 V89 H94 V94 M74 103 H102" strokeWidth="2" />
+            </g>
           </g>
         )}
 
         {mood === 'wait' && (
           <g>
             <path d="M60 58 L38 84" />
-            <path d="M60 58 L82 36" />
-            <path d="M92 14 Q86 14 87 22 Q80 24 84 30 L108 30 Q116 22 108 18 Q106 8 96 10 Q94 11 92 14Z" />
+            <path className="sp-wave" style={{ transformOrigin: '60px 58px' }} d="M60 58 L82 36" />
+            <path className="sp-bob" d="M92 14 Q86 14 87 22 Q80 24 84 30 L108 30 Q116 22 108 18 Q106 8 96 10 Q94 11 92 14Z" />
           </g>
         )}
       </g>
@@ -463,9 +487,11 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <path d="M110 62 L110 54" strokeWidth="2" />
           {/* 모닥불 */}
           <path d="M92 144 L116 134 M92 134 L116 144" strokeWidth="3.4" />
-          <path d="M104 112 C96 122 96 132 104 138 C112 132 112 122 104 112Z" fill="#e8a24a" />
-          <path d="M104 124 C100 129 101 134 104 136 C107 134 108 129 104 124Z" fill="#f2cf4a" strokeWidth="1.6" />
-          <path d="M92 116 l-3 -5 M118 114 l3 -5 M104 106 l0 -5" stroke="#e8a24a" strokeWidth="1.8" />
+          <g className="sp-flicker" style={{ transformOrigin: '104px 138px' }}>
+            <path d="M104 112 C96 122 96 132 104 138 C112 132 112 122 104 112Z" fill="#e8a24a" />
+            <path d="M104 124 C100 129 101 134 104 136 C107 134 108 129 104 124Z" fill="#f2cf4a" strokeWidth="1.6" />
+          </g>
+          <path className="sp-twinkle" d="M92 116 l-3 -5 M118 114 l3 -5 M104 106 l0 -5" stroke="#e8a24a" strokeWidth="1.8" />
         </g>
       )}
     </svg>
