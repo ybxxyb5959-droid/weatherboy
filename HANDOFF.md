@@ -109,6 +109,19 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 개인정보 안내 정리 + 로그인 없이 열리는 공개 페이지 + 후기 본문 디스코드 제외 (작성: Claude Code)
+- 수정 목적: 점검 보고서 P0(S5): 국외 이전·연령 기준·탈퇴 후 남는 정보·디스코드 전송이 안내와 실제 처리가 어긋났던 것을 정리하고, 스토어 제출·계정 삭제 안내용 공개 URL 을 만듦.
+- 사용자 답을 못 받아 기본값으로 정함(바꾸려면 알려 주세요): 연령 기준 **만 14세 이상**(`MIN_AGE`), 후기·의견 **본문은 디스코드로 안 보냄**(관리자 화면에서만 확인, `DISCORD_INCLUDE_MESSAGE=true` 로 켤 수 있으나 켜면 방침 5번 문구도 고쳐야 함).
+- 변경 파일:
+  - `frontend/src/pages/legalText.ts` — 이용약관 9개 항목(연령, AI 기능의 성격, 책임 한계, 베타 안내 등), 개인정보처리방침 10개 항목(국외 이전: Google Gemini·Vercel·Render·Neon·알림 전달, 서버 로그의 IP, 탈퇴 후 남는 것(AI 기록 익명화, 호스팅 백업·로그), 30일 빈 게스트 자동 삭제, 쿠키 기간, 만 14세 미만, 이용자 권리, 안전 조치, 시행일 `LEGAL_EFFECTIVE`), 계정 삭제 안내 5개 항목. FAQ 의 낡은 알림·탈퇴 답변도 현재 동작에 맞춤
+  - `frontend/src/pages/LegalPage.tsx`, `components/Legal.tsx`, `App.tsx` — 공개 페이지 `/terms`, `/privacy`, `/delete-account`(로그인 불필요, 하단 탭 없음, 문서 제목 설정). 설정 화면도 같은 `Legal` 컴포넌트 사용
+  - `frontend/src/pages/LandingPage.tsx`(하단 링크), `IntroPage.tsx`("시작하면 약관·방침에 동의, 만 14세 이상" 안내)
+  - `backend/src/config/env.ts`, `services/review/notifyOwner.ts` — `DISCORD_INCLUDE_MESSAGE`(기본 false). 꺼져 있으면 별점·종류·사용자 번호만 보냄. `tests/unit/notifyOwner.test.ts`
+- 프론트 연결 사항: 없음(백엔드 API 변경 없음).
+- 검증 결과: backend typecheck/lint/신규 테스트 통과, frontend tsc/build 통과, `/privacy` 화면 확인.
+- 남은 일 / 상대에게 요청: ⚠️ 법적 검토는 하지 않았음(일반 초안). 사실 확인 필요: 호스팅 지역(Vercel/Render/Neon 서버 위치), Gemini 무료 등급 여부(입력이 학습에 쓰일 수 있음 → 유료 전환 또는 방침 문구 보강), 호스팅 백업·로그 보관 기간. Play 개인정보 양식에도 같은 내용을 써야 함. 커밋 안 함.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 베타 전 안정성·보안 묶음 1 (로그인 유지, 첫 로딩, 로그 마스킹, 게스트·관리자 세션, 캐릭터 캐시) (작성: Claude Code)
 - 수정 목적: 점검 보고서 P0/P1 중 작은 항목을 한 번에. (S1) 로그인이 30일 뒤 무조건 풀려 게스트가 옷장을 잃음, (S3) 서버가 잠들었다 깨는 동안 빈 화면·무한 대기, 요청 로그에 좌표·카카오 code 노출, 게스트 연타 중복 생성·정리 없음, 관리자 로그인 때 세션 재생성 없음, 로그아웃 후 이전 계정 캐릭터가 잠깐 보임.
 - 변경 파일:

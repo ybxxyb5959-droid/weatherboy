@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import HandText from '../components/HandText'
 import GreetingFigure from '../components/GreetingFigure'
 import GearDoodles from '../components/GearDoodles'
@@ -161,6 +161,11 @@ export default function LandingPage() {
 
       <footer className="landing-foot tiny">
         <p>뭐입을옷? · 문의 ybxxyb5959@gmail.com</p>
+        <p className="legal-links">
+          <Link to="/terms">이용약관</Link>
+          <Link to="/privacy">개인정보처리방침</Link>
+          <Link to="/delete-account">계정 삭제 안내</Link>
+        </p>
       </footer>
 
       <div className="bee-lane" aria-hidden="true">

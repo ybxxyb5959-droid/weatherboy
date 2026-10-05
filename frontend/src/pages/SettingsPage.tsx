@@ -14,8 +14,8 @@ import { getReviewStatus } from '../lib/reviews'
 import { api, errorMessage } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
+import Legal from '../components/Legal'
 import { faqGroups, OPERATOR, privacySections, termsSections } from './legalText'
-import type { LegalSection } from './legalText'
 import { defaultQuiet, defaultRoutine } from '../store'
 import type { Quiet, Routine, Sensitivity, Settings } from '../store'
 
@@ -93,22 +93,6 @@ function Row({ label, value, onClick, danger }: { label: string; value?: ReactNo
 
 function Group({ seed, children }: { seed: number; children: ReactNode }) {
   return <section className={`box w${seed % 4} set-group`}>{children}</section>
-}
-
-function Legal({ sections }: { sections: LegalSection[] }) {
-  return (
-    <div className="legal">
-      <p className="tiny">운영자: {OPERATOR.name} · 문의: {OPERATOR.contact}</p>
-      {sections.map((s) => (
-        <section key={s.title}>
-          <h2>{s.title}</h2>
-          {s.body.map((p) => (
-            <p key={p}>{p}</p>
-          ))}
-        </section>
-      ))}
-    </div>
-  )
 }
 
 const TITLES: Record<string, string> = {

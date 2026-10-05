@@ -7,6 +7,7 @@ import TourPage from './pages/TourPage'
 import AdminPage from './pages/AdminPage'
 import ReviewPage from './pages/ReviewPage'
 import SupportPage from './pages/SupportPage'
+import LegalPage from './pages/LegalPage'
 import { isStandalone } from './lib/install'
 import HomePage from './pages/HomePage'
 import WardrobePage from './pages/WardrobePage'
@@ -71,7 +72,7 @@ export default function App() {
   const { pathname } = useLocation()
   const { me } = useAuth()
   // 로그인이 확인된 뒤에만 하단 탭을 보인다(로딩 중·연결 실패 화면에는 안 보인다)
-  const showNav = !!me && pathname !== '/' && pathname !== '/start' && pathname !== '/tour' && pathname !== '/admin'
+  const showNav = !!me && pathname !== '/' && pathname !== '/start' && pathname !== '/tour' && pathname !== '/admin' && pathname !== '/terms' && pathname !== '/privacy' && pathname !== '/delete-account'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}
@@ -91,6 +92,9 @@ export default function App() {
         <Route path="/start" element={<Root />} />
         <Route path="/tour" element={<Tour />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/terms" element={<LegalPage kind="terms" />} />
+        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+        <Route path="/delete-account" element={<LegalPage kind="delete-account" />} />
         <Route path="/review" element={<Protected><ReviewPage /></Protected>} />
         <Route path="/support" element={<Protected><SupportPage /></Protected>} />
         <Route path="/weather" element={<WeatherPreviewPage />} />

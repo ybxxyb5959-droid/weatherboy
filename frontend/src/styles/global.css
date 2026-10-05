@@ -4403,3 +4403,24 @@ dd,
   max-width: 280px;
   margin: 0;
 }
+
+/* 공개 문서 페이지(/terms, /privacy, /delete-account) */
+.legal-page .legal {
+  margin-top: 4px;
+}
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 18px;
+}
+.legal-links a,
+.consent-note a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.consent-note {
+  margin: 10px 0 0;
+  text-align: center;
+  opacity: 0.8;
+}

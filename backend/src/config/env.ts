@@ -44,6 +44,8 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().default(''),
   // 새 후기가 오면 디스코드로 알려 준다. 비워 두면 알림 없이 관리자 페이지에서만 본다.
   DISCORD_WEBHOOK_URL: z.string().default(''),
+  // true 면 디스코드 알림에 후기·의견 본문도 보낸다. 기본 false: 별점·종류·짧은 사용자 번호만 보낸다(개인정보처리방침이 "본문은 보내지 않는다"고 안내한다. 켜려면 방침 문구도 같이 고칠 것).
+  DISCORD_INCLUDE_MESSAGE: bool,
 })
 
 export const env = schema.parse(process.env)

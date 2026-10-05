@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import IntroFigure from '../components/IntroFigure'
 import { errorMessage } from '../api'
 import { useAuth } from '../auth'
@@ -66,6 +66,9 @@ export default function IntroPage() {
           <HandText>{starting ? '시작하는 중…' : '로그인 없이 둘러보기'}</HandText>
         </button>
         {error && <p className="tiny" role="alert">{error}</p>}
+        <p className="tiny consent-note">
+          시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의한 것으로 봐요. 만 14세 이상만 쓸 수 있어요.
+        </p>
       </div>
 
       <div className="bee-lane" aria-hidden="true">
