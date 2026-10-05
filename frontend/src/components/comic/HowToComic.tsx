@@ -124,7 +124,7 @@ const Scene2 = memo(function Scene2() {
   )
 })
 
-// ───── 3컷: 일정을 넣고 "뭐 입지?" -> 어울리는 코디 ─────
+// ───── 3컷: 일정과 장소를 넣고 "뭐 입지?" -> 그곳 날씨에 맞는 코디 ─────
 const P3 = buildPose(30, 118)
 const Scene3 = memo(function Scene3() {
   return (
@@ -134,17 +134,26 @@ const Scene3 = memo(function Scene3() {
       <path d="M6 50 H86 M24 24 V36 M68 24 V36" />
       <path d="M18 62 h.1 M34 62 h.1 M50 62 h.1 M66 62 h.1 M18 76 h.1 M34 76 h.1 M66 76 h.1 M18 90 h.1 M34 90 h.1 M50 90 h.1 M66 90 h.1" strokeWidth="3.4" />
       <circle cx="50" cy="76" r="9" stroke="#d9503f" strokeWidth="2.6" />
+      {/* 장소 표시(핀) */}
+      <g transform="translate(16 4)">
+        <path d="M0 15 C-9 5 -7 -6 0 -6 C7 -6 9 5 0 15Z" fill="#ef6f86" strokeWidth="1.6" />
+        <circle cx="0" cy="2" r="2.2" fill={PAPER} strokeWidth="1.2" />
+      </g>
       {/* 고민하는 졸라맨 */}
       <Fig pose={P3} id="c3" tx={96} ty={24} s={0.9} face="flat" />
       <g stroke="#222" strokeWidth="2.4">
         <path transform="translate(152 16)" d="M0 8 C0 -4 16 -4 16 6 C16 14 8 14 8 22 M8 29 h.1" />
         <path transform="translate(176 30) scale(.7)" d="M0 8 C0 -4 16 -4 16 6 C16 14 8 14 8 22 M8 29 h.1" />
       </g>
-      {/* 어울리는 코디 */}
+      {/* 그곳 날씨에 맞는 코디 */}
+      <g stroke="#e0a81e" strokeWidth="2">
+        <circle cx="204" cy="58" r="7" fill="#f6d44c" />
+        <path d="M204 44 V47 M204 69 V72 M190 58 H193 M215 58 H218 M194 48 l2 2 M214 48 l-2 2 M194 68 l2 -2 M214 68 l-2 -2" />
+      </g>
       <Arrow d="M190 100 Q206 92 220 96" head="M211 88 L221 96 L209 101" />
       <Rough x={224} y={30} width={70} height={124} fill={PAPER} />
-      <Cloth type="셔츠" color="흰색" x={231} y={38} s={0.56} w={4} />
-      <Cloth type="바지" color="검정" x={231} y={92} s={0.56} w={4} />
+      <Cloth type="긴팔" color="하늘색" x={231} y={38} s={0.56} w={4} />
+      <Cloth type="바지" color="베이지" x={231} y={92} s={0.56} w={4} />
       <g>
         <Sparkle x={222} y={26} s={1.3} />
         <Sparkle x={296} y={50} s={1} />
@@ -211,11 +220,11 @@ const PANELS: PanelDef[] = [
   },
   {
     scene: <Scene3 />,
-    caption: '일정을 넣고 "뭐 입지?" 하면, 어울리게 골라줘요.',
+    caption: '일정과 장소를 넣고 "뭐 입지?" 하면, 그곳 날씨에 맞게 골라줘요.',
     bubbles: [
-      { text: '면접 일정', x: 3, y: 74, tone: 'w2' },
-      { text: '뭐 입지…?', x: 35, y: 78, tone: 'w1' },
-      { text: '단정하게!', x: 71, y: 83, tone: 'w3' },
+      { text: '제주 여행 · 제주', x: 2, y: 74, tone: 'w2' },
+      { text: '뭐 입지…?', x: 44, y: 62, tone: 'w1' },
+      { text: '제주 날씨 맞춤!', x: 62, y: 83, tone: 'w3' },
     ],
   },
   {

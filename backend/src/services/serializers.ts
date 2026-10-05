@@ -68,5 +68,7 @@ export function serializeEvent(e: Event) {
     forecastStage: e.forecastStage,
     locationResolved: e.gridNx != null,
     imported: e.calendarConnectionId != null,
+    /** false 면 옷차림 대신 그날 날씨만 보여준다(기타 종류는 항상 false) */
+    needsOutfit: e.kind !== 'OTHER' && e.needsOutfit,
   }
 }

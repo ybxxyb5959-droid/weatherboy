@@ -120,7 +120,8 @@ export interface EventDayOutfit {
 }
 
 export interface EventOutfit {
-  status: 'waiting' | 'ready'
+  /** weather_only: 옷차림이 필요 없는 일정이라 날씨만 온다 */
+  status: 'waiting' | 'ready' | 'weather_only'
   weather?: EventDayWeather[]
   /** 1박 2일 이상일 때만 채워진다 */
   days?: EventDayOutfit[]

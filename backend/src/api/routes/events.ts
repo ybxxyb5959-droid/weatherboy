@@ -5,7 +5,7 @@ import { prisma } from '../../db.js'
 import { placeHintSchema, resolveLocation } from '../../services/location.js'
 import { syncStaleInBackground } from '../../services/calendar/sync.js'
 import { styleLabel } from '../../rules/outfitStyle.js'
-import { compute, dailyOutfits, saveEventRecommendation, viewOf } from '../../services/recommendationService.js'
+import { compute, dailyOutfits, outfitWanted, saveEventRecommendation, viewOf } from '../../services/recommendationService.js'
 import { serializeEvent } from '../../services/serializers.js'
 import { badRequest, notFound } from '../../utils/errors.js'
 import { fromKst, kstDate, kstTime, toKstParts } from '../../utils/time.js'
@@ -33,6 +33,8 @@ const createSchema = z.object({
   place: z.string().trim().max(100).default(''),
   kind: z.enum(eventKindMap.uiValues),
   placeHint: placeHintSchema.optional(),
+  /** 옷차림(코디) 추천이 필요한가. 생략하면 필요. 기타 종류는 값과 상관없이 날씨만 보여준다 */
+  needsOutfit: z.boolean().optional(),
 })
 const updateSchema = createSchema.partial()
 
@@ -145,7 +147,7 @@ eventsRouter.post(
     const userId = (req as AuthedRequest).userId
     if ((await prisma.event.count({ where: { userId } })) >= MAX_EVENTS) throw badRequest(`일정은 ${MAX_EVENTS}개까지 만들 수 있어요.`, 'LIMIT_REACHED')
     const row = await prisma.event.create({
-      data: { userId, title: b.title, kind: eventKindMap.toDb(b.kind), ...times, ...(await placeData(b.place, b.placeHint)) },
+      data: { userId, title: b.title, kind: eventKindMap.toDb(b.kind), needsOutfit: b.needsOutfit ?? true, ...times, ...(await placeData(b.place, b.placeHint)) },
     })
     res.status(201).json(serializeEvent(row))
   }),
@@ -167,6 +169,7 @@ eventsRouter.patch(
     const data: Prisma.EventUpdateInput = {}
     if (b.title !== undefined) data.title = b.title
     if (b.kind !== undefined) data.kind = eventKindMap.toDb(b.kind)
+    if (b.needsOutfit !== undefined) data.needsOutfit = b.needsOutfit
     const touchesTime = b.startDate !== undefined || b.endDate !== undefined || b.startTime !== undefined || b.endTime !== undefined
     if (touchesTime) {
       const sd = b.startDate ?? kstDate(cur.startAt)
@@ -204,6 +207,10 @@ eventsRouter.get(
     const reuse = parse(outfitQuery, req.query)
     const c = await compute(user, e, e.startAt, e.endAt)
     if (!c) return waiting('아직 정확한 예보가 없어요.')
+    // 옷차림이 필요 없는 일정(기타 종류, "코디 필요"를 끈 일정): 추천을 만들거나 저장하지 않고 날씨만 알려준다
+    if (!outfitWanted(e)) {
+      return void res.json({ status: 'weather_only', forecastStage: c.window.stage, recommendation: null, message: null, weather: weatherByDay(c.window.points), days: [], style: null, styleLabel: null })
+    }
     const saved = await saveEventRecommendation(e, c)
     const stage = c.window.stage
     res.json({ status: 'ready', forecastStage: stage, recommendation: viewOf(saved, stage), message: null, weather: weatherByDay(c.window.points), days: dailyOutfits(user, e, c, new Date(), reuse), reuse, style: e.outfitStyle, styleLabel: e.outfitStyle ? styleLabel[e.outfitStyle] : null, situationNotes: c.result.tabooReasons ?? [] })

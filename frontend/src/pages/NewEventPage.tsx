@@ -5,7 +5,8 @@ import DoodleButton, { ChoiceRow } from '../components/DoodleButton'
 import DatePicker from '../components/DatePicker'
 import TimePicker from '../components/TimePicker'
 import SayBox from '../components/SayBox'
-import { eventKinds } from '../mocks/events'
+import { eventKinds, outfitKinds } from '../mocks/events'
+import DoodleCheck from '../components/DoodleCheck'
 import type { EventKind, PlanEvent } from '../mocks/events'
 import { api, errorMessage } from '../api'
 import type { EventSuggestion } from '../lib/ai'
@@ -57,6 +58,8 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const [place, setPlace] = useState(event?.place ?? '')
   const [startTime, setStartTime] = useState(event?.startTime ?? '09:00')
   const [endTime, setEndTime] = useState(event?.endTime ?? '18:00')
+  // 옷차림(코디) 추천이 필요한가: 여행·캠핑·등산·야외활동은 처음부터 체크. 기타는 항목 자체가 없고 날씨만 알려준다.
+  const [needsOutfit, setNeedsOutfit] = useState(event?.needsOutfit ?? true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [say, setSay] = useState('')
@@ -71,10 +74,16 @@ export function EventForm({ event }: { event?: PlanEvent }) {
   const [touched, setTouched] = useState<Set<Field>>(() => new Set())
   const touch = (f: Field) => setTouched((t) => (t.has(f) ? t : new Set(t).add(f)))
 
+  // 종류를 바꾸면 옷차림 필요 체크가 다시 켜진다(여행·캠핑·등산·야외활동). 기타는 체크 항목이 없다.
+  const changeKind = (k: EventKind) => {
+    if (k !== kind && outfitKinds.includes(k)) setNeedsOutfit(true)
+    setKind(k)
+  }
+
   // 해석한 결과를 칸에 넣는다(직접 고친 칸은 그대로). 제안일 뿐이라 사용자가 확인하고 저장한다.
   const apply = (d: Filled) => {
     const k = d.kind ?? kind
-    if (d.kind && !touched.has('kind')) setKind(d.kind)
+    if (d.kind && !touched.has('kind')) changeKind(d.kind)
     if (d.title && !touched.has('title')) setTitle(d.title)
     if (d.startDate && !touched.has('date')) setDate(d.startDate)
     if (d.place && !touched.has('place')) setPlace(d.place)
@@ -122,8 +131,8 @@ export function EventForm({ event }: { event?: PlanEvent }) {
 
   const save = async () => {
     if (saving) return
-    if (!title.trim() || !date) {
-      setError('제목이랑 날짜는 꼭 적어줘')
+    if (!title.trim() || !date || !place.trim()) {
+      setError('제목, 날짜, 장소를 꼭 넣어줘')
       return
     }
     if (multi && (!endDate || endDate < date)) {
@@ -138,6 +147,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
         startDate: date,
         place: place.trim(),
         kind,
+        needsOutfit: outfitKinds.includes(kind) ? needsOutfit : false, // 기타는 항상 날씨만
         // 며칠 가는 일정은 첫날 아침부터 마지막 날 저녁까지로 본다
         ...(multi ? { startTime: '09:00', endTime: '18:00', ...(endDate > date ? { endDate } : {}) } : { startTime, endTime }),
       }
@@ -178,14 +188,20 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       )}
       <div className="field" style={event ? { marginTop: 0 } : undefined}>
         <div className="name">일정 유형</div>
-        <ChoiceRow options={eventKinds} value={kind} onChange={(k) => { touch('kind'); setKind(k) }} />
+        <ChoiceRow options={eventKinds} value={kind} onChange={(k) => { touch('kind'); changeKind(k) }} />
+        {outfitKinds.includes(kind) && (
+          <div style={{ marginTop: 10 }}>
+            <DoodleCheck checked={needsOutfit} onChange={setNeedsOutfit}>코디 필요</DoodleCheck>
+            {!needsOutfit && <p className="tiny">체크를 풀면 옷차림 없이 그날 날씨만 알려드려요.</p>}
+          </div>
+        )}
       </div>
       <div className="field">
-        <label className="name" htmlFor="title">제목</label>
+        <label className="name" htmlFor="title">제목 (필수)</label>
         <input id="title" type="text" value={title} placeholder={kind === '캠핑' ? '예: 가평 캠핑' : kind === '등산' ? '예: 북한산 등산' : '예: 제주 여행'} onChange={(e) => { touch('title'); setTitle(e.target.value) }} />
       </div>
       <div className="field">
-        <label className="name" htmlFor="date">{multi ? '출발 날짜' : '날짜'}</label>
+        <label className="name" htmlFor="date">{multi ? '출발 날짜 (필수)' : '날짜 (필수)'}</label>
         <DatePicker id="date" label={multi ? '출발 날짜' : '날짜'} value={date} onChange={(v) => { touch('date'); setDate(v) }} />
       </div>
 
@@ -217,7 +233,7 @@ export function EventForm({ event }: { event?: PlanEvent }) {
       )}
 
       <div className="field">
-        <label className="name" htmlFor="place">장소</label>
+        <label className="name" htmlFor="place">장소 (필수)</label>
         <input id="place" type="text" value={place} placeholder={kind === '등산' ? '예: 북한산' : '예: 제주도'} onChange={(e) => { touch('place'); setPlace(e.target.value) }} />
       </div>
 

@@ -108,7 +108,7 @@ export default function EventsPage() {
                 <div>
                   <div className="title">{e.title}{e.imported && <span className="tiny"> · 📅 연동</span>}</div>
                   <div>{formatRange(e)}</div>
-                  <div className="tiny">{statusLabel[e.status]}</div>
+                  <div className="tiny">{e.needsOutfit === false ? '날씨만 알려드려요' : statusLabel[e.status]}</div>
                 </div>
                 <StickPerson mood={eventMood(e.kind, e.status === 'waiting', e.title, e.place)} size={isSceneMood(eventMood(e.kind, false, e.title, e.place)) ? 84 : 64} />
               </div>

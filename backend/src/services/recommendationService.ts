@@ -15,6 +15,9 @@ import { forecastForWindow, getAirQuality, type Region, type WindowForecast } fr
 
 export const TODAY_OUTING = { start: '07:00', end: '22:00' }
 
+/** 이 일정에 옷차림 추천을 보여줄까. 기타 종류는 항상 아니고, 나머지는 사용자가 "코디 필요"를 끄지 않은 일정만 */
+export const outfitWanted = (e: Pick<Event, 'kind' | 'needsOutfit'>): boolean => e.kind !== 'OTHER' && e.needsOutfit
+
 export function regionOf(u: Pick<User, 'gridNx' | 'gridNy' | 'regionSido' | 'regionDistrict'>, e?: Pick<Event, 'gridNx' | 'gridNy' | 'regionSido' | 'regionDistrict'> | null): Region | null {
   const src = e && e.gridNx != null && e.gridNy != null ? e : u
   if (src.gridNx == null || src.gridNy == null) return null

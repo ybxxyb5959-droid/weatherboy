@@ -192,7 +192,9 @@ function EventDetail({ id }: { id: string }) {
   // 요청이 실패한 것과 예보가 아직 없는 것은 다르다: 실패하면 재시도를 안내한다
   const failed = waiting && !!outfit.error && !outfit.data
   // 예보가 아직 없다고 확정된 상태(불러오는 중·실패는 아님): 코디 도우미(캐릭터·칩·입력창)는 숨기고 예보가 열린 뒤에 보여준다
-  const forecastWaiting = waiting && !outfit.loading && !failed
+  // 옷차림이 필요 없는 일정(기타 종류, '코디 필요'를 끈 일정): 추천 카드·코디 도우미 없이 그날 날씨만 보여준다
+  const noOutfit = outfit.data?.status === 'weather_only' || e.needsOutfit === false
+  const forecastWaiting = waiting && !outfit.loading && !failed && !noOutfit
   const left = dDay(e.startDate)
   const approx = outfit.data?.forecastStage === 'MIDTERM'
   const days = outfit.data?.days ?? []
@@ -223,6 +225,9 @@ function EventDetail({ id }: { id: string }) {
           <p className="tiny">
             {e.startTime} ~ {e.endTime} · {e.kind} {left >= 0 ? `· D-${left}` : ''}
           </p>
+          {e.locationResolved === false && (
+            <p className="tiny" role="status">"{e.place || '장소'}"의 위치를 찾지 못해서 내 기본 지역 날씨로 보여드려요. 장소를 더 자세히 고쳐보세요.</p>
+          )}
         </div>
         <EventMenu event={e} onDeleted={() => nav('/events', { replace: true })} />
       </div>
@@ -230,7 +235,7 @@ function EventDetail({ id }: { id: string }) {
       <div className="box w1">
         <div className="row between">
           <div>
-            <h2>{failed ? '불러오지 못했어요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
+            <h2>{failed ? '불러오지 못했어요' : noOutfit && outfit.data?.status === 'weather_only' ? '날씨만 알려드려요' : statusLabel[waiting ? 'waiting' : 'ready']}</h2>
             {failed ? (
               <>
                 <p>{outfit.error}</p>
@@ -239,10 +244,15 @@ function EventDetail({ id }: { id: string }) {
                   다시 시도
                 </DoodleButton>
               </>
+            ) : noOutfit && outfit.data?.status === 'weather_only' ? (
+              <>
+                <p>이 일정은 옷차림 없이 그날 날씨만 알려드려요.</p>
+                {approx && <p className="tiny">아직 먼 날짜라 대략적인 예보예요. 가까워지면 다시 맞춰줄게요.</p>}
+              </>
             ) : waiting ? (
               <>
                 <p>{outfit.data?.message ?? '아직 정확한 예보가 없어요.'}</p>
-                <p>예보가 열리면 옷을 골라드릴게요. 그때 다시 열어 보세요.</p>
+                <p>{noOutfit ? '예보가 열리면 그날 날씨를 알려드릴게요. 그때 다시 열어 보세요.' : '예보가 열리면 옷을 골라드릴게요. 그때 다시 열어 보세요.'}</p>
               </>
             ) : (
               <>
@@ -275,7 +285,7 @@ function EventDetail({ id }: { id: string }) {
 
       <hr className="scribble" />
 
-      {!waiting && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
+      {(!waiting || (noOutfit && outfit.data?.status === 'weather_only')) && outfit.data?.weather && outfit.data.weather.length > 0 && <EventWeather days={outfit.data.weather} approx={approx} />}
 
       {(forecastWaiting || showPlainOutfit) && (
       <section className="section">

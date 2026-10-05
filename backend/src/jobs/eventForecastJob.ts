@@ -12,7 +12,7 @@ import { pushNotificationJob } from './pushNotificationJob.js'
  */
 export async function eventForecastJob(now = new Date(), sender?: PushSender) {
   const until = new Date(now.getTime() + notifyConfig.eventLookaheadDays * 86400_000)
-  const events = await prisma.event.findMany({ where: { endAt: { gt: now }, startAt: { lt: until } }, include: { user: true }, orderBy: { startAt: 'asc' } })
+  const events = await prisma.event.findMany({ where: { endAt: { gt: now }, startAt: { lt: until }, kind: { not: 'OTHER' }, needsOutfit: true }, include: { user: true }, orderBy: { startAt: 'asc' } })
   let processed = 0
   let failed = 0
   let skipped = 0
