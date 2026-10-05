@@ -394,7 +394,7 @@ export default function SettingsPage() {
                 <li>지역 검색: 카카오 Local, 로그인: 카카오</li>
               </ul>
             </div>
-            <p className="tiny">문의: {OPERATOR.contact}</p>
+            <p className="tiny about-contact">문의: {OPERATOR.contact}</p>
           </>
         )}
       </main>

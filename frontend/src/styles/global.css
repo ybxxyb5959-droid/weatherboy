@@ -1611,16 +1611,48 @@ a.card {
 .faq p {
   margin: 8px 0 2px;
 }
+/* 약관·방침: 맨 위 안내 한 줄, 항목마다 점선으로 나누고 문단 사이를 넉넉히 띄운다 */
+.legal {
+  padding-bottom: 12px;
+}
+.legal .legal-meta {
+  margin: 2px 0 6px;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed var(--ink);
+  border-bottom-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  line-height: 1.55;
+}
+.legal section {
+  padding: 18px 0 4px;
+}
+.legal section + section {
+  border-top: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+}
 .legal h2 {
-  margin: 16px 0 4px;
-  font-size: 21px;
+  margin: 0 0 10px;
+  font-size: 22px;
+  line-height: 1.25;
 }
 .legal p {
-  margin: 4px 0;
+  margin: 0 0 10px;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.legal p:last-child {
+  margin-bottom: 8px;
 }
 .about-list {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   padding-left: 20px;
+  line-height: 1.6;
+}
+.about-list li + li {
+  margin-top: 8px;
+}
+.about-contact {
+  margin-top: 18px;
+  line-height: 1.55;
 }
 
 /* ---------- 위치 정하기 / 알림 허용 ---------- */

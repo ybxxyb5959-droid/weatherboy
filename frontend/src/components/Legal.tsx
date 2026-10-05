@@ -4,7 +4,7 @@ import { LEGAL_EFFECTIVE, OPERATOR, type LegalSection } from '../pages/legalText
 export default function Legal({ sections, showEffective = true }: { sections: LegalSection[]; showEffective?: boolean }) {
   return (
     <div className="legal">
-      <p className="tiny">
+      <p className="tiny legal-meta">
         운영자: {OPERATOR.name} · 문의: {OPERATOR.contact}
         {showEffective ? ` · 시행일 ${LEGAL_EFFECTIVE}` : ''}
       </p>
