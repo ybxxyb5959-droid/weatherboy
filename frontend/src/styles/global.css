@@ -4386,3 +4386,20 @@ dd,
   display: block;
 }
 
+/* 첫 로딩(스플래시): 서버가 깨어나는 동안 빈 화면 대신 */
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: calc(100dvh - 120px);
+  text-align: center;
+}
+.splash .hello {
+  margin: 0;
+}
+.splash-note {
+  max-width: 280px;
+  margin: 0;
+}

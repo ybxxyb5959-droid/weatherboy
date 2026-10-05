@@ -109,6 +109,24 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 베타 전 안정성·보안 묶음 1 (로그인 유지, 첫 로딩, 로그 마스킹, 게스트·관리자 세션, 캐릭터 캐시) (작성: Claude Code)
+- 수정 목적: 점검 보고서 P0/P1 중 작은 항목을 한 번에. (S1) 로그인이 30일 뒤 무조건 풀려 게스트가 옷장을 잃음, (S3) 서버가 잠들었다 깨는 동안 빈 화면·무한 대기, 요청 로그에 좌표·카카오 code 노출, 게스트 연타 중복 생성·정리 없음, 관리자 로그인 때 세션 재생성 없음, 로그아웃 후 이전 계정 캐릭터가 잠깐 보임.
+- 변경 파일:
+  - `backend/src/api/middleware/sessionRenew.ts`(+`app.ts`, `common.ts` 세션 타입) — 로그인한 사용자는 12시간마다 쿠키 기간을 30일로 연장(마지막으로 쓴 날부터 30일). express-session `rolling` 은 요청마다 DB 를 쓰므로 쓰지 않음
+  - `backend/src/utils/maskUrl.ts`(+`app.ts` pino-http serializers) — 요청 로그 url·query 값을 `***` 로
+  - `backend/src/api/routes/admin.ts` — 관리자 비밀번호 로그인 시 `session.regenerate`(원래 로그인한 userId 는 이어 줌)
+  - `backend/src/jobs/guestCleanupJob.ts`(+`worker.ts` 매일 04:40 KST) — 30일 넘게 안 온 "빈" 게스트(직접 담은 옷·일정·후기·캘린더·알림 구독·앱 후기·의견 없음, 카카오 연결·관리자 아님)만 삭제
+  - `backend/src/services/admin/opsChecks.ts`, `admin.ts` — `/ops/health` 에 `network`(서버가 본 IP vs X-Forwarded-For) 추가: 프록시 뒤 IP 제한 공유 여부 진단(S2). 관리자 화면 표시는 아직 안 붙임
+  - `frontend/src/api.ts` — 타임아웃(일반 25초, AI 60초)과 재시도(조회 2회, 502/503/504 포함. 저장·삭제는 재시도 없음), `ApiOptions`
+  - `frontend/src/auth.tsx` — 처음 로그인 확인 `/api/me` 는 30초 × 3회 재시도, 로그아웃·탈퇴 때 `resetCharacterCache()`
+  - `frontend/src/components/Splash.tsx`, `App.tsx`, `index.html`, `global.css` — 로딩 스플래시(3.5초 뒤 "서버가 잠에서 깨어나는 중" 안내), 정적 부팅 화면, 하단 탭은 로그인 확인 뒤에만
+  - `frontend/src/pages/IntroPage.tsx` — 게스트 시작 중 버튼 잠금
+  - 테스트: `backend/tests/unit/hardening.test.ts`, `tests/integration/hardening.test.ts`(16개)
+- 프론트 연결 사항: `/ops/health` 응답에 `network` 필드 추가(기존 필드는 그대로).
+- 검증 결과: backend typecheck/lint 통과, 전체 테스트 598 통과 / 3 실패(기존: 미세먼지 1, 다른 세션이 새 칭호 5종을 넣으며 낡은 캐릭터 통합 테스트 2). frontend tsc/build 통과. 서버를 꺼 두거나 9초 늦게 응답하게 해서 스플래시·안내·"다시 시도" 화면을 직접 확인.
+- 남은 일 / 상대에게 요청: 운영(Vercel→Render)에서 `network.ok` 확인(IP 제한 공유 여부) 후 필요하면 `trust proxy` 단계 조정. 서버 상시 깨우기(외부 크론)는 사용자 작업. 관리자 시스템 탭에 network 표시 추가 가능. 커밋 안 함.
+- 적용한 규칙 번호: B-8
+
 ### 2026-10-05 관리자 페이지 PC 넓은 화면 + 시스템 점검·사용자·인사이트 추가, 알림 진동·긴급 전달 (작성: Claude Code)
 - 수정 목적: 관리자 화면이 PC 에서도 폰 폭(460px)으로만 보이던 것을 넓은 대시보드로 바꾸고, 베타 운영에 필요한 확인 기능을 추가. (별도) 푸시 알림에 진동·긴급 우선순위를 요청.
 - 변경 파일:

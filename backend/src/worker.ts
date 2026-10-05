@@ -5,6 +5,7 @@ import { airQualityCollectionJob, weatherCollectionJob } from './jobs/collection
 import { calendarSyncJob } from './jobs/calendarSyncJob.js'
 import { dailyPushJob } from './jobs/dailyPushJob.js'
 import { eventForecastJob } from './jobs/eventForecastJob.js'
+import { guestCleanupJob } from './jobs/guestCleanupJob.js'
 import { logger } from './utils/logger.js'
 
 const running = new Set<string>()
@@ -37,6 +38,9 @@ const events = schedule('eventForecastJob', '25 * * * *', () => eventForecastJob
 
 // 아침 옷차림 / 우산 / 귀가 후 후기 / 옷장 리마인드 등 종류별 알림 (15분마다 '지금 보낼 알림이 있는지' 판단, 같은 알림은 하루 한 번)
 schedule('dailyPushJob', '*/15 * * * *', () => dailyPushJob())
+
+// 오래 안 쓴 빈 게스트 계정 정리(하루 한 번, 새벽)
+schedule('guestCleanupJob', '40 4 * * *', () => guestCleanupJob())
 
 logger.info('worker started')
 void weather().then(() => air()).then(() => calendars()).then(() => events())

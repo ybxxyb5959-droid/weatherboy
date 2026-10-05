@@ -83,6 +83,11 @@ const publish = (d: CharacterData) => {
   listeners.forEach((l) => l(d))
 }
 
+/** 로그아웃·탈퇴 때 불러둔 캐릭터를 비운다(다른 계정으로 로그인했을 때 이전 계정의 칭호가 잠깐 보이는 것을 막는다) */
+export function resetCharacterCache() {
+  cache = null
+}
+
 export function useCharacter() {
   const [data, setData] = useState<CharacterData | null>(cache)
   const [error, setError] = useState('')

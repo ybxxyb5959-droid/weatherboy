@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, ApiError } from './api'
+import { resetCharacterCache } from './lib/character'
 import { disablePush } from './lib/push'
 import type { Me } from './types'
 
@@ -33,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      let m = await api<Me>('GET', '/api/me')
+      // 서버가 잠들어 있다 깨어나는 첫 요청은 오래 걸리니(최대 약 1분) 넉넉히 기다리고 몇 번 다시 시도한다
+      let m = await api<Me>('GET', '/api/me', undefined, { timeoutMs: 30_000, retries: 3 })
       m = await ensureOnboarded(m)
       setMe(m)
       setConnectError(false)
@@ -67,12 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 이 기기로 이 계정의 알림이 계속 오지 않게 먼저 구독을 푼다
     await disablePush().catch(() => undefined)
     await api('POST', '/api/auth/logout')
+    resetCharacterCache() // 다음에 로그인하는 계정에 이 계정의 캐릭터가 잠깐 보이지 않게
     setMe(null)
   }, [])
 
   const deleteAccount = useCallback(async () => {
     await disablePush().catch(() => undefined)
     await api('DELETE', '/api/me')
+    resetCharacterCache()
     setMe(null)
   }, [])
 

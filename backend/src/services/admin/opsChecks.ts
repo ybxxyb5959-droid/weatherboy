@@ -75,3 +75,33 @@ export function buildChecks(env: EnvLike, opts: { dbOk: boolean; dbMs: number | 
     { key: 'prod', label: '운영 모드', ok: env.NODE_ENV === 'production', note: env.NODE_ENV === 'production' ? 'production' : `NODE_ENV=${env.NODE_ENV}`, optional: true },
   ]
 }
+
+export interface NetworkInfo {
+  /** 서버(Express)가 보는 접속 IP */
+  ip: string | null
+  /** 프록시가 붙여 준 X-Forwarded-For 의 첫 주소(실제 방문자) */
+  forwardedFor: string | null
+  /** X-Forwarded-For 에 몇 단계가 적혀 있나 */
+  hops: number
+  /** 서버가 본 IP 가 실제 방문자 IP 와 같은가. 다르면 프록시 단계 설정(trust proxy)을 확인해야 한다 */
+  ok: boolean
+  note: string
+}
+
+/** 요청 IP 진단: "서버가 본 IP == X-Forwarded-For 의 첫 주소" 이면 방문자별로 IP 제한이 따로 걸린다 */
+export function networkInfo(ip: string | undefined, forwarded: string | string[] | undefined): NetworkInfo {
+  const raw = Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? '')
+  const chain = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  const first = chain[0] ?? null
+  const seen = ip ?? null
+  const strip = (v: string | null) => v?.replace(/^::ffff:/, '') ?? null
+  if (!first) return { ip: seen, forwardedFor: null, hops: 0, ok: true, note: '프록시 헤더가 없어요(서버에 바로 접속한 경우). 운영 주소로 접속해서 확인하세요' }
+  const same = strip(seen) === strip(first)
+  return {
+    ip: seen,
+    forwardedFor: first,
+    hops: chain.length,
+    ok: same,
+    note: same ? '서버가 실제 방문자 IP 를 읽고 있어요' : '서버가 본 IP 가 방문자 IP 와 달라요. 모든 방문자가 같은 IP 로 보이면 요청 제한을 나눠 쓰게 되니 프록시 단계 설정(trust proxy)을 조정해야 해요',
+  }
+}

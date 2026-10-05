@@ -14,6 +14,7 @@ export default function IntroPage() {
   const [beeMood, setBeeMood] = useState<'idle' | 'angry' | 'flee'>('idle')
   const taps = useRef(0)
   const { startGuest } = useAuth()
+  const [starting, setStarting] = useState(false) // 게스트 시작 중에는 버튼을 눌러도 계정이 또 만들어지지 않게 잠근다
   const [error, setError] = useState(() => (new URLSearchParams(window.location.search).get('login') === 'failed' ? '로그인에 실패했어요. 다시 시도해주세요.' : ''))
 
   // 이스터에그: 벌을 누르면 화내거나 도망감
@@ -31,11 +32,15 @@ export default function IntroPage() {
       window.location.href = '/api/auth/kakao'
       return
     }
+    if (starting) return
+    setStarting(true)
     try {
       await startGuest()
       nav('/home')
     } catch (e) {
       setError(errorMessage(e))
+    } finally {
+      setStarting(false)
     }
   }
 
@@ -57,8 +62,8 @@ export default function IntroPage() {
 
       <div className="login-list ready">
         <KakaoLoginButton onClick={() => void enter('kakao')} />
-        <button type="button" className="guest-link" onClick={() => void enter('guest')}>
-          <HandText>로그인 없이 둘러보기</HandText>
+        <button type="button" className="guest-link" disabled={starting} onClick={() => void enter('guest')}>
+          <HandText>{starting ? '시작하는 중…' : '로그인 없이 둘러보기'}</HandText>
         </button>
         {error && <p className="tiny" role="alert">{error}</p>}
       </div>

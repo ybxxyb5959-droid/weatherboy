@@ -24,9 +24,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Poor+Story&display=swap" rel="stylesheet" />
     <title>뭐입을옷?</title>
+    <style>
+      /* 앱 코드가 열리기 전에 잠깐 보이는 로딩 화면(앱이 열리면 #root 가 통째로 바뀐다) */
+      .boot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 100vh; min-height: 100dvh; background: #fcfcfa; color: #222; font-family: Gaegu, 'Nanum Pen Script', cursive; }
+      .boot b { font-size: 40px; }
+      .boot span { font-size: 18px; opacity: 0.7; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status">
+        <svg width="90" height="120" viewBox="0 0 90 120" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <circle cx="45" cy="22" r="16" />
+          <path d="M45 38 V80 M45 50 L22 68 M45 50 L68 68 M45 80 L28 112 M45 80 L62 112" />
+        </svg>
+        <b>뭐입을옷?</b>
+        <span>불러오는 중…</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

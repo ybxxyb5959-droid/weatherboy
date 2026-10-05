@@ -11,6 +11,8 @@ declare module 'express-session' {
     oauthState?: string
     /** 관리자 비밀번호로 로그인한 시각(ms). 12시간 동안만 유효 */
     adminAt?: number
+    /** 로그인 쿠키 기간을 마지막으로 연장한 시각(ms). 12시간마다 한 번 30일로 다시 늘린다 */
+    renewedAt?: number
   }
 }
 

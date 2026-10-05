@@ -217,7 +217,7 @@ Browser(PWA) ──/api──▶ API (Express 5) ──▶ PostgreSQL (Prisma)
 | `config/` | `env.ts`(zod 로 환경변수 검증), `mappings.ts`(한글↔enum **단일 지점**), `ruleConfig.ts`(추천 수치 전부), `sampleClothes.ts` |
 | `rules/` | **결정론적 판단**: `outfitEngine`(추천), `feelsLike`(체감온도), `clothing`, `colorHarmony`(색 궁합), `outfitStyle`(분위기·상황 금기), `outfitWish`(사용자 요청 해석) |
 | `services/` | 외부/도메인 로직: `weather/`, `airQuality/`, `kakao/`, `push/`, `ai/`, `calendar/`, `character/`, `review/`, `recommendationService`, `stylistOutfit`, `feedbackBands`, `location`, `serializers` |
-| `jobs/` | 예약 작업: 날씨·대기질 수집, 일정 예보 점검, 일일 알림, 캘린더 동기화 |
+| `jobs/` | 예약 작업: 날씨·대기질 수집, 일정 예보 점검, 일일 알림, 캘린더 동기화, 빈 게스트 정리(매일 04:40) |
 | `utils/` | `errors`(AppError), `time`(KST/UTC), `grid`(위경도→기상청 격자), `josa`, `logger`(pino, 비밀 redact) |
 | `db.ts` | Prisma 클라이언트 |
 

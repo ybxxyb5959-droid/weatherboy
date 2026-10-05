@@ -9,7 +9,7 @@ import { avgMsByKind, buildDays, failureRate, type UsageRow } from '../../servic
 import { getGlobalUsage } from '../../services/ai/aiQuota.js'
 import { MIN_CLOTHES, type ClothesForAnalysis } from '../../services/character/analysis.js'
 import { clothingTypeMap, colorMap, eventKindMap, patternMap } from '../../config/mappings.js'
-import { buildChecks } from '../../services/admin/opsChecks.js'
+import { buildChecks, networkInfo } from '../../services/admin/opsChecks.js'
 import { activeDaysBuckets, retentionOf, titleDistribution } from '../../services/admin/insights.js'
 import { parse, requireAdmin, wrap } from '../middleware/common.js'
 
@@ -34,7 +34,12 @@ adminRouter.post(
     const { password } = parse(z.object({ password: z.string().min(1).max(200) }), req.body)
     // 길이가 달라도 같은 시간이 걸리도록 해시끼리 비교한다
     if (!timingSafeEqual(sha(password), sha(env.ADMIN_PASSWORD))) throw new AppError(401, 'BAD_PASSWORD', '비밀번호가 맞지 않아요.')
+    // 로그인 직후 세션을 새로 만들어 세션 고정 공격을 막는다(원래 로그인해 있던 사용자 계정은 그대로 이어 준다)
+    const userId = req.session.userId
+    await new Promise<void>((resolve, reject) => req.session.regenerate((e) => (e ? reject(e) : resolve())))
+    if (userId) req.session.userId = userId
     req.session.adminAt = Date.now()
+    await new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())))
     res.json({ ok: true })
   }),
 )
@@ -235,7 +240,7 @@ adminRouter.post(
 // ───── 시스템 점검: 환경설정 확인, 예약 작업, 알림 발송 현황 ─────
 adminRouter.get(
   '/ops/health',
-  wrap(async (_req, res) => {
+  wrap(async (req, res) => {
     const now = Date.now()
     const since24 = new Date(now - 24 * 3600_000)
     const since7 = new Date(now - 7 * 86400_000)
@@ -287,6 +292,8 @@ adminRouter.get(
         // 알림을 받는 사용자 중 이 종류를 끈 사람 수
         optOut: { morning, rain, coldReturn, dust, feedback, closet },
       },
+      // 서버가 보는 접속 IP: 프록시(Vercel 등) 뒤에서 모두가 같은 IP 로 보이면 IP 기준 요청 제한을 서로 나눠 쓰게 된다
+      network: networkInfo(req.ip, req.headers['x-forwarded-for']),
       server: { uptimeSec: Math.round(process.uptime()), node: process.version, rssMb: Math.round(process.memoryUsage().rss / 1048576), dbMs },
     })
   }),

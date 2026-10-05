@@ -21,6 +21,7 @@ import WeatherPreviewPage from './pages/WeatherPreviewPage'
 import SettingsPage from './pages/SettingsPage'
 import CharacterPage from './pages/CharacterPage'
 import GuestDataNotice from './components/GuestDataNotice'
+import Splash from './components/Splash'
 import LocationGate from './components/LocationGate'
 import NotifyGate from './components/NotifyGate'
 import { useAuth } from './auth'
@@ -41,7 +42,7 @@ function ConnectError() {
 // 로그인 화면(/start). 로그인돼 있으면 바로 홈으로 간다.
 function Root() {
   const { me, loading, connectError } = useAuth()
-  if (loading) return null
+  if (loading) return <Splash />
   if (!me && connectError) return <ConnectError />
   if (!me) return <IntroPage />
   return <Navigate to="/home" replace />
@@ -60,7 +61,7 @@ function Tour() {
 
 function Protected({ children }: { children: ReactElement }) {
   const { me, loading, connectError } = useAuth()
-  if (loading) return null
+  if (loading) return <Splash />
   if (!me && connectError) return <ConnectError />
   if (!me) return <Navigate to="/start" replace />
   return children
@@ -68,7 +69,9 @@ function Protected({ children }: { children: ReactElement }) {
 
 export default function App() {
   const { pathname } = useLocation()
-  const showNav = pathname !== '/' && pathname !== '/start' && pathname !== '/tour' && pathname !== '/admin'
+  const { me } = useAuth()
+  // 로그인이 확인된 뒤에만 하단 탭을 보인다(로딩 중·연결 실패 화면에는 안 보인다)
+  const showNav = !!me && pathname !== '/' && pathname !== '/start' && pathname !== '/tour' && pathname !== '/admin'
   return (
     <div className="app">
       {/* 손으로 그은 듯 선을 살짝 흔드는 필터 */}

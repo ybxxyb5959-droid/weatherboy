@@ -7,6 +7,8 @@ import session from 'express-session'
 import helmet from 'helmet'
 import pg from 'pg'
 import { pinoHttp } from 'pino-http'
+import { renewSession, SESSION_MAX_AGE_MS } from './api/middleware/sessionRenew.js'
+import { maskedReqSerializer } from './utils/maskUrl.js'
 import { env, isProd } from './config/env.js'
 import { prisma } from './db.js'
 import { adminRouter } from './api/routes/admin.js'
@@ -31,7 +33,8 @@ export function createApp() {
   app.set('trust proxy', 1)
   app.disable('x-powered-by')
 
-  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/health' } }))
+  // 요청 로그에는 쿼리 값(위치 좌표, 카카오 로그인 code 등)을 남기지 않는다
+  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/health' }, serializers: { req: maskedReqSerializer } }))
   app.use(helmet())
   app.use(cors({ origin: env.FRONTEND_ORIGIN, credentials: true }))
   // 사진(data URL)을 받는 AI 경로만 본문 한도를 크게 연다. 먼저 파싱되면 아래 기본 파서는 건너뛴다.
@@ -61,9 +64,10 @@ export function createApp() {
       secret: env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
-      cookie: { httpOnly: true, sameSite: 'lax', secure: isProd, maxAge: 30 * 24 * 3600_000 },
+      cookie: { httpOnly: true, sameSite: 'lax', secure: isProd, maxAge: SESSION_MAX_AGE_MS },
     }),
   )
+  app.use(renewSession) // 쓰는 동안 로그인 유지(마지막으로 쓴 날부터 30일)
   app.use(originGuard)
 
   app.use('/api/auth', authRouter)
