@@ -109,6 +109,19 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 여러 벌 저장·사진 인식 대기 개선 + 칭호 없을 때 안내 (작성: Claude Code)
+- 수정 목적: 사진 스캔/여러 벌 저장 때 한 벌씩 기다리던 것을 줄이고, 기다리는 동안 빨랫줄 로딩을 보여줌. 칭호 조건에 안 맞는 옷장에 "가장 가까운 칭호" 안내와 임시 칭호 "취향 탐색 중".
+- 변경 파일:
+  - `backend/src/api/routes/clothes.ts` — `POST /api/clothes/bulk` 추가(최대 40벌, 한 트랜잭션: 전부 저장되거나 하나도 안 됨)
+  - `backend/tests/integration/clothes-bulk.test.ts` — 신규
+  - `frontend/src/components/HangLoader.tsx` + `global.css` — 빨랫줄에 옷이 걸리고 흔들리는 로딩
+  - `frontend/src/pages/AddClothingPage.tsx`, `ScanClosetPage.tsx` — 저장은 bulk 한 번, 사진 구간은 동시 요청(결과는 순서대로 합침), 로딩 표시
+  - `frontend/src/pages/CharacterPage.tsx` — 칭호 없을 때 임시 칭호(프론트 전용, 서버 title 은 null 그대로) + a.next(가장 가까운 칭호) 안내
+- 프론트 연결 사항: 새 API `POST /api/clothes/bulk {items:[{type,color,pattern?}]}` → 201 Clothing[]
+- 검증 결과: backend typecheck/lint/clothes-bulk 테스트 4개 통과, frontend tsc/build 통과. 로컬 브라우저에서 저장 지연을 걸어 로딩 화면과 저장 후 옷장 이동 확인. 사진 인식 병렬 동작은 AI 호출이 필요해 실제로 못 돌려 봄.
+- 남은 일 / 상대에게 요청: 커밋 안 함. 임시 칭호는 도감에 없고 공유 카드 제목에만 쓰임.
+- 적용한 규칙 번호: 해당 없음
+
 ### 2026-10-05 옷 등록 진입을 아래 시트로, 사진 스캔 저장 후 빨랫줄 애니메이션 (작성: Claude Code)
 - 수정 목적: "옷 등록하러 가기"를 누르면 아래에서 시트가 올라와 옷장 사진 / 한 벌씩을 고르게 함. 사진 스캔으로 저장한 뒤 옷이 빨랫줄에 걸리는 애니메이션이 안 나오던 문제 수정.
 - 변경 파일:

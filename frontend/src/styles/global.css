@@ -4198,3 +4198,53 @@ a.card {
 @media (prefers-reduced-motion: reduce) {
   .sheet { animation: none; }
 }
+
+.char-next {
+  margin: 6px 0 0;
+}
+
+/* 빨랫줄 로딩: 옷이 하나씩 걸리고 살랑살랑 흔들린다 */
+.hang-loader {
+  margin: 14px 0;
+  padding: 18px 12px 12px;
+  text-align: center;
+}
+.hl-line {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  min-height: 92px;
+  padding-top: 8px;
+}
+.hl-line::before {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 4px;
+  height: 0;
+  border-top: 2.2px solid var(--ink);
+  border-radius: 50%;
+}
+.hl-item {
+  position: relative;
+  transform-origin: 50% 0;
+  animation:
+    wb-hang-in 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) var(--hl-delay, 0s) both,
+    hl-sway 2.4s ease-in-out calc(var(--hl-delay, 0s) + 1s) infinite;
+}
+@keyframes hl-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.hl-label {
+  margin: 10px 0 0;
+  font-size: 1.15em;
+}
+.hl-sub {
+  margin: 2px 0 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-item { animation: none; }
+}

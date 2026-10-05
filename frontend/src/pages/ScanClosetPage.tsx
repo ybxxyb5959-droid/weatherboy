@@ -7,6 +7,7 @@ import { categories, clothingTypes, colorNames, patternNames } from '../mocks/cl
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
+import HangLoader from '../components/HangLoader'
 import { CameraIcon } from '../components/ToolIcons'
 import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
@@ -44,13 +45,20 @@ export default function ScanClosetPage() {
       for (let i = 0; i < list.length && !stop; i++) {
         try {
           const tiles = await splitForScan(list[i]!)
+          setProgress(`${i + 1}/${list.length}번째 사진 살펴보는 중…`)
+          // 한 사진의 구간들은 동시에 보낸다(차례로 기다리지 않아 빨라진다). 결과는 구간 순서대로 합친다.
+          const settled = await Promise.allSettled(tiles.map((tile) => api<{ items: (ClothingSuggestion & { label: string })[] }>('POST', '/api/ai/clothes-from-photo', { image: tile })))
           // 같은 사진의 바로 앞 조각에서 찾은 옷 (겹치는 구간의 같은 옷을 가려내기 위해)
           let prevTile: Found[] = []
-          for (let t = 0; t < tiles.length; t++) {
-            setProgress(`${i + 1}/${list.length}번째 사진 ${tiles.length > 1 ? `(${t + 1}/${tiles.length}구간) ` : ''}살펴보는 중…`)
-            const r = await api<{ items: (ClothingSuggestion & { label: string })[] }>('POST', '/api/ai/clothes-from-photo', { image: tiles[t] })
+          let firstError: unknown = null
+          for (const res of settled) {
+            if (res.status === 'rejected') {
+              firstError ??= res.reason
+              prevTile = []
+              continue
+            }
             const sameAsBefore = (it: ClothingSuggestion & { label: string }) => prevTile.some((p) => p.type === it.type && p.color === it.color && p.pattern === it.pattern && p.label === it.label)
-            const found: Found[] = r.items.map((it) => {
+            const found: Found[] = res.value.items.map((it) => {
               const dup = sameAsBefore(it)
               // 종류가 헷갈린다고 한 옷은 체크를 풀어 둔다(틀린 옷이 그대로 등록되지 않게)
               return { ...it, key: nextKey++, checked: !dup && it.confidence !== '헷갈림', dup }
@@ -58,6 +66,7 @@ export default function ScanClosetPage() {
             setItems((prev) => [...prev, ...found])
             prevTile = found
           }
+          if (firstError) throw firstError
         } catch (e) {
           if (e instanceof ApiError && isPhotoLimit(e)) {
             setLimited(true)
@@ -83,11 +92,14 @@ export default function ScanClosetPage() {
     setError('')
     const ids: string[] = []
     try {
-      for (const it of chosen) {
+      // 한 번의 요청에 최대 40벌씩 묶어서 보낸다(한 벌씩 기다리지 않는다). 묶음 안에서는 전부 담기거나 하나도 안 담긴다.
+      for (let at = 0; at < chosen.length; at += 40) {
+        const batch = chosen.slice(at, at + 40)
         // 두께·방풍·방수는 보내지 않는다. 서버가 옷 종류로 정한다.
-        const row = await api<{ id: string }>('POST', '/api/clothes', { type: it.type, color: it.color, pattern: it.pattern })
-        ids.push(row.id)
-        setItems((prev) => prev.filter((x) => x.key !== it.key)) // 등록한 건 목록에서 지운다 (중간에 실패해도 중복 등록 방지)
+        const rows = await api<{ id: string }[]>('POST', '/api/clothes/bulk', { items: batch.map((it) => ({ type: it.type, color: it.color, pattern: it.pattern })) })
+        ids.push(...rows.map((r) => r.id))
+        const done = new Set(batch.map((it) => it.key))
+        setItems((prev) => prev.filter((x) => !done.has(x.key))) // 등록한 건 목록에서 지운다 (다음 묶음이 실패해도 중복 등록 방지)
       }
       nav('/wardrobe', { state: { hung: ids } }) // 저장한 옷이 빨랫줄에 걸리는 모습을 보여준다
     } catch (e) {
@@ -121,6 +133,9 @@ export default function ScanClosetPage() {
       ) : (
         error && <p role="alert">{error}</p>
       )}
+
+      {busy && <HangLoader label={progress || '살펴보는 중…'} sub={items.length > 0 ? `지금까지 ${items.length}벌 찾았어요` : '사진 속 옷을 하나씩 찾고 있어요'} pieces={items} />}
+      {saving && <HangLoader label="옷을 걸어두는 중이에요" sub={`${chosen.length}벌을 옷장에 넣고 있어요`} pieces={chosen} />}
 
       {items.length > 0 && (
         <>

@@ -12,6 +12,9 @@ import { useAuth } from '../auth'
 import { errorMessage } from '../api'
 
 const pct = (s: number) => `${Math.floor(s * 1000 + 1e-9) / 10}%`
+// 맞는 칭호가 하나도 없을 때(옷이 충분히 모인 뒤) 보여주는 임시 칭호. 도감의 칭호가 아니다.
+const TASTE_TITLE = '취향 탐색 중'
+
 const dexGuide = '비율은 내 옷 전체 기준이며, 적힌 조건을 모두 만족해야 해요. 주·부칭호는 특징의 실제 비중순으로, 동점은 정해진 순서로 골라요. 무지개 칭호는 특징 칭호 다음이에요. 눌러보면 모습을 확인할 수 있어요.'
 const sameConfig = (a: Accessories, b: Accessories) => JSON.stringify(Object.entries(a).filter(([, v]) => v).sort()) === JSON.stringify(Object.entries(b).filter(([, v]) => v).sort())
 
@@ -183,7 +186,7 @@ export default function CharacterPage() {
     try {
       // 미리보기 중이어도 공유에는 항상 내 실제 칭호를 쓴다
       const card = await buildCharacterCard({
-        title: title?.name ?? '내 캐릭터',
+        title: title?.name ?? (a.ready ? TASTE_TITLE : '내 캐릭터'),
         tagline: title?.tagline ?? '내 옷장의 특징을 찾아가는 중이에요',
         persona: title?.key ?? null,
         wear: (title && PERSONA_WEAR[title.key]) || BASIC_WEAR,
@@ -241,8 +244,19 @@ export default function CharacterPage() {
           </>
         ) : (
           <>
-            <h2 className="char-title">아직 칭호가 없어요</h2>
-            <p className="char-tag">{a.ready ? `내 옷 ${a.count}벌을 분석했지만 아직 칭호 조건을 충족하지 않았어요. 아래 도감에서 정확한 조건을 확인해 보세요. 꾸미기는 그대로 사용할 수 있어요.` : `옷을 ${a.need}벌 더 담으면 칭호 분석을 시작해요. (지금 ${a.count}벌)`}</p>
+            <h2 className="char-title">{a.ready ? TASTE_TITLE : '아직 칭호가 없어요'}</h2>
+            <p className="char-tag">{a.ready ? `임시 칭호예요. 내 옷 ${a.count}벌이 아직 어느 칭호 조건에도 딱 맞지는 않아요. 꾸미기는 그대로 쓸 수 있어요.` : `옷을 ${a.need}벌 더 담으면 칭호 분석을 시작해요. (지금 ${a.count}벌)`}</p>
+            {a.ready && (
+              <p className="tiny char-next">
+                {a.next ? (
+                  <>
+                    가장 가까운 칭호는 <b>{a.next.title.name}</b>예요. {a.next.what} {a.next.more}벌만 더 담으면 받을 수 있어요.
+                  </>
+                ) : (
+                  <>아래 도감에서 마음에 드는 칭호의 조건을 보고, 거기에 맞춰 옷을 담아 보세요.</>
+                )}
+              </p>
+            )}
           </>
         )}
       </section>

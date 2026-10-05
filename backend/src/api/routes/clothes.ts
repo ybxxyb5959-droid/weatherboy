@@ -47,6 +47,28 @@ clothesRouter.post(
   }),
 )
 
+// 여러 벌을 한 번에 담는다(사진 스캔·말로 적기 저장). 한 번의 요청·한 번의 트랜잭션이라 전부 담기거나 하나도 안 담긴다.
+const BULK_MAX = 40
+clothesRouter.post(
+  '/bulk',
+  wrap(async (req, res) => {
+    const { items } = parse(z.object({ items: z.array(base).min(1).max(BULK_MAX) }), req.body)
+    const userId = (req as AuthedRequest).userId
+    if ((await prisma.clothing.count({ where: { userId, active: true } })) + items.length > MAX_CLOTHES) throw badRequest(`옷은 ${MAX_CLOTHES}벌까지 담을 수 있어요.`, 'LIMIT_REACHED')
+    const rows = await prisma.$transaction(
+      items.map((b) => {
+        const type = clothingTypeMap.toDb(b.type)
+        const d = defaultsForType(type)
+        const thickness = b.thickness ? thicknessMap.toDb(b.thickness) : d.thickness
+        return prisma.clothing.create({
+          data: { userId, type, thickness, color: colorMap.toDb(b.color), pattern: b.pattern ? patternMap.toDb(b.pattern) : 'SOLID', windproof: b.windproof ?? d.windproof, waterproof: b.waterproof ?? d.waterproof, ...deriveClothing(type, thickness) },
+        })
+      }),
+    )
+    res.status(201).json(rows.map(serializeClothing))
+  }),
+)
+
 clothesRouter.patch(
   '/:id',
   wrap(async (req, res) => {

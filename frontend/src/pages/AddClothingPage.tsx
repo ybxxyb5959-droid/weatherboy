@@ -8,6 +8,7 @@ import SayBox from '../components/SayBox'
 import { api, ApiError, errorMessage } from '../api'
 import LimitNotice from '../components/LimitNotice'
 import AiUsageBar from '../components/AiUsageBar'
+import HangLoader from '../components/HangLoader'
 import { CameraIcon, HandIcon } from '../components/ToolIcons'
 import { photoBlocked, useAiUsage } from '../lib/useAiUsage'
 import { isPhotoLimit, resizeImageToDataUrl, type ClothingSuggestion } from '../lib/ai'
@@ -75,23 +76,17 @@ export default function AddClothingPage() {
     }
   }
 
-  // 담은 옷을 차례로 저장한다. 저장하면 옷장으로 가서 새 옷이 빨랫줄에 걸린다.
+  // 담은 옷을 한 번의 요청으로 저장한다(하나라도 안 되면 아무것도 저장되지 않고 목록이 그대로 남는다). 저장하면 옷장으로 가서 새 옷이 빨랫줄에 걸린다.
   const save = async () => {
     if (saving || drafts.length === 0) return
     setSaving(true)
     setError('')
-    let saved = 0
-    const ids: string[] = []
+    let ids: string[]
     try {
-      for (const d of drafts) {
-        const row = await api<{ id: string }>('POST', '/api/clothes', { type: d.type, color: d.color, pattern: d.pattern })
-        ids.push(row.id)
-        saved++
-      }
+      const rows = await api<{ id: string }[]>('POST', '/api/clothes/bulk', { items: drafts.map((d) => ({ type: d.type, color: d.color, pattern: d.pattern })) })
+      ids = rows.map((r) => r.id)
     } catch (e) {
-      // 저장된 것만 목록에서 빼고, 나머지는 그대로 둔다
-      setDrafts((d) => d.slice(saved))
-      setError(`${saved ? `${saved}벌은 저장했고, ` : ''}${errorMessage(e)}`)
+      setError(errorMessage(e))
       setSaving(false)
       return
     }
@@ -166,6 +161,9 @@ export default function AddClothingPage() {
       )}
 
       {limited ? <LimitNotice message={error} /> : error && <p role="alert">{error}</p>}
+
+      {analyzing && <HangLoader label="사진을 살펴보고 있어요" sub="어떤 옷인지 보는 중이에요" />}
+      {saving && <HangLoader label="옷을 걸어두는 중이에요" sub={`${drafts.length}벌을 옷장에 넣고 있어요`} pieces={drafts} />}
 
       {drafts.length > 0 && (
         <section className="add-list" aria-label="담은 옷">
