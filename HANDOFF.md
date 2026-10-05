@@ -109,6 +109,13 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-05 옷장 사진 인식: "사진 속 옷(섞여 있어요/상의·겉옷만/하의만)" 힌트 (작성: Claude Code)
+- 계기: 사용자 실제 행거 사진 2장(상의·하의)으로 실측. 하의 사진은 하의 9벌 중 5벌을 후드티·셔츠·바람막이로 오분류(전부 "확실"). 힌트를 주고 종류 선택지를 좁히면 13/13 바지. 호출 수·한도 변화 없음.
+- 변경: `clothingVision.ts`(`PhotoPart`, 종류 enum·지시문 좁힘), `routes/ai.ts`(`part` 검증, 기본 all), `ScanClosetPage.tsx`(선택 UI), `tests/unit/ai-features.test.ts`(추가).
+- 남은 것: 같은 옷 색 다르게 나와 중복이 안 합쳐지는 문제, 한 벌 등록(`AddClothingPage`) 중복 확인 없음. 기존 테스트 3건(`ai.test.ts` 2, `flow.test.ts` 1)은 기타=날씨만 변경 후 낡은 상태.
+- 검증 결과: backend typecheck/lint, `ai-features` 테스트 통과, 실제 Gemini 하의 사진 3구간 재확인.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-05 일정 상세: 예보 확인 중에는 서버 깨우는 졸라맨 장면 (작성: Claude Code)
 - 사용자 요청: 일정을 만든 직후 예보를 받아오는 동안 "대기중"처럼 정적인 화면이 완성된 것처럼 보이는 문제 → 확인 중임을 서버 깨우는 졸라맨(`WakeScene`)으로 표시.
 - 변경 파일: `frontend/src/pages/EventDetailPage.tsx` (`checking = outfit.loading && !outfit.data && !failed`). 기기 캘린더 연동은 조사·보고만 했고 코드는 수정하지 않음(Capacitor/Android 구성 없음).

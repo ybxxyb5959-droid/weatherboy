@@ -106,6 +106,26 @@ describe('옷장·행거 사진에서 여러 벌 찾기', () => {
     for (const cue of ['허리밴드', '청(데님)', '발목 쪽 고무밴드', '상의/하의/겉옷']) expect(text).toContain(cue)
   })
 
+  it('사진 속 옷 범위(하의만/상의만)를 알려 주면 종류 선택지와 지시문을 그 범위로 좁힌다', async () => {
+    const sent = async (part: 'all' | 'top' | 'bottom') => {
+      const f = gemini({ items: [item('검정 바지', '바지', '검정', '무지')] })
+      await clothesFromPhoto(photo, f, part)
+      const body = JSON.parse(((f as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1] as { body: string }).body)
+      return { enumTypes: body.generationConfig.responseSchema.properties.items.items.properties.type.enum as string[], text: body.contents[0].parts[0].text as string }
+    }
+    const bottom = await sent('bottom')
+    expect(bottom.enumTypes).toEqual(['바지', '반바지', '치마'])
+    expect(bottom.text).toContain('전부 하의')
+    const top = await sent('top')
+    expect(top.enumTypes).not.toContain('바지')
+    expect(top.enumTypes).toContain('반팔')
+    expect(top.text).toContain('전부 상의')
+    const all = await sent('all')
+    expect(all.enumTypes).toContain('바지')
+    expect(all.enumTypes).toContain('반팔')
+    expect(all.text).not.toContain('전부 하의')
+  })
+
   it('확신도를 돌려주고, 빠지거나 이상한 값이면 보통으로 본다. 근거는 화면으로 보내지 않는다', async () => {
     const r = await clothesFromPhoto(photo, gemini({ items: [{ ...item('검정 바지', '바지', '검정', '무지'), evidence: '허리끈', confidence: '헷갈림' }, { ...item('회색 후드티', '후드티', '회색', '무지'), evidence: '모자', confidence: '확실' }, { ...item('베이지 바지', '바지', '베이지', '무지'), confidence: '모름' }, item('청바지', '바지', '파랑', '무지')] }))
     expect(r.map((x) => x.confidence)).toEqual(['헷갈림', '확실', '보통', '보통'])

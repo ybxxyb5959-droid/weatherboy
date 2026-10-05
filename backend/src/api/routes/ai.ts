@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { photoGuard, textGuard } from '../middleware/aiLimits.js'
 import { checkQuota, getGlobalUsage, usageView } from '../../services/ai/aiQuota.js'
 import { aiEnabled } from '../../services/ai/explain.js'
-import { clothesFromPhoto, clothingFromPhoto } from '../../services/ai/clothingVision.js'
+import { clothesFromPhoto, clothingFromPhoto, PHOTO_PARTS } from '../../services/ai/clothingVision.js'
 import { parseEventText } from '../../services/ai/eventParse.js'
 import { prisma } from '../../db.js'
 import { OUTFIT_STYLES } from '../../rules/outfitStyle.js'
@@ -65,7 +65,8 @@ aiRouter.post(
   '/clothes-from-photo',
   photoGuard,
   wrap(async (req, res) => {
-    res.json({ items: await clothesFromPhoto(readImage(req.body)) })
+    const part = parse(z.object({ part: z.enum(PHOTO_PARTS).default('all') }), req.body).part
+    res.json({ items: await clothesFromPhoto(readImage(req.body), undefined, part) })
   }),
 )
 

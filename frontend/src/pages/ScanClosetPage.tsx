@@ -17,6 +17,10 @@ import { isPhotoLimit, splitForScan, type ClothingSuggestion } from '../lib/ai'
 type Found = ClothingSuggestion & { label: string; key: number; checked: boolean; dup?: boolean }
 let nextKey = 1
 
+// 사진에 어떤 옷만 있는지 알려 주면 AI 가 상의·하의를 헷갈리지 않는다(같은 호출 수, 더 정확)
+const PART_LABELS = ['섞여 있어요', '상의·겉옷만', '하의만'] as const
+const PART_VALUE = { '섞여 있어요': 'all', '상의·겉옷만': 'top', '하의만': 'bottom' } as const
+
 // 종류·색·무늬가 같으면 같은 옷으로 본다(같은 옷을 여러 벌 담지 않는다)
 const sameKey = (c: { type: string; color: string; pattern?: string }) => `${c.type}|${c.color}|${c.pattern ?? '무지'}`
 
@@ -44,6 +48,7 @@ export default function ScanClosetPage() {
   const [editing, setEditing] = useState<number | null>(null)
   const [progress, setProgress] = useState('')
   const [busy, setBusy] = useState(false)
+  const [part, setPart] = useState<(typeof PART_LABELS)[number]>('섞여 있어요')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [limited, setLimited] = useState(false) // 사진 인식 한도에 걸림: 직접 등록으로 안내한다
@@ -78,7 +83,7 @@ export default function ScanClosetPage() {
           const tiles = await splitForScan(list[i]!)
           setProgress(`${i + 1}/${list.length}번째 사진 살펴보는 중…`)
           // 한 사진의 구간들은 동시에 보낸다(차례로 기다리지 않아 빨라진다). 결과는 구간 순서대로 합친다.
-          const settled = await Promise.allSettled(tiles.map((tile) => api<{ items: (ClothingSuggestion & { label: string })[] }>('POST', '/api/ai/clothes-from-photo', { image: tile })))
+          const settled = await Promise.allSettled(tiles.map((tile) => api<{ items: (ClothingSuggestion & { label: string })[] }>('POST', '/api/ai/clothes-from-photo', { image: tile, part: PART_VALUE[part] })))
           // 같은 사진의 바로 앞 조각에서 찾은 옷 (겹치는 구간의 같은 옷을 가려내기 위해)
           let prevTile: Found[] = []
           let firstError: unknown = null
@@ -169,6 +174,9 @@ export default function ScanClosetPage() {
       <div className="field ai-box" style={{ marginTop: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void analyze(e.target.files)} />
         <AiUsageBar usage={usage} />
+        <div className="name">사진 속 옷</div>
+        <ChoiceRow options={[...PART_LABELS]} value={part} onChange={setPart} />
+        <p className="tiny ai-note">상의만, 하의만 찍었다면 골라 주세요. 상의와 하의를 헷갈리는 실수가 크게 줄어요.</p>
         <DoodleButton seed={2} className="block sketchy" icon={<CameraIcon />} onClick={() => fileRef.current?.click()} disabled={busy || saving || blocked}>
           {busy ? progress || '살펴보는 중…' : '옷장·행거 사진 고르기'}
         </DoodleButton>

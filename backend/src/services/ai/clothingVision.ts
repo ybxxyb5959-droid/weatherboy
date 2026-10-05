@@ -61,6 +61,12 @@ const MAX_ITEMS = 12
 export const CONFIDENCES = ['확실', '보통', '헷갈림'] as const
 export type Confidence = (typeof CONFIDENCES)[number]
 
+/** 사진에 어떤 옷만 있는지 사용자가 알려 준 범위. 알려 주면 종류 선택지를 그 범위로 좁혀 상의·하의를 서로 헷갈리지 않는다. */
+export const PHOTO_PARTS = ['all', 'top', 'bottom'] as const
+export type PhotoPart = (typeof PHOTO_PARTS)[number]
+const BOTTOM_TYPES = ['바지', '반바지', '치마']
+const typesFor = (part: PhotoPart): string[] => (part === 'bottom' ? types.filter((t) => BOTTOM_TYPES.includes(t)) : part === 'top' ? types.filter((t) => !BOTTOM_TYPES.includes(t)) : [...types])
+
 const multiValidate = z.object({
   items: z
     .array(
@@ -77,7 +83,7 @@ const multiValidate = z.object({
     .max(30),
 })
 
-const multiSchema = {
+const multiSchema = (part: PhotoPart) => ({
   type: 'OBJECT',
   properties: {
     items: {
@@ -86,7 +92,7 @@ const multiSchema = {
         type: 'OBJECT',
         properties: {
           label: { type: 'STRING' },
-          type: { type: 'STRING', enum: [...types] },
+          type: { type: 'STRING', enum: typesFor(part) },
           color: { type: 'STRING', enum: [...colors] },
           pattern: { type: 'STRING', enum: [...patterns] },
           evidence: { type: 'STRING' },
@@ -97,11 +103,11 @@ const multiSchema = {
     },
   },
   required: ['items'],
-}
+})
 
 // 같은 사진으로 지시문을 비교한 결과(가벼운 모델): 예전 지시문은 행거에 걸린 바지를 바람막이·긴팔·셔츠로 보는 일이 잦았고,
 // 아래처럼 "먼저 상의/하의/겉옷을 정하고, 구분 단서를 쓰고, 근거를 한 줄 적게" 했더니 바지를 바지로 보았다.
-const multiPrompt = [
+const multiPromptLines = [
   '옷장이나 행거 사진이다. 사진에 보이는 옷(상의/하의/겉옷)을 한 벌씩 따로 찾아 JSON 의 items 배열로 답해라.',
   `- 최대 ${MAX_ITEMS}벌. 앞에 크게 보이는 옷부터 순서대로.`,
   '- 같은 옷을 두 번 넣지 말고, 종류와 색을 알아볼 수 없을 만큼 가려지거나 흐린 옷은 넣지 마라. 옷이 아닌 물건(옷걸이, 선반, 가방 등)은 넣지 마라.',
@@ -117,15 +123,26 @@ const multiPrompt = [
   colorLine,
   patternLine,
   '옷이 하나도 안 보이면 items 를 빈 배열로 답하고, 사진에 없는 옷을 지어내지 마라.',
-].join('\n')
+]
+
+const partHint: Record<PhotoPart, string | null> = {
+  all: null,
+  top: '이 사진에 있는 옷은 전부 상의 또는 겉옷이다. 바지·치마 같은 하의는 사진에 없으니 하의로 답하지 마라.',
+  bottom: '이 사진에 있는 옷은 전부 하의(바지·반바지·치마)다. 상의나 겉옷은 없다. 후드·바람막이·셔츠처럼 보여도(스웨트·나일론·청 소재, 연한 색 포함) 하의로 본다.',
+}
+const promptFor = (part: PhotoPart): string => {
+  const lines = multiPromptLines.map((l) => (l === typeLine ? `- type: 다음 중 가장 가까운 것 하나: ${typesFor(part).join(', ')}` : l))
+  const hint = partHint[part]
+  return (hint ? [lines[0]!, hint, ...lines.slice(1)] : lines).join('\n')
+}
 
 export interface ClothesSuggestion extends ClothingSuggestion {
   label: string
   confidence: Confidence
 }
 
-export async function clothesFromPhoto(image: GeminiImage, fetchImpl?: typeof fetch): Promise<ClothesSuggestion[]> {
-  const r = await geminiJson({ prompt: multiPrompt, image, schema: multiSchema, validate: multiValidate, fetchImpl, model: photoModel() })
+export async function clothesFromPhoto(image: GeminiImage, fetchImpl?: typeof fetch, part: PhotoPart = 'all'): Promise<ClothesSuggestion[]> {
+  const r = await geminiJson({ prompt: promptFor(part), image, schema: multiSchema(part), validate: multiValidate, fetchImpl, model: photoModel() })
   if (r.items.length === 0) throw new AppError(422, 'NOT_CLOTHING', '사진에서 옷을 찾지 못했어요. 옷이 잘 보이게 다시 찍어주세요.')
   // 근거(evidence)는 모델이 따져 보게 하려는 용도라서 화면에는 보내지 않는다
   return r.items.slice(0, MAX_ITEMS).map(({ evidence: _evidence, ...item }) => item)
