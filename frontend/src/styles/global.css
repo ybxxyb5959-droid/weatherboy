@@ -4673,8 +4673,11 @@ dd,
 /* 홈의 일출·일몰 카드: 점수 카드와 같은 해 길을 쓰되 윗 구분선은 없다 */
 .home-sun .act-sun {
   margin-top: 4px;
-  padding-top: 0;
+  padding-top: 12px;
   border-top: 0;
+}
+.home-sun .act-sun svg {
+  overflow: visible;
 }
 .act-status {
   margin-top: 2px;
@@ -4694,7 +4697,7 @@ dd,
 }
 .home-sun .hourly + .act-sun {
   margin-top: 6px;
-  padding-top: 8px;
+  padding-top: 20px;
   border-top: 2px dashed rgb(var(--ink-rgb) / 0.3);
 }
 
