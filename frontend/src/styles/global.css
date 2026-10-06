@@ -1,6 +1,6 @@
 :root {
-  /* 밝은 모습이 기본. 폰이 다크모드이면 아래 칠판 색으로 바뀐다(삼성 인터넷 등이 색을 억지로 뒤집지 않게 우리가 직접 지원한다고 알린다) */
-  color-scheme: light dark;
+  /* 시스템 테마와 관계없이 밝은 종이 배경을 유지한다. */
+  color-scheme: only light;
   --paper: #fcfcfa;
   --paper-dark: #eeeeec;
   --ink: #222;
@@ -12,36 +12,6 @@
   --ink-rgb: 34 34 34; /* 잉크 색에 투명도를 줄 때: rgb(var(--ink-rgb) / 0.3) */
   --paper-rgb: 252 252 250;
   --font: 'Gaegu', 'Nanum Pen Script', 'Comic Sans MS', cursive;
-}
-
-/* 다크모드: 어두운 칠판에 분필로 쓴 느낌. 그림의 선·칠은 위 변수를 따라 바뀌고, 옷·해·달 같은 색 있는 그림은 그대로다. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #252b28;
-    --paper-dark: #181c1a;
-    --ink: #ece9de;
-    --pick: #39423e;
-    --scribble: #3b4440;
-    --muted: #b6b2a6;
-    --track: #4a534e;
-    --note: #2d3531;
-    --ink-rgb: 236 233 222;
-    --paper-rgb: 37 43 40;
-  }
-}
-/* 관리자 화면은 표 중심이라 항상 밝게 둔다 */
-:root:has(.admin) {
-  color-scheme: light;
-  --muted: #6b6b66;
-  --track: #d6d6d6;
-  --note: #fffdf3;
-  --scribble: #e6e6df;
-  --paper: #fcfcfa;
-  --paper-dark: #eeeeec;
-  --ink: #222;
-  --pick: #e5e5e5;
-  --ink-rgb: 34 34 34;
-  --paper-rgb: 252 252 250;
 }
 
 * {
@@ -97,13 +67,6 @@ body {
 
 .app > * {
   position: relative;
-}
-
-/* 다크모드: 구겨진 자국 선을 밝은 색으로 */
-@media (prefers-color-scheme: dark) {
-  :root:not(:has(.admin)) .app::before {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='460' height='900' viewBox='0 0 460 900' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='2'><path d='M-5 180 L120 150 L300 205 L470 160'/><path d='M60 -5 L90 300 L50 560 L110 905'/><path d='M470 420 L330 470 L180 440 L-5 520'/><path d='M390 -5 L360 250 L410 520 L370 905'/></svg>");
-  }
 }
 
 .doodle {
