@@ -30,7 +30,7 @@ function OwnedCheck() {
   return (
     <span className="scan-owned-mark" role="img" aria-label="이미 등록되어 있어요">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" fill="#4fae6a" stroke="#222" strokeWidth="1.6" />
+        <circle cx="12" cy="12" r="10" fill="#4fae6a" stroke="var(--ink)" strokeWidth="1.6" />
         <path d="M7 12.5 L10.5 16 L17 8.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>

@@ -8,8 +8,8 @@ import { buildPose, type Pose } from '../greetingPose'
 // "이렇게 사용해보세요" 4컷 만화. 움직임 없이 처음부터 완성된 그림으로 보여준다.
 
 type Pt = readonly [number, number]
-const INK = '#222'
-const PAPER = '#fcfcfa'
+const INK = 'var(--ink)'
+const PAPER = 'var(--paper)'
 
 /** 자로 댄 듯한 직사각형 대신, 모서리마다 조금씩 어긋나고 변이 살짝 휜 손그림 사각형 */
 function Rough({ x, y, width, height, fill, stroke, strokeWidth }: { x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }) {
@@ -141,7 +141,7 @@ const Scene3 = memo(function Scene3() {
       </g>
       {/* 고민하는 졸라맨 */}
       <Fig pose={P3} id="c3" tx={96} ty={24} s={0.9} face="flat" />
-      <g stroke="#222" strokeWidth="2.4">
+      <g stroke="var(--ink)" strokeWidth="2.4">
         <path transform="translate(152 16)" d="M0 8 C0 -4 16 -4 16 6 C16 14 8 14 8 22 M8 29 h.1" />
         <path transform="translate(176 30) scale(.7)" d="M0 8 C0 -4 16 -4 16 6 C16 14 8 14 8 22 M8 29 h.1" />
       </g>

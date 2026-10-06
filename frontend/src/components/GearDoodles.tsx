@@ -4,7 +4,7 @@ export type GearKind = 'umbrella' | 'mask' | 'sunscreen'
 
 const common = {
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.4,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
@@ -25,7 +25,7 @@ function Art({ kind, size }: { kind: GearKind; size: number }) {
   if (kind === 'mask')
     return (
       <svg width={size} height={size} {...common}>
-        <path d="M10 20 Q28 14 46 20 L44 38 Q28 46 12 38Z" fill="#fcfcfa" />
+        <path d="M10 20 Q28 14 46 20 L44 38 Q28 46 12 38Z" fill="var(--paper)" />
         <path d="M10 22 C2 22 2 32 10 32 M46 22 C54 22 54 32 46 32" strokeWidth="1.8" />
         <path d="M16 27 H40 M16 31 H40 M17 35 H39" strokeWidth="1.4" />
       </svg>
@@ -33,7 +33,7 @@ function Art({ kind, size }: { kind: GearKind; size: number }) {
   return (
     <svg width={size} height={size} {...common}>
       <path d="M20 22 H36 L38 48 Q28 52 18 48Z" fill="#f2cf4a" />
-      <path d="M23 12 H33 V22 H23Z" fill="#fcfcfa" />
+      <path d="M23 12 H33 V22 H23Z" fill="var(--paper)" />
       <path d="M26 7 H30 V12" />
       <path d="M24 33 Q28 29 32 33 M25 40 H31" strokeWidth="1.6" />
       <path d="M44 8 V13 M48 14 L44 17 M10 10 L14 14 M8 24 H12" stroke="#e8a24a" strokeWidth="2" />

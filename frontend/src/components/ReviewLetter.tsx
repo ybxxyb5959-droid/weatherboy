@@ -7,8 +7,8 @@ import HandText from './HandText'
 /** 편지 아이콘(볼펜 낙서 스타일). 닫혀 있으면 봉투, 열리면 뚜껑이 올라가고 편지지가 살짝 보인다. */
 function LetterIcon({ open }: { open: boolean }) {
   return (
-    <svg className="doodle" width="40" height="34" viewBox="0 0 40 34" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {open && <path d="M9 14 L9 5 Q20 3 31 5 L31 14" fill="#fcfcfa" strokeWidth="2" />}
+    <svg className="doodle" width="40" height="34" viewBox="0 0 40 34" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {open && <path d="M9 14 L9 5 Q20 3 31 5 L31 14" fill="var(--paper)" strokeWidth="2" />}
       <path d="M4 12 L36 12 L35 30 L5 30Z" fill="#fff6d8" />
       {open ? <path d="M4 12 L20 2 L36 12" fill="#fff6d8" /> : <path d="M4 12 L20 23 L36 12" />}
       <path d="M5 30 L16 20 M35 30 L24 20" strokeWidth="1.8" />

@@ -2,7 +2,7 @@
 export const figureSvgProps = {
   viewBox: '0 0 140 160',
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.6,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',

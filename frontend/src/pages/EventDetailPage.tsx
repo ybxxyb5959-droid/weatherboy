@@ -296,7 +296,7 @@ function EventBody({ e, id }: { e: PlanEvent; id: string }) {
                 <span>{s.t}</span>
               </div>
               {i < steps.length - 1 && (
-                <svg className="doodle arrow" width="34" height="20" viewBox="0 0 34 20" fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                <svg className="doodle arrow" width="34" height="20" viewBox="0 0 34 20" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                   <path d="M2 11 Q16 6 30 10 M24 4 L31 10 L23 16" />
                 </svg>
               )}

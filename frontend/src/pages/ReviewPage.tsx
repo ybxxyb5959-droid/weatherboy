@@ -20,14 +20,14 @@ function RatingFace({ level }: { level: 1 | 2 | 3 | 4 | 5 }) {
     5: 'M11 26 Q20 38 29 26 Z',
   }[level]
   return (
-    <svg className="doodle" width="46" height="46" viewBox="0 0 40 40" fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="doodle" width="46" height="46" viewBox="0 0 40 40" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="20" cy="20" r="16" />
       {level === 1 ? (
         <path d="M11 14 L16 16 M29 14 L24 16" />
       ) : (
         <>
-          <circle cx="14" cy="17" r="1.6" fill="#222" stroke="none" />
-          <circle cx="26" cy="17" r="1.6" fill="#222" stroke="none" />
+          <circle cx="14" cy="17" r="1.6" fill="var(--ink)" stroke="none" />
+          <circle cx="26" cy="17" r="1.6" fill="var(--ink)" stroke="none" />
         </>
       )}
       <path d={mouth} fill={level === 5 ? '#f2b8a8' : 'none'} />

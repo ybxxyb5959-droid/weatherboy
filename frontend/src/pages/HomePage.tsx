@@ -394,7 +394,7 @@ export default function HomePage() {
     <>
       {!fbOpen && (
         <button type="button" className="fb-notice" onClick={() => setFbOpen(true)} aria-label="오늘 어땠나요? 후기 남기기">
-          <svg width="22" height="20" viewBox="0 0 22 20" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="22" height="20" viewBox="0 0 22 20" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M3 3 C8 1 14 1.5 19 3 C20.5 7 20 11 18.5 14 C13 15.5 10 14.5 8 15 L4 18.5 L4.5 14 C2 11 1.5 7 3 3Z" fill="#f2cf4a" />
             <path d="M8 8 l.1 0 M11.5 8 l.1 0 M15 8 l.1 0" strokeWidth="2.4" />
           </svg>

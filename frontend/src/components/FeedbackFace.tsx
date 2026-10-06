@@ -1,6 +1,6 @@
 export type FeelKind = 'cold' | 'good' | 'hot'
 
-const ink = '#222'
+const ink = 'var(--ink)'
 
 /** 졸라맨 얼굴 + 몸통. 추웠어요/딱 좋아요/더웠어요 표정만 다르다. */
 export default function FeedbackFace({ kind, size = 64 }: { kind: FeelKind; size?: number }) {
@@ -25,7 +25,7 @@ export default function FeedbackFace({ kind, size = 64 }: { kind: FeelKind; size
       {/* 머리 */}
       <path
         d="M35 6 C48 5 52 20 48 28 C44 38 26 38 22 28 C18 19 23 7 35 6Z"
-        fill={kind === 'hot' ? '#f6c9b8' : kind === 'cold' ? '#d6e8f5' : '#fcfcfa'}
+        fill={kind === 'hot' ? '#f6c9b8' : kind === 'cold' ? '#d6e8f5' : 'var(--paper)'}
       />
       {kind === 'cold' && (
         <g>
@@ -43,7 +43,7 @@ export default function FeedbackFace({ kind, size = 64 }: { kind: FeelKind; size
           {/* 동그란 눈, 활짝 웃는 입 */}
           <circle cx="29.5" cy="21" r="2.2" fill={ink} stroke="none" />
           <circle cx="40.5" cy="21" r="2.2" fill={ink} stroke="none" />
-          <path d="M27 27 Q35 36 43 27 Z" fill="#fcfcfa" strokeWidth="1.8" />
+          <path d="M27 27 Q35 36 43 27 Z" fill="var(--paper)" strokeWidth="1.8" />
         </g>
       )}
       {kind === 'hot' && (

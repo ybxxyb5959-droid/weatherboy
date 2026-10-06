@@ -21,7 +21,7 @@ const THEME: Record<string, string | string[]> = {
   TOP_HEAVY: '#f2b8c6',
   BOTTOM_HEAVY: '#a9b8e0',
 }
-const NEUTRAL = '#e6e6df'
+const NEUTRAL = 'var(--scribble)' // 밝을 땐 연한 회색, 다크모드에선 칠판 위의 은은한 선
 
 const jitter = (n: number) => Math.sin(n * 12.9898) * 43758.5453 - Math.floor(Math.sin(n * 12.9898) * 43758.5453) // 0~1, 항상 같은 값
 

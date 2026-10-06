@@ -9,15 +9,15 @@ import { useCharacter } from '../lib/character'
 
 export type LoadingKind = 'weather' | 'calendar' | 'note' | 'closet' | 'mirror' | 'gear' | 'letter' | 'edit'
 
-const svgProps = { viewBox: '0 0 220 160', fill: 'none', stroke: '#222', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round', overflow: 'visible', 'aria-hidden': true } as const
+const svgProps = { viewBox: '0 0 220 160', fill: 'none', stroke: 'var(--ink)', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round', overflow: 'visible', 'aria-hidden': true } as const
 
 /** 졸라맨 몸(머리·얼굴·몸통·다리). 팔은 장면마다 따로 그린다. x 는 가로 위치. */
 function Man({ x = 0, children, head }: { x?: number; children?: ReactNode; head?: string }) {
   return (
     <g transform={`translate(${x} 0)`}>
       <g className={head}>
-        <circle cx="62" cy="46" r="16" fill="#fcfcfa" />
-        <g stroke="none" fill="#222">
+        <circle cx="62" cy="46" r="16" fill="var(--paper)" />
+        <g stroke="none" fill="var(--ink)">
           <circle cx="56.5" cy="45" r="1.8" />
           <circle cx="67.5" cy="45" r="1.8" />
         </g>
@@ -52,7 +52,7 @@ function Weather() {
         <path d="M62 72 L46 98" />
         <g className="ls-brow" style={{ transformOrigin: '62px 72px' }}>
           <path d="M62 72 L88 62" />
-          <circle cx="91" cy="61" r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+          <circle cx="91" cy="61" r="3.4" fill="var(--paper)" strokeWidth="2.2" />
         </g>
         <g className="ls-umb" style={{ transformOrigin: '76px 24px' }}>
           <path d="M48 24 Q76 -8 104 24 Q96 19 90 24 Q83 19 76 24 Q69 19 62 24 Q56 19 48 24Z" fill="#cfe6e2" />
@@ -63,7 +63,7 @@ function Weather() {
         <SunDoodle />
       </g>
       <g className="ls-cloud">
-        <path d="M118 52 C106 52 105 38 117 37 C117 25 135 22 141 33 C152 27 165 37 158 46 C166 48 162 53 155 52Z" fill="#fcfcfa" />
+        <path d="M118 52 C106 52 105 38 117 37 C117 25 135 22 141 33 C152 27 165 37 158 46 C166 48 162 53 155 52Z" fill="var(--paper)" />
         <g className="ls-rain" stroke="#4aa6a0" strokeWidth="2.2">
           <path className="ls-drop" d="M124 60 l-3 8" />
           <path className="ls-drop ls-d2" d="M136 60 l-3 8" />
@@ -90,17 +90,17 @@ function Calendar() {
         </g>
       </Man>
       <g>
-        <rect x="112" y="38" width="88" height="92" rx="6" fill="#fcfcfa" />
+        <rect x="112" y="38" width="88" height="92" rx="6" fill="var(--paper)" />
         <path d="M112 60 H200" />
         <path d="M134 32 v12 M178 32 v12" />
         <path d={DOTS} strokeWidth="3" />
         <g className="ls-page ls-p2" style={{ transformOrigin: '156px 60px' }}>
-          <rect x="114" y="61" width="84" height="67" fill="#fcfcfa" stroke="none" />
+          <rect x="114" y="61" width="84" height="67" fill="var(--paper)" stroke="none" />
           <path d="M128 78 l.1 0 M144 78 l.1 0 M160 78 l.1 0 M176 78 l.1 0 M128 94 l.1 0 M144 94 l.1 0 M160 94 l.1 0 M176 94 l.1 0" strokeWidth="3" />
           <path d="M120 70 H192" strokeWidth="1.4" opacity="0.5" />
         </g>
         <g className="ls-page ls-p1" style={{ transformOrigin: '156px 60px' }}>
-          <rect x="114" y="61" width="84" height="67" fill="#fcfcfa" stroke="none" />
+          <rect x="114" y="61" width="84" height="67" fill="var(--paper)" stroke="none" />
           <path d="M128 78 l.1 0 M144 78 l.1 0 M160 78 l.1 0 M176 78 l.1 0 M128 110 l.1 0 M144 110 l.1 0 M160 110 l.1 0 M176 110 l.1 0" strokeWidth="3" />
           <path d="M120 70 H192" strokeWidth="1.4" opacity="0.5" />
         </g>
@@ -119,16 +119,16 @@ function Note() {
         <path d="M62 72 L46 98" />
         <g className="ls-pat" style={{ transformOrigin: '62px 72px' }}>
           <path d="M62 72 L100 56" />
-          <circle cx="103" cy="54.5" r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+          <circle cx="103" cy="54.5" r="3.4" fill="var(--paper)" strokeWidth="2.2" />
         </g>
       </Man>
       <g className="ls-paper" style={{ transformOrigin: '150px 30px' }}>
-        <path d="M104 34 L196 31 L198 124 L106 127Z" fill="#fcfcfa" />
+        <path d="M104 34 L196 31 L198 124 L106 127Z" fill="var(--paper)" />
         <g className="ls-tape ls-t1" style={{ transformOrigin: '118px 34px' }}>
-          <rect x="105" y="26" width="30" height="11" fill="rgba(34,34,34,0.07)" strokeWidth="1.6" transform="rotate(-6 118 34)" />
+          <rect x="105" y="26" width="30" height="11" fill="rgb(var(--ink-rgb) / 0.07)" strokeWidth="1.6" transform="rotate(-6 118 34)" />
         </g>
         <g className="ls-tape ls-t2" style={{ transformOrigin: '180px 31px' }}>
-          <rect x="165" y="24" width="30" height="11" fill="rgba(34,34,34,0.07)" strokeWidth="1.6" transform="rotate(5 180 31)" />
+          <rect x="165" y="24" width="30" height="11" fill="rgb(var(--ink-rgb) / 0.07)" strokeWidth="1.6" transform="rotate(5 180 31)" />
         </g>
         <path className="ls-line ls-l1" d="M116 62 C130 58 144 66 160 61" pathLength="1" />
         <path className="ls-line ls-l2" d="M116 78 C132 74 150 82 176 76" pathLength="1" />
@@ -136,7 +136,7 @@ function Note() {
         <g className="ls-doodle">
           <circle cx="178" cy="108" r="6" fill="#f2cf4a" strokeWidth="1.8" />
           <path d="M178 97 V99 M167 108 H169 M189 108 H187 M170 100 L172 102 M186 100 L184 102" strokeWidth="1.6" stroke="#e8a24a" />
-          <path d="M122 112 C116 112 116 105 122 105 C123 99 132 99 134 105 C140 105 140 112 134 112Z" fill="#fcfcfa" strokeWidth="1.8" />
+          <path d="M122 112 C116 112 116 105 122 105 C123 99 132 99 134 105 C140 105 140 112 134 112Z" fill="var(--paper)" strokeWidth="1.8" />
         </g>
       </g>
     </svg>
@@ -159,7 +159,7 @@ function Closet() {
         <path d="M62 72 L46 98" />
         <g className="ls-reach" style={{ transformOrigin: '62px 72px' }}>
           <path d="M62 72 L84 44" />
-          <circle cx="86" cy="41" r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+          <circle cx="86" cy="41" r="3.4" fill="var(--paper)" strokeWidth="2.2" />
         </g>
       </Man>
       {clothes.map((c) => (
@@ -224,20 +224,20 @@ function Gear() {
         <path d="M62 72 L46 98" />
         <g className="ls-wrench" style={{ transformOrigin: '62px 72px' }}>
           <path d="M62 72 L112 78" />
-          <circle cx="115" cy="78.5" r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+          <circle cx="115" cy="78.5" r="3.4" fill="var(--paper)" strokeWidth="2.2" />
         </g>
       </Man>
       <g transform="translate(150 80)">
         <g className="ls-bigg">
           <path d={BIG_GEAR} fill="#e7dcc4" strokeWidth="2.4" />
-          <circle r="7" fill="#fcfcfa" strokeWidth="2.2" />
+          <circle r="7" fill="var(--paper)" strokeWidth="2.2" />
           <path d="M0 0 L22 0" strokeWidth="2.2" />
         </g>
       </g>
       <g transform="translate(192 122)">
         <g className="ls-smallg">
           <path d={SMALL_GEAR} fill="#cfe6e2" strokeWidth="2.4" />
-          <circle r="4.5" fill="#fcfcfa" strokeWidth="2" />
+          <circle r="4.5" fill="var(--paper)" strokeWidth="2" />
         </g>
       </g>
       <path className="ls-sweat" d="M52 22 q-3 6 0 8 q3 -2 0 -8" stroke="#4aa6a0" fill="#cfe6e2" strokeWidth="1.4" />
@@ -253,7 +253,7 @@ function Letter() {
       <Man>
         <path d="M62 72 L46 98" />
         <path d="M62 72 L84 84" />
-        <circle cx="87" cy="85.5" r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+        <circle cx="87" cy="85.5" r="3.4" fill="var(--paper)" strokeWidth="2.2" />
       </Man>
       {/* 우체통 */}
       <g>
@@ -265,7 +265,7 @@ function Letter() {
       {/* 편지: 써지고 → 접히고 → 우체통으로 */}
       <g className="ls-mail" style={{ transformOrigin: '110px 80px' }}>
         <g className="ls-sheet" style={{ transformOrigin: '110px 94px' }}>
-          <rect x="94" y="60" width="38" height="46" fill="#fcfcfa" transform="rotate(-4 113 83)" />
+          <rect x="94" y="60" width="38" height="46" fill="var(--paper)" transform="rotate(-4 113 83)" />
           <path className="ls-line ls-l1" d="M100 72 H124" pathLength="1" />
           <path className="ls-line ls-l2" d="M100 82 H126" pathLength="1" />
           <path className="ls-line ls-l3" d="M100 92 H116" pathLength="1" />
@@ -287,7 +287,7 @@ function Edit() {
           <path d="M0 0 H40" transform="translate(62 72)" vectorEffect="non-scaling-stroke" />
         </g>
       </Man>
-      <path d="M104 40 L196 37 L198 120 L106 123Z" fill="#fcfcfa" />
+      <path d="M104 40 L196 37 L198 120 L106 123Z" fill="var(--paper)" />
       <g className="ls-oldtext">
         <path d="M116 62 C130 58 144 66 160 61 M116 78 C132 74 150 82 176 76 M116 94 C128 90 140 98 156 93" strokeWidth="2.4" />
       </g>
@@ -298,14 +298,14 @@ function Edit() {
       <g className="ls-eraser">
         <g transform="rotate(30)" strokeLinejoin="round">
           <rect x="-5" y="-11" width="10" height="11" rx="2.2" fill="#f2a7b0" strokeWidth="1.8" />
-          <rect x="-5" y="-30" width="10" height="19" rx="2" fill="#fcfcfa" strokeWidth="1.8" />
+          <rect x="-5" y="-30" width="10" height="19" rx="2" fill="var(--paper)" strokeWidth="1.8" />
         </g>
       </g>
       {/* 펜 */}
       <g className="ls-pen">
         <g transform="rotate(30)" strokeLinejoin="round">
-          <path d="M0 0 L-2 -7 L2 -7Z" fill="#222" strokeWidth="1" />
-          <rect x="-2.7" y="-36" width="5.4" height="29" rx="1.7" fill="#fcfcfa" strokeWidth="1.8" />
+          <path d="M0 0 L-2 -7 L2 -7Z" fill="var(--ink)" strokeWidth="1" />
+          <rect x="-2.7" y="-36" width="5.4" height="29" rx="1.7" fill="var(--paper)" strokeWidth="1.8" />
           <rect x="-2.7" y="-36" width="5.4" height="9" rx="1.7" fill="#4a7fc1" strokeWidth="1.8" />
         </g>
       </g>

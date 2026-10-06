@@ -58,10 +58,10 @@ const lerp = (a: number, b: number, u: number) => a + (b - a) * u
 function Pen() {
   return (
     <g transform="rotate(30)" strokeLinejoin="round" strokeLinecap="round">
-      <path d="M0 0 L-2 -7 L2 -7Z" fill="#222" stroke="#222" strokeWidth="1" />
-      <rect x="-2.7" y="-36" width="5.4" height="29" rx="1.7" fill="#fcfcfa" stroke="#222" strokeWidth="1.6" />
-      <rect x="-2.7" y="-36" width="5.4" height="9" rx="1.7" fill="#4a7fc1" stroke="#222" strokeWidth="1.6" />
-      <path d="M2.7 -25 L2.7 -14" stroke="#222" strokeWidth="1.3" />
+      <path d="M0 0 L-2 -7 L2 -7Z" fill="var(--ink)" stroke="var(--ink)" strokeWidth="1" />
+      <rect x="-2.7" y="-36" width="5.4" height="29" rx="1.7" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.6" />
+      <rect x="-2.7" y="-36" width="5.4" height="9" rx="1.7" fill="#4a7fc1" stroke="var(--ink)" strokeWidth="1.6" />
+      <path d="M2.7 -25 L2.7 -14" stroke="var(--ink)" strokeWidth="1.3" />
     </g>
   )
 }
@@ -70,8 +70,8 @@ function Pen() {
 function Eraser() {
   return (
     <g transform="rotate(-12)" strokeLinejoin="round" strokeLinecap="round">
-      <path d="M-14 0 L-14 -11 Q-14 -14 -11 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="#f2a7b0" stroke="#222" strokeWidth="1.8" />
-      <path d="M-2 0 L-2 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="#fcfcfa" stroke="#222" strokeWidth="1.8" />
+      <path d="M-14 0 L-14 -11 Q-14 -14 -11 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="#f2a7b0" stroke="var(--ink)" strokeWidth="1.8" />
+      <path d="M-2 0 L-2 -14 L11 -14 Q14 -14 14 -11 L14 0Z" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.8" />
       <path d="M2 -14 V0 M7 -14 V0" stroke="#4a7fc1" strokeWidth="1.6" />
       <path d="M-11 -9.5 Q-8.5 -11.5 -5.5 -10.5" stroke="#fff" strokeWidth="1.6" opacity="0.75" />
     </g>

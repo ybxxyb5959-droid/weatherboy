@@ -150,7 +150,7 @@ function Pants({ id, type, color }: { id: string; type: string; color: string })
   )
 }
 
-const hand = (p: Pt, key: string) => <circle key={key} cx={p[0]} cy={p[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+const hand = (p: Pt, key: string) => <circle key={key} cx={p[0]} cy={p[1]} r="3.4" fill="var(--paper)" strokeWidth="2.2" />
 
 /** 옷 한 벌: 다리(바지 밑으로 보이는 부분) -> 하의 -> 상의/겉옷 -> 소매 밖으로 나온 팔뚝과 손 */
 function Wear({ o, angL, angR }: { o: Outfit; angL: number; angR: number }) {
@@ -209,8 +209,8 @@ export function FigureBody({ armL = ARM_ANGLE, armR = ARM_ANGLE, idKey = 'final'
       <path d="M60 47 L61 100" />
       <path d="M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z" />
       <g stroke="none">
-        <circle cx="53.5" cy="30" r="1.9" fill="#222" />
-        <circle cx="66.5" cy="29.5" r="1.9" fill="#222" />
+        <circle cx="53.5" cy="30" r="1.9" fill="var(--ink)" />
+        <circle cx="66.5" cy="29.5" r="1.9" fill="var(--ink)" />
       </g>
       <path d="M56.5 36.5 Q60.5 40 64.5 36" strokeWidth="2" />
 

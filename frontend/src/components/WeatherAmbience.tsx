@@ -59,7 +59,7 @@ export default function WeatherAmbience({ kind }: { kind: WeatherKind }) {
       )}
       {layers.includes('clouds') &&
         range(3).map((i) => (
-          <svg key={i} className="cloud" viewBox="0 0 64 44" style={style({ '--top': `${8 + i * 24}%`, '--t': `${46 + i * 17}s`, '--d': `${-i * 15}s`, '--s': 0.8 + i * 0.25 })} fill="#fcfcfa" stroke="#222" strokeWidth="2.2" strokeLinejoin="round">
+          <svg key={i} className="cloud" viewBox="0 0 64 44" style={style({ '--top': `${8 + i * 24}%`, '--t': `${46 + i * 17}s`, '--d': `${-i * 15}s`, '--s': 0.8 + i * 0.25 })} fill="var(--paper)" stroke="var(--ink)" strokeWidth="2.2" strokeLinejoin="round">
             <path d={CLOUD} />
           </svg>
         ))}
@@ -76,13 +76,13 @@ export default function WeatherAmbience({ kind }: { kind: WeatherKind }) {
         ))}
       {layers.includes('fog') &&
         range(3).map((i) => (
-          <svg key={i} className="fogband" viewBox="0 0 200 20" preserveAspectRatio="none" style={style({ '--top': `${18 + i * 26}%`, '--t': `${16 + i * 6}s`, '--d': `${-i * 5}s` })} fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round">
+          <svg key={i} className="fogband" viewBox="0 0 200 20" preserveAspectRatio="none" style={style({ '--top': `${18 + i * 26}%`, '--t': `${16 + i * 6}s`, '--d': `${-i * 5}s` })} fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round">
             <path d="M0 10 Q25 2 50 10 T100 10 T150 10 T200 10" />
           </svg>
         ))}
       {layers.includes('gust') &&
         range(6).map((i) => (
-          <svg key={i} className="gust" viewBox="0 0 70 14" style={style({ '--top': `${10 + i * 15}%`, '--w': `${40 + (i % 3) * 18}px`, '--t': `${(1.9 + (i % 3) * 0.5).toFixed(1)}s`, '--d': `${-((i * 0.7) % 3).toFixed(1)}s` })} fill="none" stroke="#222" strokeWidth="2.2" strokeLinecap="round">
+          <svg key={i} className="gust" viewBox="0 0 70 14" style={style({ '--top': `${10 + i * 15}%`, '--w': `${40 + (i % 3) * 18}px`, '--t': `${(1.9 + (i % 3) * 0.5).toFixed(1)}s`, '--d': `${-((i * 0.7) % 3).toFixed(1)}s` })} fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round">
             <path d="M2 8 H48 C58 8 60 2 54 2" />
           </svg>
         ))}

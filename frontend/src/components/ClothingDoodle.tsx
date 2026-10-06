@@ -31,7 +31,7 @@ const patId = (pattern: string, dark: boolean) => `wb-pat-${pattern}-${dark ? 'l
 
 /** 체크/줄무늬/도트 타일. 같은 id 는 항상 같은 모양이라 그림이 여러 개여도 서로 겹쳐 문제되지 않는다. */
 function PatternDefs({ pattern, dark }: { pattern: string; dark: boolean }) {
-  const ink = dark ? '#f2f2f2' : '#222'
+  const ink = dark ? '#f2f2f2' : '#222' // 옷 위의 무늬·세부선은 옷 색에 맞춘다(다크모드에서도 밝은 옷에는 어두운 선)
   const id = patId(pattern, dark)
   if (pattern === '체크')
     return (
@@ -72,14 +72,14 @@ export function ClothingArt({ type, color, pattern = '무지' }: { type: string;
   return (
     <>
       {tiled && <PatternDefs pattern={pattern} dark={dark} />}
-      {type === '후드티' && <path d="M34 17 Q50 -4 66 17 Q50 32 34 17Z" fill={fill} stroke="#222" />}
-      <path d={shape} fill={fill} stroke="#222" />
+      {type === '후드티' && <path d="M34 17 Q50 -4 66 17 Q50 32 34 17Z" fill={fill} stroke="var(--ink)" />}
+      <path d={shape} fill={fill} stroke="var(--ink)" />
       {tiled && <path d={shape} fill={`url(#${patId(pattern, dark)})`} stroke="none" />}
       {(type === '셔츠' || type === '반팔셔츠') && (
         // 깃(칼라): 목 양쪽에 접힌 삼각형. 몸판 위에 같은 색으로 덮어 그린다
         <>
-          <path d="M38 15 L50 31 L43 40 L32 23Z" fill={fill} stroke="#222" />
-          <path d="M62 15 L50 31 L57 40 L68 23Z" fill={fill} stroke="#222" />
+          <path d="M38 15 L50 31 L43 40 L32 23Z" fill={fill} stroke="var(--ink)" />
+          <path d="M62 15 L50 31 L57 40 L68 23Z" fill={fill} stroke="var(--ink)" />
         </>
       )}
       {pattern === '프린트' && (

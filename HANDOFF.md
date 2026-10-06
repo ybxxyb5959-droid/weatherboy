@@ -109,6 +109,18 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 다크모드 대응(색 변수화) — 커밋 전 (작성: Claude Code)
+- 목적: 기본 모습은 그대로(밝은 종이), 폰이 다크모드일 때(삼성 인터넷 강제 반전 포함)는 어두운 칠판에 분필로 쓴 느낌으로 보이게. 삼성 등이 색을 억지로 뒤집지 않도록 color-scheme: light dark 로 "다크 지원"을 알림.
+- 변경:
+  - frontend/src/styles/global.css: :root 에 --paper/--ink 외에 --ink-rgb --paper-rgb --scribble --muted --track --note 추가, @media (prefers-color-scheme: dark) 에서 다크 값으로 교체(칠판 #252b28, 분필 #ece9de), 관리자 화면(:root:has(.admin))은 항상 밝게, 구겨진 종이 선 다크용. rgba(34,34,34,x) 45곳 -> rgb(var(--ink-rgb) / x), 하드코딩 #222/#fcfcfa/#111/#666/#6b6b66/#d6d6d6/#fffdf3 -> 변수.
+  - 컴포넌트·페이지 TSX 약 35개: SVG 속성의 "#222" -> "var(--ink)", "#fcfcfa" -> "var(--paper)" (일회성 스크립트로 일괄, 삭제함). 예외로 고정 색 유지: shareCard.ts(이미지로 저장), ClothingDoodle.tsx 의 옷 위 세부선(옷 색에 맞춤), SunBar.tsx 의 빌딩 그림자(밤하늘·노을 위), motion.css 의 .ls-glass(연한 유리잔), 색 있는 그림(옷·해·달·우산 등).
+  - frontend/index.html: color-scheme/supported-color-schemes light dark, theme-color 밝음/어두움 두 개, 정적 스플래시 색 변수.
+  - frontend/src/__tests__/theme.test.ts: 하드코딩 #222/#fcfcfa 재유입 방지(허용 파일 제외), 다크 팔레트가 모든 변수를 덮는지, light dark 선언 확인.
+- 확인한 화면(다크, 크롬 에뮬레이션): 랜딩, 시작(로그인), 위치 허용, 홈(날씨·추천·시간대별·해 그림·앞으로의 날씨), 옷장, 캐릭터, 일정 목록·달력, 일정 상세(여행·야외활동 점수·지난 일정·로딩), 설정 메인·개인맞춤·알림·FAQ, 일정 등록, 옷 추가, 옷장 사진 가이드, 후기, 약관, 둘러보기. 밝은 모드 홈은 원래 모습과 같음.
+- 못 본 것: 실제 삼성 인터넷 기기, 의견 보내기·후기 제출 후 화면, 위치 검색 패널, 캘린더 연동 팝업, 공유 이미지, 옷 수정, 아이폰 사파리. 흰 옷·흰 모자 같은 밝은 그림 안쪽의 세부선(CharacterDecor 등)은 밝은 선이 되어 흐릴 수 있음.
+- 상태: 커밋·푸시 안 함(사용자 요청). 임시 확인용 가짜 서버 응답 파일은 삭제함.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-06 서비스워커: 앱 껍데기 저장(오프라인에서도 열림) (작성: Claude Code)
 - 수정 목적: 오프라인이거나 연결이 불안정해도 앱 화면이 뜨게. 서비스워커가 푸시 알림만 처리하던 것을 확장.
 - 변경: frontend/public/sw.js(화면 문서 네트워크 우선 + 실패 시 저장분 -> 오프라인 안내, /assets/ 해시 파일 저장 우선, 아이콘·둘러보기 그림 저장 후 갱신, 설치 시 JS·CSS 미리 받기, 버전 올리면 옛 저장분 삭제, 220개 넘으면 오래된 것부터 삭제), frontend/public/offline.html(오프라인 안내 + 다시 시도), frontend/vite.config.ts(빌드 끝에 dist/sw.js 의 미리 받기 목록을 /assets/ 의 JS·CSS 로 채움. 관리자 화면·공유 이미지 조각·폰트 CSS 는 제외), frontend/src/__tests__/sw.test.ts

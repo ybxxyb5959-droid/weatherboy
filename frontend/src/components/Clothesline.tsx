@@ -6,8 +6,8 @@ export function Clothespin({ style }: { style?: React.CSSProperties }) {
       width="14"
       height="28"
       viewBox="0 0 14 28"
-      fill="#fcfcfa"
-      stroke="#222"
+      fill="var(--paper)"
+      stroke="var(--ink)"
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -31,7 +31,7 @@ export function ClosetScene({ empty = false }: { empty?: boolean }) {
         height="150"
         viewBox="0 0 230 150"
         fill="none"
-        stroke="#222"
+        stroke="var(--ink)"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -57,8 +57,8 @@ export function ClosetScene({ empty = false }: { empty?: boolean }) {
         {/* 빈 옷장일 땐 문 쪽으로 다가가 손잡이를 잡는다(팔을 길게 늘이지 않고 몸을 옮긴다) */}
         <g transform={empty ? 'translate(24 0)' : undefined}>
           <path d="M44 22 C58 20 62 36 58 44 C53 56 34 54 30 43 C26 33 31 23 45 21 L50 24" />
-          <circle cx="39" cy="35" r="1.6" fill="#222" stroke="none" />
-          <circle cx="51" cy="35" r="1.6" fill="#222" stroke="none" />
+          <circle cx="39" cy="35" r="1.6" fill="var(--ink)" stroke="none" />
+          <circle cx="51" cy="35" r="1.6" fill="var(--ink)" stroke="none" />
           {empty ? <path d="M41 43 L49 41" /> : <path d="M41.5 41.5 Q45 44.5 48.5 41.5" />}
           <path d="M45 55 L46 100" />
           <path d="M46 100 L30 140 M46 100 L62 138" />

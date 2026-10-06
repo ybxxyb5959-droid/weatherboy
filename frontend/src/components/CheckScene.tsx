@@ -33,11 +33,11 @@ export default function CheckScene({ size = 140 }: { size?: number }) {
   }, [])
 
   return (
-    <svg className="doodle check-scene" width={size} height={size * 1.07} viewBox="0 0 150 160" fill="none" stroke="#222" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" overflow="visible" aria-hidden="true">
+    <svg className="doodle check-scene" width={size} height={size * 1.07} viewBox="0 0 150 160" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" overflow="visible" aria-hidden="true">
       {/* 클립보드: 삐뚤게 놓여 있다 */}
       <g transform="rotate(-3 65 80)">
-        <rect x="22" y="16" width="86" height="130" rx="6" fill="#fcfcfa" />
-        <path d="M50 10 H80 V24 H50 Z" fill="#fcfcfa" strokeWidth="2.2" />
+        <rect x="22" y="16" width="86" height="130" rx="6" fill="var(--paper)" />
+        <path d="M50 10 H80 V24 H50 Z" fill="var(--paper)" strokeWidth="2.2" />
         <path d="M58 17 H72" strokeWidth="2" opacity="0.6" />
         {TICKS.map((t) => (
           <g key={t.y}>

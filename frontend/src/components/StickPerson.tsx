@@ -28,7 +28,7 @@ interface Props {
   accessories?: Accessories
 }
 
-const ink = '#222'
+const ink = 'var(--ink)'
 
 /**
  * 소매 밖으로 나오는 팔과 손. 옷은 소매가 몸 옆으로 벌어진 모양이라, 옷을 입으면 안쪽의 팔 선이 옷 뒤로 숨는다.
@@ -39,7 +39,7 @@ const ink = '#222'
 export function Hands({ top, outer }: { top?: string; outer?: string }) {
   // 옷 그림 좌표(100x100) -> 졸라맨 좌표. 상의는 scale .65 @ (27.5,39.6), 겉옷은 scale .72 @ (24,41)
   const at = (scale: number, tx: number, ty: number) => (x: number, y: number) => [tx + x * scale, ty + y * scale] as const
-  const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+  const hand = (cx: number, cy: number, key: string) => <circle key={key} cx={cx} cy={cy} r="3.4" fill="var(--paper)" strokeWidth="2.2" />
 
   if (outer) {
     const w = at(0.72, 24, 41) // 겉옷 소매 끝(왼 14.5,69 / 오른 85.5,69) 바로 아래
@@ -108,7 +108,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
         <g>
           {/* 산: 큰 봉우리에 눈 덮인 꼭대기와 깃발, 작은 봉우리 */}
           <path d="M40 138 L88 66 L112 100 L124 84 L146 138Z" fill="#cfe6e2" />
-          <path d="M78 82 L88 66 L98 82 L92 79 L88 85 L83 79Z" fill="#fcfcfa" strokeWidth="1.8" />
+          <path d="M78 82 L88 66 L98 82 L92 79 L88 85 L83 79Z" fill="var(--paper)" strokeWidth="1.8" />
           <path d="M88 66 V52" strokeWidth="2" />
           <path className="sp-flag" style={{ transformOrigin: '88px 57px' }} d="M88 52 L102 57 L88 62" strokeWidth="2" />
           <path d="M104 100 L112 90 L120 100" strokeWidth="1.6" />
@@ -144,7 +144,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
           <path d="M61 100 L44 136 M61 100 L80 133" />
         )}
         {/* 머리 */}
-        <path fill={mood === 'stand' ? '#fcfcfa' : undefined} d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
+        <path fill={mood === 'stand' ? 'var(--paper)' : undefined} d={mood === 'stand' ? 'M60.5 12.5 C71 11.5 78.5 20 77.5 30.5 C76.5 40 70 48 60 48 C50 48 42.5 40.5 42.5 30 C42.5 20.5 49.5 13 60.5 12.5Z' : 'M60 13 C75 11 79 28 75 37 C70 49 50 48 45 37 C41 27 46 14 61 12 L67 15'} />
         {mood === 'stand' ? (
           // 오늘 추천: 작은 점 눈 + 작게 벌린 :D 입 (혀가 살짝 보이게)
           <g>
@@ -318,7 +318,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path className="sp-cheer" style={{ transformOrigin: '60px 58px' }} d="M60 58 L38 38 M38 38 l-4 -6 M38 38 l-7 -1" />
             <path d="M60 58 L84 90" />
             {/* 케이크: 접시, 크림, 초 세 개 */}
-            <path d="M82 104 L118 104 L118 128 L82 128Z" fill="#fcfcfa" />
+            <path d="M82 104 L118 104 L118 128 L82 128Z" fill="var(--paper)" />
             <path d="M82 104 Q88 112 94 104 Q100 112 106 104 Q112 112 118 104" fill="#f4c6c6" strokeWidth="2" />
             <path d="M77 129 L123 129" strokeWidth="3" />
             <path d="M91 103 V93 M100 103 V93 M109 103 V93" stroke="#4a8bd4" strokeWidth="2.6" />
@@ -352,8 +352,8 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M60 58 L44 86" />
             <path d="M60 58 L84 80" />
             <path className="sp-dip" style={{ transformOrigin: '84px 78px' }} d="M83 79 L100 93 M86 77 L103 90" strokeWidth="1.8" />
-            <path d="M84 96 Q100 116 116 96Z" fill="#fcfcfa" />
-            <path d="M86 96 Q100 86 114 96" fill="#fcfcfa" strokeWidth="2" />
+            <path d="M84 96 Q100 116 116 96Z" fill="var(--paper)" />
+            <path d="M86 96 Q100 86 114 96" fill="var(--paper)" strokeWidth="2" />
             <path className="sp-steam" d="M95 82 q-3 -4 0 -8 q3 -4 0 -8 M106 82 q-3 -4 0 -8 q3 -4 0 -8" strokeWidth="1.6" opacity="0.6" />
             <path d="M74 108 L128 108" strokeWidth="3.2" />
             <path d="M80 108 L80 138 M122 108 L122 138" strokeWidth="2.6" />
@@ -367,7 +367,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <g className="sp-clink" style={{ transformOrigin: '60px 58px' }}>
               <path d="M60 58 L82 46" />
               <path d="M80 30 L96 30 L95 50 L81 50Z" fill="#f2cf4a" />
-              <path d="M78 31 Q78 23 84 25 Q87 20 92 24 Q98 22 98 30 Q90 33 78 31Z" fill="#fcfcfa" strokeWidth="2" />
+              <path d="M78 31 Q78 23 84 25 Q87 20 92 24 Q98 22 98 30 Q90 33 78 31Z" fill="var(--paper)" strokeWidth="2" />
               <path d="M95 34 Q103 34 102 41 Q102 47 95 46" strokeWidth="2.2" />
               <path d="M85 36 V45 M90 36 V45" strokeWidth="1.4" />
             </g>
@@ -419,7 +419,7 @@ export default function StickPerson({ mood = 'wave', size = 140, wear, umbrella 
             <path d="M60 58 L40 70 L34 56" />
             <path d="M60 58 L80 74 L92 66" />
             <g className="sp-bounce">
-              <circle cx="100" cy="128" r="9" fill="#fcfcfa" />
+              <circle cx="100" cy="128" r="9" fill="var(--paper)" />
               <path d="M96 124 L100 121 L104 124 L103 129 L97 129Z" fill={ink} strokeWidth="1" />
               <path d="M84 122 h-8 M86 130 h-10 M86 138 h-7" strokeWidth="1.8" />
             </g>

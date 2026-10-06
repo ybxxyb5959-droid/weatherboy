@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 const common = {
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.4,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
@@ -97,7 +97,7 @@ export const weatherKinds: { kind: WeatherKind; label: string }[] = [
 ]
 
 const CLOUD = 'M16 38 C5 38 4 24 15 23 C15 11 32 8 38 18 C48 12 60 22 53 31 C60 33 56 39 50 38 Z'
-const PAPER = '#fcfcfa'
+const PAPER = 'var(--paper)'
 
 const wrap = (size: number, kind: string, children: ReactNode, animate = false) => (
   <svg width={size} height={size} viewBox="0 0 64 64" {...common} className={cls(animate)} aria-label={kind} role="img">
@@ -209,7 +209,7 @@ function extraWeather(kind: WeatherKind, size: number, animate: boolean): ReactN
         kind,
         <g>
           <path d="M32 14 C44 12 50 24 47 34 C43 45 24 46 18 35 C13 24 20 15 32 14Z" fill="#f2cf4a" />
-          <path d="M20 26 C20 22 30 22 31 26 C31 31 21 31 20 26Z M34 26 C34 22 44 22 44 26 C43 31 35 31 34 26Z" fill="#222" strokeWidth="1.6" />
+          <path d="M20 26 C20 22 30 22 31 26 C31 31 21 31 20 26Z M34 26 C34 22 44 22 44 26 C43 31 35 31 34 26Z" fill="var(--ink)" strokeWidth="1.6" />
           <path d="M31 25 H34" strokeWidth="1.6" />
           <path d="M28 36 Q33 40 38 35" strokeWidth="1.8" />
           <path className="wx-rays" style={{ transformOrigin: '32px 30px' }} d="M32 2 V9 M6 28 H13 M52 28 H58 M12 8 L17 13 M52 8 L47 13 M12 48 L17 43 M52 48 L47 43 M32 52 V58" strokeWidth="2.4" stroke="#e8a24a" />

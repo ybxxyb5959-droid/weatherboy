@@ -272,7 +272,7 @@
     width: var(--s, 6px);
     height: var(--s, 6px);
     background: #fff;
-    border: 1.4px solid rgba(34, 34, 34, 0.42);
+    border: 1.4px solid rgb(var(--ink-rgb) / 0.42);
     border-radius: 50%;
     animation: amb-snow var(--t, 6s) ease-in-out var(--d, 0s) infinite;
   }
@@ -526,10 +526,10 @@
   }
   @keyframes today-pulse {
     0%, 100% {
-      box-shadow: 0 0 0 0 rgba(34, 34, 34, 0);
+      box-shadow: 0 0 0 0 rgb(var(--ink-rgb) / 0);
     }
     50% {
-      box-shadow: 0 0 0 5px rgba(34, 34, 34, 0.12);
+      box-shadow: 0 0 0 5px rgb(var(--ink-rgb) / 0.12);
     }
   }
   .events-list .card-wrap {
@@ -798,8 +798,8 @@
   left: 18%;
   width: 52px;
   height: 15px;
-  background: rgba(34, 34, 34, 0.06);
-  border: 1.2px solid rgba(34, 34, 34, 0.28);
+  background: rgb(var(--ink-rgb) / 0.06);
+  border: 1.2px solid rgb(var(--ink-rgb) / 0.28);
   transform: rotate(var(--tape-rot, -4deg));
   pointer-events: none;
 }
@@ -857,8 +857,8 @@
     right: 14%;
     width: 52px;
     height: 15px;
-    background: rgba(34, 34, 34, 0.06);
-    border: 1.2px solid rgba(34, 34, 34, 0.28);
+    background: rgb(var(--ink-rgb) / 0.06);
+    border: 1.2px solid rgb(var(--ink-rgb) / 0.28);
     --tape-rot: 5deg;
     transform: rotate(var(--tape-rot));
     pointer-events: none;
@@ -1091,7 +1091,7 @@
       filter: drop-shadow(0 0 0 transparent);
     }
     45%, 100% {
-      filter: drop-shadow(1.4px 0 0 #222) drop-shadow(-1.4px 0 0 #222) drop-shadow(0 1.4px 0 #222) drop-shadow(0 -1.4px 0 #222);
+      filter: drop-shadow(1.4px 0 0 var(--ink)) drop-shadow(-1.4px 0 0 var(--ink)) drop-shadow(0 1.4px 0 var(--ink)) drop-shadow(0 -1.4px 0 var(--ink));
     }
   }
 }
@@ -1487,6 +1487,10 @@
   transform-origin: 50% 100%;
 }
 .ls-glass {
+  /* 연한 색 유리잔이라 다크모드에서도 안의 선은 어두운 색 그대로 */
+  --ink: #222;
+  --ink-rgb: 34 34 34;
+  --paper: #fcfcfa;
   position: relative;
   display: flex;
   align-items: flex-end;

@@ -21,7 +21,7 @@ interface Props {
 
 function Magnifier() {
   return (
-    <svg className="doodle" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="doodle" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M10 3.5 C15 3 18.5 7 17.5 11.5 C16.5 15.5 11 17 7.5 14.5 C4 12 4.5 5.5 10 3.5Z" />
       <path d="M16 15.5 L21 21" />
     </svg>
@@ -30,7 +30,7 @@ function Magnifier() {
 
 function Star({ filled, size = 22 }: { filled: boolean; size?: number }) {
   return (
-    <svg className="doodle" width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#f2cf4a' : 'none'} stroke="#222" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="doodle" width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#f2cf4a' : 'none'} stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 3 L14.5 9 L21 9.6 L16 13.8 L17.6 20.5 L12 17 L6.4 20.5 L8 13.8 L3 9.6 L9.5 9Z" />
     </svg>
   )

@@ -370,7 +370,7 @@ export default function TourPage() {
                 return (
                   <div key={fi} className={`tour-frame${fi === f ? ' on' : ''}`}>
                     <img src={fr.image} alt={fr.alt} width={W} height={H} draggable={false} />
-                    <svg className="doodle tour-lines" viewBox={`0 0 ${W} ${H}`} fill="none" stroke="#222" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg className="doodle tour-lines" viewBox={`0 0 ${W} ${H}`} fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       {fr.callouts.map((c, k) => (
                         <Arrow key={k} c={c} delay={base + 0.5 + k * 0.7} />
                       ))}

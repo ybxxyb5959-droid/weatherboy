@@ -3,7 +3,7 @@ const common = {
   className: 'doodle gate-scene',
   viewBox: '0 0 260 190',
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.4,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
@@ -14,9 +14,9 @@ const common = {
 function Upper({ face, x = 0 }: { face: 'meh' | 'smile'; x?: number }) {
   return (
     <g transform={`translate(${x} 0)`}>
-      <path d="M36 66 C36 48 50 40 62 41 C76 42 86 54 84 70 C82 86 68 94 56 92 C42 91 36 80 36 66Z" fill="#fcfcfa" />
-      <circle cx="52" cy="64" r="1.9" fill="#222" stroke="none" />
-      <circle cx="68" cy="63" r="1.9" fill="#222" stroke="none" />
+      <path d="M36 66 C36 48 50 40 62 41 C76 42 86 54 84 70 C82 86 68 94 56 92 C42 91 36 80 36 66Z" fill="var(--paper)" />
+      <circle cx="52" cy="64" r="1.9" fill="var(--ink)" stroke="none" />
+      <circle cx="68" cy="63" r="1.9" fill="var(--ink)" stroke="none" />
       {face === 'meh' ? <path d="M52 77 L67 74" strokeWidth="2" /> : <path d="M50 72 Q60 84 70 71" strokeWidth="2" />}
       <path d="M60 92 L60 140" />
     </g>
@@ -42,10 +42,10 @@ export function MapScene({ width = 260 }: { width?: number }) {
       <path d="M56 146 Q64 140 70 150 M84 160 Q94 152 104 160 M134 140 Q142 146 148 138 M132 166 Q142 160 150 168" strokeWidth="1.4" />
       {/* 위치 핀 */}
       <path d="M101 168 C89 154 91 142 101 142 C111 142 113 154 101 168Z" fill="#e8735a" strokeWidth="2" />
-      <circle cx="101" cy="151" r="2.3" fill="#fcfcfa" stroke="none" />
+      <circle cx="101" cy="151" r="2.3" fill="var(--paper)" stroke="none" />
       {/* 손 */}
-      <circle cx="48" cy="130" r="4.3" fill="#fcfcfa" strokeWidth="2.1" />
-      <circle cx="152" cy="128" r="4.3" fill="#fcfcfa" strokeWidth="2.1" />
+      <circle cx="48" cy="130" r="4.3" fill="var(--paper)" strokeWidth="2.1" />
+      <circle cx="152" cy="128" r="4.3" fill="var(--paper)" strokeWidth="2.1" />
     </svg>
   )
 }
@@ -60,15 +60,15 @@ export function BellScene({ width = 260 }: { width?: number }) {
       <path d="M170 104 Q180 118 190 104" />
       <path d="M140 56 L130 48 M146 38 L140 28 M222 56 L232 48 M216 38 L222 28" strokeWidth="2" />
       {/* 떠 있는 알림 카드 */}
-      <path d="M136 128 L228 122 L232 158 L140 164Z" fill="#fcfcfa" />
+      <path d="M136 128 L228 122 L232 158 L140 164Z" fill="var(--paper)" />
       <path d="M150 140 L208 136 M151 150 L190 147" strokeWidth="1.8" />
       <circle cx="217" cy="134" r="3.4" fill="#e8735a" stroke="none" />
       <Upper face="smile" />
       {/* 신나서 두 팔을 번쩍 */}
       <path d="M60 108 L34 84" />
       <path d="M60 108 L88 80" />
-      <circle cx="32" cy="82" r="4.3" fill="#fcfcfa" strokeWidth="2.1" />
-      <circle cx="90" cy="78" r="4.3" fill="#fcfcfa" strokeWidth="2.1" />
+      <circle cx="32" cy="82" r="4.3" fill="var(--paper)" strokeWidth="2.1" />
+      <circle cx="90" cy="78" r="4.3" fill="var(--paper)" strokeWidth="2.1" />
       <path d="M22 66 L28 72 M96 62 L90 70" strokeWidth="1.8" />
     </svg>
   )

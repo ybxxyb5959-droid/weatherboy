@@ -15,7 +15,7 @@ export default function WardrobeScene({ phase }: { phase: StagePhase }) {
   return (
     <div className={`stage-scene${open ? ' open' : ''}`} data-phase={phase} aria-hidden="true">
       <div className="stage-caption tiny">{phase === 'run' ? '옷장으로 달려가요!' : phase === 'dig' ? '뒤적뒤적…' : phase === 'change' ? '갈아입는 중…' : '짠!'}</div>
-      <svg className="doodle stage-wardrobe" width="76" height="116" viewBox="0 0 76 116" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="doodle stage-wardrobe" width="76" height="116" viewBox="0 0 76 116" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="6" width="68" height="104" rx="3" fill="#e7dcc4" />
         {/* 안쪽: 옷걸이 봉과 걸린 옷 */}
         <rect x="8" y="10" width="60" height="96" fill="#cdbf9f" strokeWidth="1.4" />

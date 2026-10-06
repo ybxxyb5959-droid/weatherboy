@@ -27,12 +27,12 @@ function Gauge({ score }: { score: number }) {
   return (
     <svg className="act-gauge" viewBox="0 0 120 74" width="132" height="81" fill="none" strokeLinecap="round" strokeLinejoin="round" role="img" aria-label={`야외활동 점수 ${score}점`}>
       {/* 바깥 윤곽(살짝 삐뚤게)과 칸 눈금 */}
-      <path d="M8 64 C6 30 34 6 60 6 C88 6 114 30 112 64" stroke="#222" strokeWidth="2.4" />
-      <path d="M20 64 C20 38 40 18 60 18 C82 18 100 38 100 64" stroke="#222" strokeWidth="2" opacity="0.85" />
-      <path d="M8 64 H20 M100 64 H112" stroke="#222" strokeWidth="2.4" />
+      <path d="M8 64 C6 30 34 6 60 6 C88 6 114 30 112 64" stroke="var(--ink)" strokeWidth="2.4" />
+      <path d="M20 64 C20 38 40 18 60 18 C82 18 100 38 100 64" stroke="var(--ink)" strokeWidth="2" opacity="0.85" />
+      <path d="M8 64 H20 M100 64 H112" stroke="var(--ink)" strokeWidth="2.4" />
       {/* 채워지는 호: 점수만큼 */}
       <path className="act-arc" d="M14 64 C14 33 36 12 60 12 C84 12 106 33 106 64" stroke={color} strokeWidth="7" pathLength="100" strokeDasharray={`${Math.max(score, 1)} 100`} />
-      <g stroke="#222" strokeWidth="1.6">
+      <g stroke="var(--ink)" strokeWidth="1.6">
         <path d="M60 3 V0 M31 11 L29 8 M89 11 L91 8" />
       </g>
     </svg>

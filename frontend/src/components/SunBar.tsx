@@ -64,9 +64,9 @@ function SunFace() {
   return (
     <g transform="scale(1.15)">
       {/* 동글납작한 얼굴, 점 눈, 작은 미소, 길이가 제각각인 햇살 */}
-      <path d="M0 -10 C8 -11 12 -3 10 4 C7 12 -5 13 -10 6 C-13 -2 -8 -9 0 -10Z" fill="#f2cf4a" stroke="#222" strokeWidth="2.2" />
-      <path d="M-4 -1 l.1 0 M4 -1.5 l.1 0" stroke="#222" strokeWidth="3" />
-      <path d="M-3 4 Q0 7.5 3.5 3.5" stroke="#222" strokeWidth="1.8" />
+      <path d="M0 -10 C8 -11 12 -3 10 4 C7 12 -5 13 -10 6 C-13 -2 -8 -9 0 -10Z" fill="#f2cf4a" stroke="var(--ink)" strokeWidth="2.2" />
+      <path d="M-4 -1 l.1 0 M4 -1.5 l.1 0" stroke="var(--ink)" strokeWidth="3" />
+      <path d="M-3 4 Q0 7.5 3.5 3.5" stroke="var(--ink)" strokeWidth="1.8" />
       <path d="M1 -15 L0 -19 M-14 -3 L-18 -5 M15 -2 L19 -3 M-10 -12 L-13 -16 M11 -11 L15 -13 M-9 11 L-12 14 M10 11 L13 14" stroke="#e8a24a" strokeWidth="2" />
     </g>
   )
@@ -167,7 +167,7 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
               <path d="M16 46 C90 41 150 52 244 45" />
               <path d="M10 58 C70 63 180 55 250 60" />
             </g>
-            <g stroke="#222" strokeWidth="2.6" opacity={0.8 * (1 - dawn)}>
+            <g stroke="var(--ink)" strokeWidth="2.6" opacity={0.8 * (1 - dawn)}>
               <path d="M52 2 l.1 0 M92 22 l.1 0 M214 28 l.1 0 M236 4 l.1 0 M34 40 l.1 0" />
             </g>
           </g>
@@ -247,12 +247,12 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
         </g>
 
         {/* 땅: 손으로 그은 삐뚤빼뚤한 선 */}
-        <path d="M5 58 C24 55 44 61 78 57 C108 54 124 60 158 58 C190 56 222 61 255 56" stroke="#222" strokeWidth="2.4" />
-        <path d="M70 64 q6 3 12 0 M176 65 q7 3 13 0" stroke="#222" strokeWidth="1.5" opacity="0.5" />
+        <path d="M5 58 C24 55 44 61 78 57 C108 54 124 60 158 58 C190 56 222 61 255 56" stroke="var(--ink)" strokeWidth="2.4" />
+        <path d="M70 64 q6 3 12 0 M176 65 q7 3 13 0" stroke="var(--ink)" strokeWidth="1.5" opacity="0.5" />
         {/* 해가 지나가는 길: 점선을 콕콕 찍은 듯 */}
         {dayLayer && (
           <g className={dayFx}>
-            <path d="M29 38 C60 -16 200 -16 231 39" stroke="#222" strokeWidth="2.2" strokeDasharray="0.5 8" opacity="0.75" />
+            <path d="M29 38 C60 -16 200 -16 231 39" stroke="var(--ink)" strokeWidth="2.2" strokeDasharray="0.5 8" opacity="0.75" />
             {/* 해가 지나온 길은 주황 실선으로 */}
             {passed && <path d={passed} stroke="#e8a24a" strokeWidth="3.2" />}
           </g>
@@ -269,6 +269,7 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
               const body = `M${b[0]} ${b[1]} L${b[2]} ${b[3]} L${b[4]} ${b[5]} L${b[6]} ${b[7]}Z`
               return (
                 <g key={i}>
+                  {/* 빌딩 그림자는 밤하늘·노을 위에 놓이는 그림이라 다크모드에서도 어두운 색 그대로 */}
                   <path d={body} fill="#222" stroke="#222" strokeWidth="1.6" />
                   {/* 빛: 해가 뜰 때는 해에 가까운 빌딩부터 차례로 켜지고, 질 때는 먼 빌딩부터 해와 함께 꺼진다 */}
                   <g
@@ -313,9 +314,9 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
 
         {/* 일출·일몰 자리: 호의 양 끝에 작은 점과 눈금(해는 가운데에서 움직이는 하나만) */}
         {dayLayer && (
-          <g className={dayFx} stroke="#222" strokeWidth="2.2">
-            <circle cx="29" cy="40" r="3" fill="#fcfcfa" />
-            <circle cx="231" cy="41" r="3" fill="#fcfcfa" />
+          <g className={dayFx} stroke="var(--ink)" strokeWidth="2.2">
+            <circle cx="29" cy="40" r="3" fill="var(--paper)" />
+            <circle cx="231" cy="41" r="3" fill="var(--paper)" />
             <path d="M29 46 V55 M231 47 V55" strokeWidth="1.8" opacity="0.6" />
           </g>
         )}
@@ -326,8 +327,8 @@ export default function SunBar({ rise, set, now, eventTime }: { rise: string; se
               {night ? (
                 <g className={now && dawn === 0 ? 'sb-moon-in' : undefined}>
                   <g transform="scale(0.95) rotate(-14)">
-                    <path d="M4 -14 C-1 -16 -7 -11 -10 -4 C-14 2 -11 11 -4 14 C2 16 6 18 12 14 C16 11 17 8 14 7 C10 9 5 7 2 4 C-2 0 -3 -4 0 -8 C2 -11 6 -11 4 -14Z" fill="#f2cf4a" stroke="#222" strokeWidth="2.4" />
-                    <path d="M1 -11 C-5 -9 -10 -2 -8 5 C-7 9 -4 11 -1 12" stroke="#222" strokeWidth="1.2" opacity="0.45" />
+                    <path d="M4 -14 C-1 -16 -7 -11 -10 -4 C-14 2 -11 11 -4 14 C2 16 6 18 12 14 C16 11 17 8 14 7 C10 9 5 7 2 4 C-2 0 -3 -4 0 -8 C2 -11 6 -11 4 -14Z" fill="#f2cf4a" stroke="var(--ink)" strokeWidth="2.4" />
+                    <path d="M1 -11 C-5 -9 -10 -2 -8 5 C-7 9 -4 11 -1 12" stroke="var(--ink)" strokeWidth="1.2" opacity="0.45" />
                     <path d="M-5 0 l.1 0 M-2 8 l.1 0" stroke="#e8a24a" strokeWidth="2.6" />
                   </g>
                 </g>

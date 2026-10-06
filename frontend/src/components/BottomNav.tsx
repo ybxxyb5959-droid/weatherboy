@@ -7,7 +7,7 @@ import { LockIcon } from './ToolIcons'
 
 const stroke = {
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.2,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,

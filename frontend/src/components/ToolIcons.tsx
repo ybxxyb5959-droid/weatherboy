@@ -2,7 +2,7 @@
 const common = {
   viewBox: '0 0 32 32',
   fill: 'none',
-  stroke: '#222',
+  stroke: 'var(--ink)',
   strokeWidth: 2.3,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
@@ -14,7 +14,7 @@ const common = {
 export function CameraIcon({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} {...common}>
-      <path d="M4 11.5 Q4 9.5 6.2 9.5 H10 L12.2 6 H19.8 L22 9.5 H25.8 Q28 9.5 28 11.5 V23.5 Q28 26 25.6 26 H6.4 Q4 26 4 23.5 Z" fill="#fcfcfa" />
+      <path d="M4 11.5 Q4 9.5 6.2 9.5 H10 L12.2 6 H19.8 L22 9.5 H25.8 Q28 9.5 28 11.5 V23.5 Q28 26 25.6 26 H6.4 Q4 26 4 23.5 Z" fill="var(--paper)" />
       <circle cx="16" cy="17.2" r="5.2" fill="#cfe6e2" />
       <path d="M13.8 16.2 Q15 14.8 16.8 15" strokeWidth="1.6" />
       <path d="M24 13.2 h.1" strokeWidth="3.2" />
@@ -42,7 +42,7 @@ export function LockIcon({ size = 22 }: { size?: number }) {
       <path d="M10 14 V10.5 Q10 5 16 5 Q22 5 22 10.5 V14" />
       <path d="M7 14 H25 V26 Q25 27.5 23.5 27.5 H8.5 Q7 27.5 7 26 Z" fill="#f2cf4a" />
       <path d="M16 19 v3.5" strokeWidth="2.6" />
-      <circle cx="16" cy="18.6" r="1.4" fill="#222" stroke="none" />
+      <circle cx="16" cy="18.6" r="1.4" fill="var(--ink)" stroke="none" />
     </svg>
   )
 }

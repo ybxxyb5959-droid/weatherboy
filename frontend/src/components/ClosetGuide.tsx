@@ -27,7 +27,7 @@ const markSeen = () => {
 function Frame({ children }: { children: React.ReactNode }) {
   return (
     <div className="cg-frame">
-      <svg className="doodle cg-corners" viewBox="0 0 200 110" fill="none" stroke="#222" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg className="doodle cg-corners" viewBox="0 0 200 110" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M8 24 V10 Q8 6 12 6 H26 M174 6 H188 Q192 6 192 10 V24 M192 86 V100 Q192 104 188 104 H174 M26 104 H12 Q8 104 8 100 V86" />
       </svg>
       {children}
@@ -39,7 +39,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 function Hung({ items }: { items: { type: string; color: string; pattern?: string }[] }) {
   return (
     <div className="cg-hung">
-      <svg className="doodle cg-rod" viewBox="0 0 200 8" fill="none" stroke="#222" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+      <svg className="doodle cg-rod" viewBox="0 0 200 8" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M4 4 Q50 1 100 4 T196 4" />
       </svg>
       <div className="cg-row">

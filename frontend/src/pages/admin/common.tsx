@@ -93,28 +93,28 @@ export function LineChart({ rows, days = 7, label }: { rows: { d: string; c: num
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
         {[0, 0.5, 1].map((f) => (
           <g key={f}>
-            <path d={`M${L} ${y(max * f)} H${W - R}`} stroke="#222" strokeOpacity="0.18" strokeDasharray="4 4" />
-            <text x={L - 6} y={y(max * f) + 4} textAnchor="end" fontSize="12" fill="#222" opacity="0.7">
+            <path d={`M${L} ${y(max * f)} H${W - R}`} stroke="var(--ink)" strokeOpacity="0.18" strokeDasharray="4 4" />
+            <text x={L - 6} y={y(max * f) + 4} textAnchor="end" fontSize="12" fill="var(--ink)" opacity="0.7">
               {Math.round(max * f)}
             </text>
           </g>
         ))}
-        <g className="doodle" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <g className="doodle" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <polyline points={pts} />
           {list.map((p, i) => (
-            <circle key={p.d} cx={x(i)} cy={y(p.c)} r="3.6" fill="#fcfcfa" />
+            <circle key={p.d} cx={x(i)} cy={y(p.c)} r="3.6" fill="var(--paper)" />
           ))}
         </g>
         {list.map((p, i) =>
           p.c > 0 ? (
-            <text key={p.d} x={x(i)} y={y(p.c) - 9} textAnchor="middle" fontSize="13" fontWeight="700" fill="#222">
+            <text key={p.d} x={x(i)} y={y(p.c) - 9} textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--ink)">
               {p.c}
             </text>
           ) : null,
         )}
         {list.map((p, i) =>
           i % step === 0 || i === list.length - 1 ? (
-            <text key={p.d} x={x(i)} y={H - 8} textAnchor="middle" fontSize="12" fill="#222" opacity="0.75">
+            <text key={p.d} x={x(i)} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--ink)" opacity="0.75">
               {p.d.slice(5).replace('-', '/')}
             </text>
           ) : null,

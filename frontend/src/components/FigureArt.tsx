@@ -47,17 +47,17 @@ export default function FigureArt({ pose, id, reg, face, tilt = 0, dy = 0 }: { p
           <FaceArt face={face} />
         ) : (
           <>
-            <circle ref={r('eyeL')} cx={pose.eyes[0]![0]} cy={pose.eyes[0]![1]} r="1.9" fill="#222" stroke="none" />
-            <circle ref={r('eyeR')} cx={pose.eyes[1]![0]} cy={pose.eyes[1]![1]} r="1.9" fill="#222" stroke="none" />
+            <circle ref={r('eyeL')} cx={pose.eyes[0]![0]} cy={pose.eyes[0]![1]} r="1.9" fill="var(--ink)" stroke="none" />
+            <circle ref={r('eyeR')} cx={pose.eyes[1]![0]} cy={pose.eyes[1]![1]} r="1.9" fill="var(--ink)" stroke="none" />
             <path ref={r('smile')} d={pose.smile} strokeWidth="2" />
           </>
         )}
       </g>
       <path ref={r('body')} d={pose.body} />
       <path ref={r('armL')} d={pose.armL} />
-      <circle ref={r('handL')} cx={pose.handL[0]} cy={pose.handL[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+      <circle ref={r('handL')} cx={pose.handL[0]} cy={pose.handL[1]} r="3.4" fill="var(--paper)" strokeWidth="2.2" />
       <path ref={r('armR')} d={pose.armR} />
-      <circle ref={r('handR')} cx={pose.handR[0]} cy={pose.handR[1]} r="3.4" fill="#fcfcfa" strokeWidth="2.2" />
+      <circle ref={r('handR')} cx={pose.handR[0]} cy={pose.handR[1]} r="3.4" fill="var(--paper)" strokeWidth="2.2" />
       <path ref={r('legL')} d={pose.legL} />
       <path ref={r('legR')} d={pose.legR} />
       <path ref={r('pants')} d={pose.pants} fill={pose.pantsFill} strokeWidth="3.6" />

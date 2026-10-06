@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 export type Slot = 'hat' | 'hairpin' | 'glasses' | 'neck' | 'face' | 'extra'
 export type Accessories = Partial<Record<Slot, string>>
 
-const ink = '#222'
-const PAPER = '#fcfcfa'
+const ink = 'var(--ink)'
+const PAPER = 'var(--paper)'
 
 // ───── 작은 도형 ─────
 const Star = ({ x, y, s = 1, fill = '#f6d44c' }: { x: number; y: number; s?: number; fill?: string }) => (
