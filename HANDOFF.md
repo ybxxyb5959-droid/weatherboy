@@ -109,6 +109,14 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 프론트 자동 테스트 추가 (작성: Claude Code)
+- 수정 목적: 프론트에 자동 테스트가 없어서 연출·화면을 바꿀 때 보호망이 없었음.
+- 변경: frontend/package.json(vitest, npm test), frontend/vite.config.ts(test 설정), frontend/src/__tests__/{api,events,sunbar,legal,lazyPage}.test.ts(x), CLAUDE.md(검증 명령에 npm test)
+- 내용(29개): 서버 호출(성공·204·오류 매핑·GET 재시도·POST 재시도 안 함·연결 실패·시간 초과), 일정 날짜 계산(dDay·formatRange), 말로 입력한 일정·옷 해석, 후기 카드 시각, 홈 일출·일몰 카드의 때별 장면(상태 문구·낮 호·빌딩·연출 클래스·교차 전환·일정 화면 기준), 약관·방침 문구 구조와 FAQ, 화면별 코드 받기 실패 시 한 번만 새로고침.
+- 검증 결과: vitest 29개 통과, 연출 클래스 하나를 일부러 망가뜨리면 테스트가 실패하는 것 확인. tsc -b·lint·build 통과.
+- 남은 일: 로그인 화면 흐름 같은 브라우저 테스트(playwright 등)는 아직 없음. CI(GitHub Actions)로 push 마다 돌리는 설정도 아직 없음.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-06 첫 로딩 가볍게: 화면별 코드 분리 + 폰트 자체 호스팅 (작성: Claude Code)
 - 수정 목적: JS 한 덩어리(835KB)와 Google Fonts 의존 제거.
 - 변경: frontend/src/App.tsx(대부분의 화면을 React.lazy 로 분리, 소개·로그인 화면은 바로 받음, Suspense 대기 중에는 Splash), frontend/src/lib/lazyPage.ts(새 버전 배포로 옛 조각 파일을 못 찾으면 한 번만 새로고침), frontend/src/main.tsx(폰트 CSS 를 따로 비동기로 받음), frontend/src/styles/fonts.css(@fontsource/gaegu, poor-story 의 woff2 글꼴 조각만 옮김, scripts/gen-fonts.cjs 로 다시 생성), frontend/index.html(구글 폰트 링크 제거), package.json(@fontsource/gaegu, @fontsource/poor-story)

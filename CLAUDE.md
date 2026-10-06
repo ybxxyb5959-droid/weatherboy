@@ -10,5 +10,5 @@
 ## 요약
 - 프론트와 백엔드가 맞물리는 계약 파일(`PROJECT_RULES.md` 1-2)은 한쪽만 바꾸지 말고 양쪽을 함께 확인한다.
 - 비밀값(`.env`)은 읽어서 출력하거나 적지 않는다. 커밋/푸시는 사용자가 요청할 때만.
-- 검증: 프론트 `cd frontend; npx tsc --noEmit -p tsconfig.app.json; npm run lint; npm run build` / 백엔드 `cd backend; npm run typecheck; npm run lint; npm test`(`TEST_DATABASE_URL` 필요). 개발 서버는 `.claude/launch.json` (frontend 5180, backend 4000).
+- 검증: 프론트 `cd frontend; npx tsc --noEmit -p tsconfig.app.json; npm run lint; npm test; npm run build` / 백엔드 `cd backend; npm run typecheck; npm run lint; npm test`(`TEST_DATABASE_URL` 필요). 개발 서버는 `.claude/launch.json` (frontend 5180, backend 4000).
 - 미결정(`PROJECT_RULES.md` 11번)은 임의로 정하지 말고 사용자에게 묻는다.
