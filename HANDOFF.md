@@ -109,6 +109,15 @@
 
 ## 7. 작업 기록 (최신이 위)
 
+### 2026-10-06 서비스워커: 앱 껍데기 저장(오프라인에서도 열림) (작성: Claude Code)
+- 수정 목적: 오프라인이거나 연결이 불안정해도 앱 화면이 뜨게. 서비스워커가 푸시 알림만 처리하던 것을 확장.
+- 변경: frontend/public/sw.js(화면 문서 네트워크 우선 + 실패 시 저장분 -> 오프라인 안내, /assets/ 해시 파일 저장 우선, 아이콘·둘러보기 그림 저장 후 갱신, 설치 시 JS·CSS 미리 받기, 버전 올리면 옛 저장분 삭제, 220개 넘으면 오래된 것부터 삭제), frontend/public/offline.html(오프라인 안내 + 다시 시도), frontend/vite.config.ts(빌드 끝에 dist/sw.js 의 미리 받기 목록을 /assets/ 의 JS·CSS 로 채움. 관리자 화면·공유 이미지 조각·폰트 CSS 는 제외), frontend/src/__tests__/sw.test.ts
+- 저장하지 않는 것: /api/ 응답(로그인한 사용자의 데이터), POST 등 변경 요청, 다른 사이트 파일. 로그아웃 시 지울 개인 데이터가 저장되지 않는다.
+- 겪은 문제: 서버가 Vary: Origin 을 붙이면 모듈(import) 요청이 미리 받아 둔 파일을 못 찾아 안 가 본 화면이 열리지 않음 -> 저장분 찾을 때 ignoreVary. 브라우저에서 서버를 완전히 끄고 /privacy(미리 방문한 적 없음)가 폰트까지 열리는 것 확인.
+- 검증 결과: vitest 36개 통과(서비스워커 7개 포함), tsc -b·lint·build 통과. 로컬 빌드 미리보기에서 서버 종료 후 오프라인 동작 확인. 실제 Vercel 배포에서의 동작과 iOS 사파리는 못 봄.
+- 남은 일: 오프라인에서는 날씨·옷장 같은 서버 데이터는 못 불러옴(화면은 열리고 오류 안내). 서버 데이터 캐시는 개인정보(로그아웃 후 남음) 때문에 일부러 안 함. 배포 직후 한 번 열어 설치(미리 받기)되는지 확인.
+- 적용한 규칙 번호: A-2
+
 ### 2026-10-06 프론트 자동 테스트 추가 (작성: Claude Code)
 - 수정 목적: 프론트에 자동 테스트가 없어서 연출·화면을 바꿀 때 보호망이 없었음.
 - 변경: frontend/package.json(vitest, npm test), frontend/vite.config.ts(test 설정), frontend/src/__tests__/{api,events,sunbar,legal,lazyPage}.test.ts(x), CLAUDE.md(검증 명령에 npm test)

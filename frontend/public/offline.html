@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fcfcfa" />
+    <title>뭐입을옷? · 오프라인</title>
+    <style>
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #fcfcfa; color: #222; font-family: 'Gaegu', 'Nanum Pen Script', 'Comic Sans MS', cursive; text-align: center; padding: 24px; box-sizing: border-box; }
+      main { max-width: 320px; }
+      svg { width: 120px; height: auto; }
+      h1 { font-size: 30px; margin: 12px 0 8px; }
+      p { font-size: 19px; line-height: 1.5; margin: 0 0 18px; }
+      button { font: inherit; font-size: 20px; padding: 8px 22px; border: 2.4px solid #222; border-radius: 14px 18px 12px 20px; background: #fff; color: #222; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 120 130" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="60" cy="34" r="18" fill="#fcfcfa" />
+        <path d="M52 32 l.1 0 M68 32 l.1 0" stroke-width="4" />
+        <path d="M52 44 Q60 38 68 44" stroke-width="2.6" />
+        <path d="M60 52 V92 M60 92 L46 122 M60 92 L74 122 M60 62 L40 78 M60 62 L80 78" />
+        <path d="M14 22 q8 -10 18 -4 q8 -8 18 0 M88 16 q8 -8 18 -2" stroke-width="2.2" opacity="0.5" />
+      </svg>
+      <h1>인터넷에 연결되어 있지 않아요</h1>
+      <p>연결이 돌아오면 다시 불러올게요. 잠시 후 아래 버튼을 눌러 주세요.</p>
+      <button type="button" onclick="location.reload()">다시 시도</button>
+    </main>
+  </body>
+</html>
